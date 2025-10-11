@@ -10,24 +10,22 @@
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">📁 Mes missions</h1>
                 <p class="text-gray-600 mt-1">
-                    {{ $stats['total'] }} mission(s) {{ auth()->user()->isCollaborateur() ? 'assignée(s)' : 'sous votre responsabilité' }}
+                    {{ $stats['total'] }} mission(s) {{ auth()->user()->isCollaborateur() ? 'assignée(s) ou créée(s)' : 'sous votre responsabilité' }}
                 </p>
             </div>
             
-            @if(auth()->user()->isManager() || auth()->user()->isAdministrateur())
-                <div class="mt-4 sm:mt-0">
-                    <a href="{{ route('missions.create') }}" 
-                       class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors shadow-sm">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                        </svg>
-                        Créer une mission
-                    </a>
-                </div>
-            @endif
+            <div class="mt-4 sm:mt-0">
+                <a href="{{ route('missions.create') }}" 
+                   class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors shadow-sm">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Créer une mission
+                </a>
+            </div>
         </div>
         
-        <!-- Statistiques rapides selon le cahier des charges -->
+        <!-- Statistiques rapides -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
             <div class="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div class="text-2xl font-bold text-blue-600">{{ $stats['total'] }}</div>
@@ -71,6 +69,35 @@
                 </div>
             </div>
             
+            <!-- Catégorie -->
+            <div class="min-w-0 flex-shrink-0">
+                <label for="category" class="block text-sm font-medium text-gray-700 mb-2">
+                    📁 Catégorie
+                </label>
+                <div class="relative">
+                    <select id="category" 
+                            name="category"
+                            class="block w-full pl-4 pr-10 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 sm:text-sm hover:border-gray-400 bg-white appearance-none cursor-pointer">
+                        <option value="">Toutes les catégories</option>
+                        @if(isset($categories))
+                            @foreach($categories as $value => $label)
+                                <option value="{{ $value }}" {{ $request->category === $value ? 'selected' : '' }}>
+                                    @if($value === 'location')🏠 {{ $label }}
+                                    @elseif($value === 'syndic')🏢 {{ $label }}
+                                    @else📋 {{ $label }}
+                                    @endif
+                                </option>
+                            @endforeach
+                        @endif
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
             <!-- Statut -->
             <div class="min-w-0 flex-shrink-0">
                 <label for="status" class="block text-sm font-medium text-gray-700 mb-2">
@@ -153,7 +180,7 @@
                     Filtrer
                 </button>
                 
-                @if($request->search || $request->status || $request->priority || $request->assigned_to)
+                @if($request->search || $request->status || $request->priority || $request->assigned_to || $request->category)
                     <a href="{{ route('missions.index') }}" 
                        class="inline-flex items-center px-6 py-3 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all duration-200 shadow-sm hover:shadow-md">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -166,7 +193,7 @@
         </form>
         
         <!-- Indicateur de filtres actifs -->
-        @if($request->search || $request->status || $request->priority || $request->assigned_to)
+        @if($request->search || $request->status || $request->priority || $request->assigned_to || $request->category)
             <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <div class="flex items-center">
                     <svg class="w-5 h-5 text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,7 +204,11 @@
                         @if($request->search)
                             <span class="font-medium">Recherche : "{{ $request->search }}"</span>
                         @endif
-                        @if($request->search && ($request->status || $request->priority || $request->assigned_to)) • @endif
+                        @if($request->search && ($request->status || $request->priority || $request->assigned_to || $request->category)) • @endif
+                        @if($request->category)
+                            <span class="font-medium">Catégorie : {{ $categories[$request->category] ?? 'Inconnue' }}</span>
+                        @endif
+                        @if($request->category && ($request->status || $request->priority || $request->assigned_to)) • @endif
                         @if($request->status)
                             <span class="font-medium">Statut : {{ ucfirst(str_replace('_', ' ', $request->status)) }}</span>
                         @endif
@@ -204,6 +235,24 @@
                         <div class="flex-1 min-w-0">
                             <!-- En-tête de la mission -->
                             <div class="flex items-center flex-wrap gap-3 mb-3">
+                                <!-- Badge de catégorie -->
+                                @if($mission->category)
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                        @if($mission->category === 'location')🏠
+                                        @elseif($mission->category === 'syndic')🏢
+                                        @else📋
+                                        @endif
+                                        {{ $mission->category_label }}
+                                    </span>
+                                @endif
+
+                                <!-- Badge de sous-catégorie -->
+                                @if($mission->subcategory)
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                                        {{ $mission->subcategory_label }}
+                                    </span>
+                                @endif
+
                                 <!-- Badge de priorité -->
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $mission->priority === 'urgente' ? 'bg-red-100 text-red-800' : ($mission->priority === 'haute' ? 'bg-orange-100 text-orange-800' : ($mission->priority === 'normale' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800')) }}">
                                     @if($mission->priority === 'urgente')🔴
@@ -330,19 +379,19 @@
                 <div class="text-6xl mb-4">📁</div>
                 <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune mission trouvée</h3>
                 <p class="text-gray-500 mb-6">
-                    @if($request->search || $request->status || $request->priority || $request->assigned_to)
+                    @if($request->search || $request->status || $request->priority || $request->assigned_to || $request->category)
                         Aucune mission ne correspond aux critères de recherche.
                     @else
-                        {{ auth()->user()->isCollaborateur() ? 'Vous n\'avez pas encore de missions assignées.' : 'Aucune mission sous votre responsabilité.' }}
+                        {{ auth()->user()->isCollaborateur() ? 'Vous n\'avez pas encore de missions assignées ou créées.' : 'Aucune mission sous votre responsabilité.' }}
                     @endif
                 </p>
                 
-                @if($request->search || $request->status || $request->priority || $request->assigned_to)
+                @if($request->search || $request->status || $request->priority || $request->assigned_to || $request->category)
                     <a href="{{ route('missions.index') }}" 
                        class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
                         Voir toutes les missions
                     </a>
-                @elseif(auth()->user()->isManager() || auth()->user()->isAdministrateur())
+                @else
                     <a href="{{ route('missions.create') }}" 
                        class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
                         Créer la première mission

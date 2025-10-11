@@ -7,24 +7,137 @@
     <!-- En-tête -->
     <div class="bg-white shadow rounded-lg p-6">
         <div class="flex items-center">
-            <div class="h-12 w-12 rounded-full bg-indigo-500 flex items-center justify-center text-white text-lg font-medium">
-                {{ substr(auth()->user()->first_name, 0, 1) }}{{ substr(auth()->user()->last_name, 0, 1) }}
-            </div>
+            @if(auth()->user()->avatar)
+                <img class="h-12 w-12 rounded-full object-cover border-2 border-indigo-200" 
+                     src="{{ asset('storage/avatars/' . auth()->user()->avatar) }}" 
+                     alt="Photo de profil">
+            @else
+                <div class="h-12 w-12 rounded-full bg-indigo-500 flex items-center justify-center text-white text-lg font-medium">
+                    {{ substr(auth()->user()->first_name, 0, 1) }}{{ substr(auth()->user()->last_name, 0, 1) }}
+                </div>
+            @endif
             <div class="ml-4">
                 <h1 class="text-2xl font-bold text-gray-900">👤 Mon profil</h1>
-                <p class="text-gray-600 mt-1">Gérez vos informations personnelles et préférences</p>
+                <p class="text-gray-600 mt-1">
+                    @if(auth()->user()->isAdministrateur())
+                        Gérez vos informations personnelles et préférences
+                    @else
+                        Modifiez vos informations autorisées
+                    @endif
+                </p>
             </div>
         </div>
     </div>
 
+    <!-- Message d'information pour non-admins -->
+    @if(!auth()->user()->isAdministrateur())
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800">ℹ️ Informations</h3>
+                <div class="mt-2 text-sm text-blue-700">
+                    Vous pouvez uniquement modifier votre numéro de téléphone et votre photo de profil. Pour modifier d'autres informations, contactez un administrateur.
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Informations personnelles -->
         <div class="lg:col-span-2 space-y-6">
+            <!-- Gestion photo de profil -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">📸 Photo de profil</h2>
+                    <p class="text-sm text-gray-600 mt-1">Modifiez votre photo de profil</p>
+                </div>
+                <div class="p-6">
+                    <div class="flex items-center space-x-6">
+                        <!-- Photo actuelle -->
+                        <div class="flex-shrink-0">
+                            @if(auth()->user()->avatar)
+                                <img class="h-20 w-20 rounded-full object-cover border-4 border-gray-200" 
+                                     src="{{ asset('storage/avatars/' . auth()->user()->avatar) }}" 
+                                     alt="Photo de profil">
+                            @else
+                                <div class="h-20 w-20 rounded-full bg-indigo-500 flex items-center justify-center text-white text-2xl font-medium border-4 border-gray-200">
+                                    {{ substr(auth()->user()->first_name, 0, 1) }}{{ substr(auth()->user()->last_name, 0, 1) }}
+                                </div>
+                            @endif
+                        </div>
+                        
+                        <!-- Actions photo -->
+                        <div class="flex-1">
+                            <!-- FORMULAIRE POUR UPLOAD AVATAR -->
+                            <form method="POST" action="{{ route('profile.update-avatar') }}" enctype="multipart/form-data" class="space-y-4">
+                                @csrf
+                                
+                                <div>
+                                    <label for="avatar" class="block text-sm font-medium text-gray-700 mb-2">
+                                        <span class="flex items-center">
+                                            <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                            </svg>
+                                            Choisir une nouvelle photo
+                                        </span>
+                                    </label>
+                                    <input type="file" 
+                                           name="avatar" 
+                                           id="avatar" 
+                                           accept="image/jpeg,image/png,image/jpg,image/gif"
+                                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-colors @error('avatar') border-red-300 @enderror">
+                                    <p class="mt-1 text-xs text-gray-500">PNG, JPG, GIF jusqu'à 2MB</p>
+                                    @error('avatar')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                
+                                <button type="submit" 
+                                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                    </svg>
+                                    Télécharger
+                                </button>
+                            </form>
+                            
+                            <!-- FORMULAIRE SÉPARÉ POUR SUPPRIMER AVATAR -->
+                            @if(auth()->user()->avatar)
+                            <form method="POST" action="{{ route('profile.remove-avatar') }}" class="mt-3">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" 
+                                        onclick="return confirm('Êtes-vous sûr de vouloir supprimer votre photo de profil ?')"
+                                        class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                    Supprimer
+                                </button>
+                            </form>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Formulaire informations personnelles -->
             <div class="bg-white shadow rounded-lg">
                 <div class="p-6 border-b border-gray-200">
                     <h2 class="text-lg font-semibold text-gray-900">📝 Informations personnelles</h2>
-                    <p class="text-sm text-gray-600 mt-1">Modifiez vos informations de base</p>
+                    <p class="text-sm text-gray-600 mt-1">
+                        @if(auth()->user()->isAdministrateur())
+                            Modifiez vos informations de base
+                        @else
+                            Seuls les champs autorisés peuvent être modifiés
+                        @endif
+                    </p>
                 </div>
                 <div class="p-6">
                     <form method="POST" action="{{ route('profile.update') }}">
@@ -32,14 +145,19 @@
                         @method('PUT')
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <!-- Prénom -->
+                            <!-- Prénom - Lecture seule pour non-admins -->
                             <div>
                                 <label for="first_name" class="block text-sm font-medium text-gray-700 mb-2">
                                     <span class="flex items-center">
                                         <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                                         </svg>
-                                        Prénom <span class="text-red-500">*</span>
+                                        Prénom 
+                                        @if(auth()->user()->isAdministrateur())
+                                            <span class="text-red-500">*</span>
+                                        @else
+                                            <span class="text-gray-400 text-xs ml-2">(lecture seule)</span>
+                                        @endif
                                     </span>
                                 </label>
                                 <div class="relative">
@@ -47,9 +165,12 @@
                                            name="first_name" 
                                            id="first_name" 
                                            value="{{ old('first_name', auth()->user()->first_name) }}"
-                                           class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors @error('first_name') border-red-300 ring-red-500 @enderror">
+                                           @if(!auth()->user()->isAdministrateur()) readonly @endif
+                                           class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors 
+                                           @if(!auth()->user()->isAdministrateur()) bg-gray-50 text-gray-600 cursor-not-allowed @endif
+                                           @error('first_name') border-red-300 ring-red-500 @enderror">
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="h-5 w-5 {{ auth()->user()->isAdministrateur() ? 'text-gray-400' : 'text-gray-300' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                                         </svg>
                                     </div>
@@ -59,14 +180,19 @@
                                 @enderror
                             </div>
 
-                            <!-- Nom -->
+                            <!-- Nom - Lecture seule pour non-admins -->
                             <div>
                                 <label for="last_name" class="block text-sm font-medium text-gray-700 mb-2">
                                     <span class="flex items-center">
                                         <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                                         </svg>
-                                        Nom <span class="text-red-500">*</span>
+                                        Nom 
+                                        @if(auth()->user()->isAdministrateur())
+                                            <span class="text-red-500">*</span>
+                                        @else
+                                            <span class="text-gray-400 text-xs ml-2">(lecture seule)</span>
+                                        @endif
                                     </span>
                                 </label>
                                 <div class="relative">
@@ -74,9 +200,12 @@
                                            name="last_name" 
                                            id="last_name" 
                                            value="{{ old('last_name', auth()->user()->last_name) }}"
-                                           class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors @error('last_name') border-red-300 ring-red-500 @enderror">
+                                           @if(!auth()->user()->isAdministrateur()) readonly @endif
+                                           class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors 
+                                           @if(!auth()->user()->isAdministrateur()) bg-gray-50 text-gray-600 cursor-not-allowed @endif
+                                           @error('last_name') border-red-300 ring-red-500 @enderror">
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="h-5 w-5 {{ auth()->user()->isAdministrateur() ? 'text-gray-400' : 'text-gray-300' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                                         </svg>
                                     </div>
@@ -86,14 +215,19 @@
                                 @enderror
                             </div>
 
-                            <!-- Email -->
+                            <!-- Email - Lecture seule pour non-admins -->
                             <div>
                                 <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
                                     <span class="flex items-center">
                                         <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                                         </svg>
-                                        Email <span class="text-red-500">*</span>
+                                        Email 
+                                        @if(auth()->user()->isAdministrateur())
+                                            <span class="text-red-500">*</span>
+                                        @else
+                                            <span class="text-gray-400 text-xs ml-2">(lecture seule)</span>
+                                        @endif
                                     </span>
                                 </label>
                                 <div class="relative">
@@ -101,9 +235,12 @@
                                            name="email" 
                                            id="email" 
                                            value="{{ old('email', auth()->user()->email) }}"
-                                           class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors @error('email') border-red-300 ring-red-500 @enderror">
+                                           @if(!auth()->user()->isAdministrateur()) readonly @endif
+                                           class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors 
+                                           @if(!auth()->user()->isAdministrateur()) bg-gray-50 text-gray-600 cursor-not-allowed @endif
+                                           @error('email') border-red-300 ring-red-500 @enderror">
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="h-5 w-5 {{ auth()->user()->isAdministrateur() ? 'text-gray-400' : 'text-gray-300' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                                         </svg>
                                     </div>
@@ -113,7 +250,7 @@
                                 @enderror
                             </div>
 
-                            <!-- Téléphone -->
+                            <!-- Téléphone - Modifiable par tous -->
                             <div>
                                 <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">
                                     <span class="flex items-center">
@@ -121,6 +258,9 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
                                         </svg>
                                         Téléphone
+                                        @if(!auth()->user()->isAdministrateur())
+                                            <span class="text-green-600 text-xs ml-2">(modifiable)</span>
+                                        @endif
                                     </span>
                                 </label>
                                 <div class="relative">
@@ -141,7 +281,8 @@
                                 @enderror
                             </div>
 
-                            <!-- Poste -->
+                            @if(auth()->user()->isAdministrateur())
+                            <!-- Poste - Uniquement pour admins -->
                             <div>
                                 <label for="position" class="block text-sm font-medium text-gray-700 mb-2">
                                     <span class="flex items-center">
@@ -169,7 +310,7 @@
                                 @enderror
                             </div>
 
-                            <!-- Département -->
+                            <!-- Département - Uniquement pour admins -->
                             <div>
                                 <label for="department" class="block text-sm font-medium text-gray-700 mb-2">
                                     <span class="flex items-center">
@@ -196,6 +337,22 @@
                                     <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
                             </div>
+                            @else
+                            <!-- Affichage en lecture seule pour non-admins -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <span class="flex items-center">
+                                        <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                        </svg>
+                                        Département <span class="text-gray-400 text-xs ml-2">(lecture seule)</span>
+                                    </span>
+                                </label>
+                                <div class="text-sm text-gray-600 py-2.5 px-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                    {{ auth()->user()->department ?? 'Non renseigné' }}
+                                </div>
+                            </div>
+                            @endif
                         </div>
 
                         <!-- Boutons -->
@@ -237,7 +394,7 @@
                                 <label for="current_password" class="block text-sm font-medium text-gray-700 mb-2">
                                     <span class="flex items-center">
                                         <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1721 9z"/>
                                         </svg>
                                         Mot de passe actuel <span class="text-red-500">*</span>
                                     </span>
@@ -249,7 +406,7 @@
                                            class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors @error('current_password') border-red-300 ring-red-500 @enderror">
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1721 9z"/>
                                         </svg>
                                     </div>
                                 </div>
@@ -317,7 +474,7 @@
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1721 9z"/>
                                 </svg>
-                                🔑 Changer le mot de passe
+                                Changer le mot de passe
                             </button>
                         </div>
                     </form>
@@ -329,14 +486,20 @@
         <div class="space-y-6">
             <!-- Informations du compte -->
             <div class="bg-white shadow rounded-lg p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">ℹ️ Informations du compte</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Informations du compte</h3>
                 
                 <div class="space-y-4">
                     <!-- Avatar et nom -->
                     <div class="flex items-center">
-                        <div class="h-12 w-12 rounded-full bg-indigo-500 flex items-center justify-center text-white text-lg font-medium">
-                            {{ substr(auth()->user()->first_name, 0, 1) }}{{ substr(auth()->user()->last_name, 0, 1) }}
-                        </div>
+                        @if(auth()->user()->avatar)
+                            <img class="h-12 w-12 rounded-full object-cover border-2 border-indigo-200" 
+                                 src="{{ asset('storage/avatars/' . auth()->user()->avatar) }}" 
+                                 alt="Photo de profil">
+                        @else
+                            <div class="h-12 w-12 rounded-full bg-indigo-500 flex items-center justify-center text-white text-lg font-medium">
+                                {{ substr(auth()->user()->first_name, 0, 1) }}{{ substr(auth()->user()->last_name, 0, 1) }}
+                            </div>
+                        @endif
                         <div class="ml-3">
                             <div class="font-medium text-gray-900">{{ auth()->user()->full_name }}</div>
                             <div class="text-sm text-gray-500">
@@ -388,9 +551,34 @@
                 </div>
             </div>
 
+            <!-- Permissions -->
+            @if(!auth()->user()->isAdministrateur())
+            <div class="bg-orange-50 border border-orange-200 rounded-lg p-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-orange-800">Accès limité</h3>
+                        <div class="mt-2 text-sm text-orange-700">
+                            <p>En tant que {{ auth()->user()->role }}, vous ne pouvez modifier que :</p>
+                            <ul class="list-disc list-inside mt-1">
+                                <li>Votre numéro de téléphone</li>
+                                <li>Votre photo de profil</li>
+                                <li>Votre mot de passe</li>
+                            </ul>
+                            <p class="mt-1">Pour toute autre modification, contactez un administrateur.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
             <!-- Mes statistiques -->
             <div class="bg-white shadow rounded-lg p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">📊 Mes statistiques</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Mes statistiques</h3>
                 
                 <div class="space-y-4">
                     <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
@@ -441,7 +629,7 @@
                         </svg>
                     </div>
                     <div class="ml-3">
-                        <h3 class="text-sm font-medium text-yellow-800">💡 Conseils de sécurité</h3>
+                        <h3 class="text-sm font-medium text-yellow-800">Conseils de sécurité</h3>
                         <div class="mt-2 text-sm text-yellow-700">
                             <ul class="list-disc list-inside space-y-1">
                                 <li>Changez votre mot de passe régulièrement</li>

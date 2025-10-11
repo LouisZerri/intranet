@@ -12,11 +12,12 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             NewsSeeder::class,
             MissionSeeder::class,
-            InternalRequestSeeder::class,
+            CommunicationProductSeeder::class,
             FormationsSeeder::class,
             ContactSeeder::class,
             FaqSeeder::class,
-            ResourceSeeder::class
+            ResourceSeeder::class,
+            FormationFileSeeder::class,
         ]);
     }
 }

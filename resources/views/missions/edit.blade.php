@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Modifier la mission - Intranet')
+@section('title', 'Modifier une mission - Intranet')
 
 @section('content')
 <div class="max-w-4xl mx-auto space-y-6">
@@ -13,54 +13,15 @@
             </svg>
             Retour à la mission
         </a>
-        
-        <div class="flex items-center space-x-2 text-sm text-gray-500">
-            <span>Créé par {{ $mission->creator->full_name }}</span>
-            <span>•</span>
-            <span>{{ $mission->created_at->format('d/m/Y à H:i') }}</span>
-        </div>
     </div>
-
-    <!-- Informations d'échéance en haut -->
-    @if($mission->due_date)
-        <div class="bg-{{ $mission->due_color }}-50 border border-{{ $mission->due_color }}-200 rounded-lg p-4">
-            <div class="flex items-center">
-                <svg class="w-5 h-5 text-{{ $mission->due_color }}-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <span class="text-{{ $mission->due_color }}-800 font-medium">
-                    <strong>Échéance :</strong> {{ $mission->due_date->format('d/m/Y') }} 
-                    ({{ $mission->due_status }})
-                </span>
-            </div>
-        </div>
-    @endif
 
     <!-- Formulaire d'édition -->
     <div class="bg-white shadow rounded-lg">
         <div class="p-6 border-b border-gray-200">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900 flex items-center">
-                        <svg class="w-6 h-6 mr-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                        </svg>
-                        Modifier la mission
-                    </h1>
-                    <p class="text-gray-600 mt-1">
-                        Modifiez les informations de cette mission
-                    </p>
-                </div>
-                
-                <div class="flex items-center space-x-3">
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-{{ $mission->priority_color }}-100 text-{{ $mission->priority_color }}-800">
-                        {{ $mission->priority_label }}
-                    </span>
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-{{ $mission->status_color }}-100 text-{{ $mission->status_color }}-800">
-                        {{ $mission->status_label }}
-                    </span>
-                </div>
-            </div>
+            <h1 class="text-2xl font-bold text-gray-900">✏️ Modifier la mission</h1>
+            <p class="text-gray-600 mt-1">
+                Modifiez les détails de la mission
+            </p>
         </div>
 
         <form method="POST" action="{{ route('missions.update', $mission) }}" class="p-6 space-y-6">
@@ -87,7 +48,12 @@
                     </div>
                 </div>
                 @error('title')
-                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    <p class="mt-1 text-sm text-red-600 flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        {{ $message }}
+                    </p>
                 @enderror
             </div>
 
@@ -102,13 +68,123 @@
                               rows="6" 
                               required
                               class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 hover:border-gray-400 resize-y @error('description') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">{{ old('description', $mission->description) }}</textarea>
+                    <div class="absolute bottom-3 right-3">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
+                        </svg>
+                    </div>
                 </div>
                 @error('description')
-                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    <p class="mt-1 text-sm text-red-600 flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        {{ $message }}
+                    </p>
                 @enderror
             </div>
 
+            <!-- Catégorie et Sous-catégorie -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Catégorie -->
+                <div>
+                    <label for="category" class="block text-sm font-medium text-gray-700 mb-2">
+                        📁 Catégorie <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <select id="category" 
+                                name="category" 
+                                required
+                                class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 hover:border-gray-400 appearance-none bg-white cursor-pointer @error('category') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                            <option value="">Choisir une catégorie...</option>
+                            @foreach($categories as $value => $label)
+                                <option value="{{ $value }}" {{ old('category', $mission->category) === $value ? 'selected' : '' }}>
+                                    @if($value === 'location')🏠 {{ $label }}
+                                    @elseif($value === 'syndic')🏢 {{ $label }}
+                                    @else📋 {{ $label }}
+                                    @endif
+                                </option>
+                            @endforeach
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                    </div>
+                    @error('category')
+                        <p class="mt-1 text-sm text-red-600 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            {{ $message }}
+                        </p>
+                    @enderror
+                </div>
+
+                <!-- Sous-catégorie -->
+                <div>
+                    <label for="subcategory" class="block text-sm font-medium text-gray-700 mb-2">
+                        🏷️ Type de mission <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <select id="subcategory" 
+                                name="subcategory" 
+                                required
+                                class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 hover:border-gray-400 appearance-none bg-white cursor-pointer @error('subcategory') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                            <option value="">Choisir un type de mission...</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                    </div>
+                    @error('subcategory')
+                        <p class="mt-1 text-sm text-red-600 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            {{ $message }}
+                        </p>
+                    @enderror
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Assignation -->
+                <div>
+                    <label for="assigned_to" class="block text-sm font-medium text-gray-700 mb-2">
+                        👤 Assigner à <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <select id="assigned_to" 
+                                name="assigned_to" 
+                                required
+                                class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 hover:border-gray-400 appearance-none bg-white cursor-pointer @error('assigned_to') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                            <option value="">Choisir un collaborateur...</option>
+                            @foreach($collaborateurs as $collaborateur)
+                                <option value="{{ $collaborateur->id }}" {{ old('assigned_to', $mission->assigned_to) == $collaborateur->id ? 'selected' : '' }}>
+                                    {{ $collaborateur->full_name }} - {{ $collaborateur->position }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                    </div>
+                    @error('assigned_to')
+                        <p class="mt-1 text-sm text-red-600 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            {{ $message }}
+                        </p>
+                    @enderror
+                </div>
+
                 <!-- Priorité -->
                 <div>
                     <label for="priority" class="block text-sm font-medium text-gray-700 mb-2">
@@ -119,9 +195,14 @@
                                 name="priority" 
                                 required
                                 class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 hover:border-gray-400 appearance-none bg-white cursor-pointer @error('priority') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                            <option value="">Choisir une priorité...</option>
                             @foreach($priorities as $value => $label)
                                 <option value="{{ $value }}" {{ old('priority', $mission->priority) === $value ? 'selected' : '' }}>
-                                    {{ $label }}
+                                    @if($value === 'urgente')🔴 {{ $label }} - Action immédiate
+                                    @elseif($value === 'haute')🟠 {{ $label }} - À traiter rapidement
+                                    @elseif($value === 'normale')🟡 {{ $label }} - Délai standard
+                                    @else🟢 {{ $label }} - Pas de rush
+                                    @endif
                                 </option>
                             @endforeach
                         </select>
@@ -132,10 +213,17 @@
                         </div>
                     </div>
                     @error('priority')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        <p class="mt-1 text-sm text-red-600 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            {{ $message }}
+                        </p>
                     @enderror
                 </div>
+            </div>
 
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Statut -->
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-2">
@@ -148,7 +236,11 @@
                                 class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 hover:border-gray-400 appearance-none bg-white cursor-pointer @error('status') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
                             @foreach($statuses as $value => $label)
                                 <option value="{{ $value }}" {{ old('status', $mission->status) === $value ? 'selected' : '' }}>
-                                    {{ $label }}
+                                    @if($value === 'en_attente')⏳ {{ $label }}
+                                    @elseif($value === 'en_cours')🔄 {{ $label }}
+                                    @elseif($value === 'termine')✅ {{ $label }}
+                                    @else❌ {{ $label }}
+                                    @endif
                                 </option>
                             @endforeach
                         </select>
@@ -159,48 +251,48 @@
                         </div>
                     </div>
                     @error('status')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        <p class="mt-1 text-sm text-red-600 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            {{ $message }}
+                        </p>
+                    @enderror
+                </div>
+
+                <!-- Date d'échéance -->
+                <div>
+                    <label for="due_date" class="block text-sm font-medium text-gray-700 mb-2">
+                        ⏰ Date d'échéance
+                    </label>
+                    <div class="relative">
+                        <input type="date" 
+                               id="due_date" 
+                               name="due_date" 
+                               value="{{ old('due_date', $mission->due_date?->format('Y-m-d')) }}"
+                               class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 hover:border-gray-400 @error('due_date') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    @error('due_date')
+                        <p class="mt-1 text-sm text-red-600 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            {{ $message }}
+                        </p>
                     @enderror
                 </div>
             </div>
 
-            <!-- Assignation -->
-            <div>
-                <label for="assigned_to" class="block text-sm font-medium text-gray-700 mb-2">
-                    👤 Assigné à <span class="text-red-500">*</span>
-                </label>
-                <div class="relative">
-                    <select id="assigned_to" 
-                            name="assigned_to" 
-                            required
-                            class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 hover:border-gray-400 appearance-none bg-white cursor-pointer @error('assigned_to') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
-                        <option value="">Sélectionner un collaborateur</option>
-                        @foreach($collaborateurs as $collaborateur)
-                            <option value="{{ $collaborateur->id }}" 
-                                    {{ old('assigned_to', $mission->assigned_to) == $collaborateur->id ? 'selected' : '' }}>
-                                {{ $collaborateur->full_name }} 
-                                @if($collaborateur->department)
-                                    ({{ $collaborateur->department }})
-                                @endif
-                            </option>
-                        @endforeach
-                    </select>
-                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                        </svg>
-                    </div>
-                </div>
-                @error('assigned_to')
-                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                @enderror
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Date de début -->
                 <div>
                     <label for="start_date" class="block text-sm font-medium text-gray-700 mb-2">
-                        🚀 Date de début
+                        🚀 Date de début (optionnel)
                     </label>
                     <div class="relative">
                         <input type="date" 
@@ -215,52 +307,45 @@
                         </div>
                     </div>
                     @error('start_date')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <!-- Date d'échéance -->
-                <div>
-                    <label for="due_date" class="block text-sm font-medium text-gray-700 mb-2">
-                        ⏰ Échéance prévue
-                    </label>
-                    <div class="relative">
-                        <input type="date" 
-                               id="due_date" 
-                               name="due_date" 
-                               value="{{ old('due_date', $mission->due_date?->format('Y-m-d')) }}"
-                               class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 hover:border-gray-400 @error('due_date') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
-                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        <p class="mt-1 text-sm text-red-600 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
-                        </div>
-                    </div>
-                    @error('due_date')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            {{ $message }}
+                        </p>
                     @enderror
                 </div>
 
-                <!-- Chiffre d'affaires -->
+                <!-- Revenus associés -->
                 <div>
                     <label for="revenue" class="block text-sm font-medium text-gray-700 mb-2">
-                        💰 Chiffre d'affaires
+                        💰 Revenus associés (optionnel)
                     </label>
                     <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500 sm:text-sm">€</span>
+                        </div>
                         <input type="number" 
                                id="revenue" 
                                name="revenue" 
                                value="{{ old('revenue', $mission->revenue) }}"
-                               step="0.01"
                                min="0"
-                               placeholder="0.00"
-                               class="block w-full px-4 py-3 pl-8 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 hover:border-gray-400 @error('revenue') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
-                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                            <span class="text-gray-500 text-sm">€</span>
+                               step="0.01"
+                               class="block w-full pl-7 pr-12 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 hover:border-gray-400 @error('revenue') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror"
+                               placeholder="0.00">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                            </svg>
                         </div>
                     </div>
                     @error('revenue')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        <p class="mt-1 text-sm text-red-600 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            {{ $message }}
+                        </p>
                     @enderror
                 </div>
             </div>
@@ -268,49 +353,41 @@
             <!-- Notes -->
             <div>
                 <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">
-                    📝 Notes et observations
+                    📝 Notes et commentaires (optionnel)
                 </label>
                 <div class="relative">
                     <textarea id="notes" 
                               name="notes" 
                               rows="4" 
-                              placeholder="Notes additionnelles, commentaires..."
-                              class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 hover:border-gray-400 resize-y @error('notes') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">{{ old('notes', $mission->notes) }}</textarea>
+                              class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 hover:border-gray-400 resize-y @error('notes') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror"
+                              placeholder="Ajoutez des notes, instructions spéciales, contexte...">{{ old('notes', $mission->notes) }}</textarea>
+                    <div class="absolute bottom-3 right-3">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                    </div>
                 </div>
                 @error('notes')
-                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    <p class="mt-1 text-sm text-red-600 flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        {{ $message }}
+                    </p>
                 @enderror
-            </div>
-
-            <!-- Informations de suivi -->
-            <div class="bg-gray-50 -m-6 p-6 rounded-lg border-t border-gray-200">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                    <div class="flex items-center">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
-                        </svg>
-                        <span><strong>Modifiée le :</strong> {{ $mission->updated_at->format('d/m/Y à H:i') }}</span>
-                    </div>
-                    
-                    @if($mission->completed_at)
-                    <div class="flex items-center">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                        </svg>
-                        <span><strong>Terminée le :</strong> {{ $mission->completed_at->format('d/m/Y à H:i') }}</span>
-                    </div>
-                    @endif
-                </div>
             </div>
 
             <!-- Actions -->
             <div class="border-t border-gray-200 pt-6">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-                    <div class="flex items-center text-sm text-gray-500">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="flex items-center p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <svg class="w-5 h-5 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
-                        <span>Les modifications seront sauvegardées automatiquement</span>
+                        <div>
+                            <div class="text-sm font-medium text-blue-900">💡 Conseil</div>
+                            <div class="text-xs text-blue-700">Modifiez les informations nécessaires</div>
+                        </div>
                     </div>
 
                     <div class="flex space-x-3">
@@ -323,11 +400,11 @@
                         </a>
                         
                         <button type="submit" 
-                                class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-sm font-medium rounded-lg hover:from-green-700 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                                class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                             </svg>
-                            Sauvegarder les modifications
+                            Mettre à jour
                         </button>
                     </div>
                 </div>
@@ -337,25 +414,66 @@
 </div>
 
 <script>
-// Auto-resize du textarea description
-document.getElementById('description').addEventListener('input', function() {
-    this.style.height = 'auto';
-    this.style.height = this.scrollHeight + 'px';
+// Auto-resize des textareas
+document.querySelectorAll('textarea').forEach(function(textarea) {
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    });
 });
 
-// Auto-resize du textarea notes
-document.getElementById('notes').addEventListener('input', function() {
-    this.style.height = 'auto';
-    this.style.height = this.scrollHeight + 'px';
+// Gestion des listes déroulantes en cascade
+document.getElementById('category').addEventListener('change', function() {
+    const categoryValue = this.value;
+    const subcategorySelect = document.getElementById('subcategory');
+    const currentSubcategory = '{{ old("subcategory", $mission->subcategory) }}';
+    
+    // Réinitialiser la sous-catégorie
+    subcategorySelect.innerHTML = '<option value="">Chargement...</option>';
+    
+    if (categoryValue) {
+        // Appel AJAX pour récupérer les sous-catégories
+        fetch(`{{ route('missions.subcategories') }}?category=${categoryValue}`)
+            .then(response => response.json())
+            .then(data => {
+                subcategorySelect.innerHTML = '<option value="">Choisir un type de mission...</option>';
+                
+                // Ajouter les sous-catégories
+                Object.keys(data).forEach(key => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = data[key];
+                    // Conserver la sélection actuelle
+                    if (key === currentSubcategory) {
+                        option.selected = true;
+                    }
+                    subcategorySelect.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('Erreur lors du chargement des sous-catégories:', error);
+                subcategorySelect.innerHTML = '<option value="">Erreur de chargement</option>';
+            });
+    } else {
+        subcategorySelect.innerHTML = '<option value="">Sélectionnez d\'abord une catégorie...</option>';
+    }
+});
+
+// Charger les sous-catégories au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    const categorySelect = document.getElementById('category');
+    if (categorySelect.value) {
+        categorySelect.dispatchEvent(new Event('change'));
+    }
 });
 
 // Indication visuelle de la priorité
 document.getElementById('priority').addEventListener('change', function() {
     const priorityColors = {
         'urgente': 'border-red-300 bg-red-50',
-        'haute': 'border-orange-300 bg-orange-50',
-        'normale': 'border-blue-300 bg-blue-50',
-        'basse': 'border-gray-300 bg-gray-50'
+        'haute': 'border-orange-300 bg-orange-50', 
+        'normale': 'border-yellow-300 bg-yellow-50',
+        'basse': 'border-green-300 bg-green-50'
     };
     
     // Reset classes
@@ -366,55 +484,24 @@ document.getElementById('priority').addEventListener('change', function() {
     }
 });
 
-// Indication visuelle du statut
-document.getElementById('status').addEventListener('change', function() {
-    const statusColors = {
-        'en_attente': 'border-yellow-300 bg-yellow-50',
-        'en_cours': 'border-blue-300 bg-blue-50',
-        'termine': 'border-green-300 bg-green-50',
-        'annule': 'border-gray-300 bg-gray-50',
-        'en_retard': 'border-red-300 bg-red-50'
-    };
-    
-    // Reset classes
-    this.className = this.className.replace(/border-\w+-300|bg-\w+-50/g, '');
-    
-    if (statusColors[this.value]) {
-        this.className += ' ' + statusColors[this.value];
-    }
-});
-
 // Validation des dates
-document.getElementById('start_date').addEventListener('change', function() {
-    const startDate = new Date(this.value);
-    const dueDateInput = document.getElementById('due_date');
-    
-    if (dueDateInput.value) {
-        const dueDate = new Date(dueDateInput.value);
-        if (startDate > dueDate) {
-            alert('La date de début ne peut pas être postérieure à l\'échéance');
-            this.value = '';
-        }
-    }
-});
-
 document.getElementById('due_date').addEventListener('change', function() {
-    const dueDate = new Date(this.value);
-    const startDateInput = document.getElementById('start_date');
+    const startDate = document.getElementById('start_date').value;
+    const dueDate = this.value;
     
-    if (startDateInput.value) {
-        const startDate = new Date(startDateInput.value);
-        if (dueDate < startDate) {
-            alert('L\'échéance ne peut pas être antérieure à la date de début');
-            this.value = '';
-        }
+    if (startDate && dueDate && new Date(startDate) > new Date(dueDate)) {
+        alert('La date de fin ne peut pas être antérieure à la date de début.');
+        this.value = '';
     }
 });
 
-// Formatage automatique du chiffre d'affaires
-document.getElementById('revenue').addEventListener('blur', function() {
-    if (this.value && !isNaN(this.value)) {
-        this.value = parseFloat(this.value).toFixed(2);
+document.getElementById('start_date').addEventListener('change', function() {
+    const startDate = this.value;
+    const dueDate = document.getElementById('due_date').value;
+    
+    if (startDate && dueDate && new Date(startDate) > new Date(dueDate)) {
+        alert('La date de début ne peut pas être postérieure à la date de fin.');
+        this.value = '';
     }
 });
 </script>

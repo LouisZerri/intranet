@@ -13,24 +13,47 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+
+            // Informations personnelles
             $table->string('name');
             $table->string('first_name');
             $table->string('last_name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+
+            // Rôle et permissions
             $table->enum('role', ['collaborateur', 'manager', 'administrateur'])->default('collaborateur');
+            $table->boolean('is_active')->default(true);
+
+            // Informations professionnelles
             $table->string('phone')->nullable();
             $table->string('department')->nullable();
+            $table->string('localisation')->nullable();
             $table->string('position')->nullable();
-            $table->unsignedBigInteger('manager_id')->nullable();
-            $table->decimal('revenue_target', 10, 2)->nullable();
-            $table->boolean('is_active')->default(true);
+
+            // Avatar
+            $table->string('avatar')->nullable();
+
+            // Hiérarchie
+            $table->foreignId('manager_id')->nullable()->constrained('users')->onDelete('set null');
+
+            // Objectifs
+            $table->decimal('revenue_target', 10, 2)->nullable()->comment('Objectif de CA mensuel');
+
+            // Suivi connexion
             $table->timestamp('last_login_at')->nullable();
+
+            // Laravel standards
             $table->rememberToken();
             $table->timestamps();
-            
-            $table->foreign('manager_id')->references('id')->on('users')->onDelete('set null');
+
+            // Index pour améliorer les performances
+            $table->index('role');
+            $table->index('department');
+            $table->index('manager_id');
+            $table->index('is_active');
+            $table->index('email');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Mission;
-use App\Models\InternalRequest;
+use App\Models\CommunicationOrder;
 use App\Models\News;
 use App\Models\Formation;
 use App\Models\FormationRequest;
@@ -47,7 +47,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Données KPI pour un collaborateur (MISE À JOUR avec formations)
+     * Données KPI pour un collaborateur
      */
     private function getCollaborateurData(User $user): array
     {
@@ -58,8 +58,10 @@ class DashboardController extends Controller
                 'missions_terminees_mois' => $user->getCompletedMissionsThisMonth(),
                 'chiffre_affaires' => $user->getCurrentMonthRevenue(),
                 'missions_en_retard' => $user->getOverdueMissions(),
-                'demandes_en_attente' => $user->getPendingInternalRequests(),
-                // NOUVEAU : KPI Formations
+                // Communication (remplace demandes internes)
+                'commandes_ce_mois' => $user->getOrdersThisMonth(),
+                'montant_commandes_mois' => $user->getOrdersAmountThisMonth(),
+                // Formations
                 'heures_formation_annee' => $user->getFormationHoursThisYear(),
                 'formations_terminees' => $user->getCompletedFormationsCount(),
                 'demandes_formation_attente' => $user->getPendingFormationRequests(),
@@ -76,17 +78,23 @@ class DashboardController extends Controller
                 ->orderBy('due_date')
                 ->take(5)
                 ->get(),
-            // NOUVEAU : Formations récentes
+            // Formations récentes
             'recent_formations' => $user->formationRequests()
                 ->with(['formation'])
                 ->orderBy('requested_at', 'desc')
+                ->take(3)
+                ->get(),
+            // Commandes récentes (NOUVEAU)
+            'recent_orders' => $user->communicationOrders()
+                ->with(['items.product'])
+                ->orderBy('ordered_at', 'desc')
                 ->take(3)
                 ->get(),
         ];
     }
 
     /**
-     * Données KPI pour un manager (MISE À JOUR avec formations)
+     * Données KPI pour un manager
      */
     private function getManagerData(User $user): array
     {
@@ -109,10 +117,12 @@ class DashboardController extends Controller
                 'missions_equipe_en_retard' => Mission::whereIn('assigned_to', $teamIds)
                     ->overdue()
                     ->count(),
-                'demandes_equipe_en_attente' => InternalRequest::whereIn('requested_by', $teamIds)
-                    ->pending()
+                // Communication équipe (remplace demandes)
+                'commandes_equipe_mois' => CommunicationOrder::whereIn('user_id', $teamIds)
+                    ->whereMonth('ordered_at', now()->month)
+                    ->whereYear('ordered_at', now()->year)
                     ->count(),
-                // NOUVEAU : KPI Formations équipe
+                // Formations équipe
                 'taux_collaborateurs_formes' => $this->getTeamTrainingRate($teamMembers),
                 'formations_equipe_en_attente' => FormationRequest::whereIn('user_id', $teamIds)
                     ->pending()
@@ -121,12 +131,7 @@ class DashboardController extends Controller
             ],
             'team_members' => $teamMembers,
             'team_performance' => $this->getTeamPerformance($teamMembers),
-            'pending_requests_to_approve' => InternalRequest::whereIn('requested_by', $teamIds)
-                ->pending()
-                ->with('requester')
-                ->take(5)
-                ->get(),
-            // NOUVEAU : Demandes de formation à approuver
+            // Demandes de formation à approuver
             'pending_formation_requests' => FormationRequest::whereIn('user_id', $teamIds)
                 ->pending()
                 ->with(['user', 'formation'])
@@ -136,12 +141,11 @@ class DashboardController extends Controller
     }
 
     /**
-     * Données KPI pour un administrateur (MISE À JOUR avec formations)
+     * Données KPI pour un administrateur
      */
     private function getAdministrateurData(User $user): array
     {
         $thisMonth = now()->startOfMonth();
-        $lastMonth = now()->subMonth()->startOfMonth();
 
         return [
             'role_label' => 'Administrateur',
@@ -149,8 +153,14 @@ class DashboardController extends Controller
                 'utilisateurs_actifs' => User::where('is_active', true)->count(),
                 'missions_ouvertes_mois' => Mission::thisMonth()->count(),
                 'ca_total_mois' => Mission::completedThisMonth()->sum('revenue') ?: 0,
-                'taux_validation_demandes' => InternalRequest::getApprovalRate($thisMonth, now()),
-                // NOUVEAU : KPI Formations globaux
+                // Communication (remplace taux validation demandes)
+                'commandes_ce_mois' => CommunicationOrder::whereMonth('ordered_at', now()->month)
+                    ->whereYear('ordered_at', now()->year)
+                    ->count(),
+                'ca_commandes_mois' => CommunicationOrder::whereMonth('ordered_at', now()->month)
+                    ->whereYear('ordered_at', now()->year)
+                    ->sum('total_amount') ?: 0,
+                // Formations
                 'formations_actives' => Formation::active()->count(),
                 'demandes_formation_mois' => FormationRequest::whereMonth('requested_at', now()->month)
                     ->whereYear('requested_at', now()->year)
@@ -161,20 +171,20 @@ class DashboardController extends Controller
                 'taux_completion_formations' => $this->getGlobalFormationCompletionRate(),
             ],
             'recent_activities' => $this->getRecentActivities(),
-            'department_stats' => $this->getDepartmentStats(),
-            'pending_requests' => InternalRequest::pending()
-                ->with(['requester'])
-                ->orderBy('requested_at')
+            'localisation_stats' => $this->getLocalisationStats(),
+            // Commandes récentes (remplace pending_requests)
+            'recent_orders' => CommunicationOrder::with(['user', 'items.product'])
+                ->orderBy('ordered_at', 'desc')
                 ->take(10)
                 ->get(),
-            // NOUVEAU : Formations populaires et stats
+            // Formations populaires
             'popular_formations' => Formation::getPopularFormations(5),
             'formation_categories_stats' => Formation::getCategoriesStats(),
         ];
     }
 
     /**
-     * Actualités personnalisées selon l'utilisateur
+     * Actualités personnalisées
      */
     private function getPersonalizedNews(User $user): \Illuminate\Database\Eloquent\Collection
     {
@@ -187,7 +197,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Performance de l'équipe pour les managers (MISE À JOUR avec formations)
+     * Performance de l'équipe
      */
     private function getTeamPerformance(\Illuminate\Database\Eloquent\Collection $teamMembers): array
     {
@@ -200,10 +210,12 @@ class DashboardController extends Controller
                 'ca_mois' => $member->getCurrentMonthRevenue(),
                 'missions_en_retard' => $member->getOverdueMissions(),
                 'completion_rate' => Mission::getCompletionRate($member, now()->startOfMonth(), now()->endOfMonth()),
-                // NOUVEAU : Données formations
+                // Formations
                 'heures_formation_annee' => $member->getFormationHoursThisYear(),
                 'formations_terminees' => $member->getCompletedFormationsCount(),
                 'est_forme_cette_annee' => $member->isTrainedThisYear(),
+                // Communication (NOUVEAU)
+                'commandes_mois' => $member->getOrdersThisMonth(),
             ];
         }
 
@@ -211,13 +223,13 @@ class DashboardController extends Controller
     }
 
     /**
-     * Activités récentes pour l'administrateur (MISE À JOUR avec formations et traductions)
+     * Activités récentes pour l'administrateur
      */
     private function getRecentActivities(): array
     {
         $activities = [];
 
-        // Nouvelles missions créées
+        // Missions créées
         $recentMissions = Mission::with(['assignedUser', 'creator'])
             ->where('created_at', '>=', now()->subDays(7))
             ->orderBy('created_at', 'desc')
@@ -234,24 +246,24 @@ class DashboardController extends Controller
             ];
         }
 
-        // Nouvelles demandes internes
-        $recentRequests = InternalRequest::with('requester')
-            ->where('requested_at', '>=', now()->subDays(7))
-            ->orderBy('requested_at', 'desc')
+        // Commandes de communication (REMPLACE demandes internes)
+        $recentOrders = CommunicationOrder::with('user')
+            ->where('ordered_at', '>=', now()->subDays(7))
+            ->orderBy('ordered_at', 'desc')
             ->take(3)
             ->get();
 
-        foreach ($recentRequests as $request) {
+        foreach ($recentOrders as $order) {
             $activities[] = [
-                'type' => 'Demande créée',
-                'date' => $request->requested_at,
-                'description' => "Nouvelle demande '{$request->title}' par {$request->requester->full_name}",
-                'icon' => '📋',
+                'type' => 'Commande passée',
+                'date' => $order->ordered_at,
+                'description' => "Commande {$order->order_number} de {$order->user->full_name} ({$order->items->count()} article(s))",
+                'icon' => '📦',
                 'color' => 'green'
             ];
         }
 
-        // Nouvelles formations créées
+        // Formations créées
         $recentFormations = Formation::with('creator')
             ->where('created_at', '>=', now()->subDays(7))
             ->orderBy('created_at', 'desc')
@@ -268,7 +280,7 @@ class DashboardController extends Controller
             ];
         }
 
-        // Demandes de formations récentes
+        // Demandes de formations
         $recentFormationRequests = FormationRequest::with(['user', 'formation'])
             ->where('requested_at', '>=', now()->subDays(7))
             ->orderBy('requested_at', 'desc')
@@ -294,36 +306,41 @@ class DashboardController extends Controller
     }
 
     /**
-     * Statistiques par département
+     * Statistiques par localisation
      */
-    private function getDepartmentStats(): array
+    private function getLocalisationStats(): array
     {
-        $departments = User::where('is_active', true)
-            ->whereNotNull('department')
-            ->groupBy('department')
-            ->selectRaw('department, count(*) as user_count')
+        $localisations = User::where('is_active', true)
+            ->whereNotNull('localisation')
+            ->groupBy('localisation')
+            ->selectRaw('localisation, count(*) as user_count')
             ->get();
 
         $stats = [];
 
-        foreach ($departments as $dept) {
-            $deptUsers = User::where('department', $dept->department)->pluck('id');
+        foreach ($localisations as $loc) {
+            $locUsers = User::where('localisation', $loc->localisation)->pluck('id');
 
             $stats[] = [
-                'name' => $dept->department,
-                'users' => $dept->user_count,
-                'missions_mois' => Mission::whereIn('assigned_to', $deptUsers)
+                'name' => $loc->localisation,
+                'users' => $loc->user_count,
+                'missions_mois' => Mission::whereIn('assigned_to', $locUsers)
                     ->thisMonth()
                     ->count(),
-                'ca_mois' => Mission::whereIn('assigned_to', $deptUsers)
+                'ca_mois' => Mission::whereIn('assigned_to', $locUsers)
                     ->completedThisMonth()
                     ->sum('revenue') ?: 0,
-                // NOUVEAU : Stats formations par département
-                'heures_formation_annee' => FormationRequest::whereIn('user_id', $deptUsers)
+                // Formations
+                'heures_formation_annee' => FormationRequest::whereIn('user_id', $locUsers)
                     ->completed()
                     ->thisYear()
                     ->sum('hours_completed'),
-                'taux_formes_annee' => $this->getDepartmentTrainingRate($deptUsers),
+                'taux_formes_annee' => $this->getLocalisationTrainingRate($locUsers),
+                // Communication (NOUVEAU)
+                'commandes_mois' => CommunicationOrder::whereIn('user_id', $locUsers)
+                    ->whereMonth('ordered_at', now()->month)
+                    ->whereYear('ordered_at', now()->year)
+                    ->count(),
             ];
         }
 
@@ -361,7 +378,6 @@ class DashboardController extends Controller
      */
     private function getGlobalFormationCompletionRate(): float
     {
-        $thisYear = now()->year;
         $totalRequests = FormationRequest::thisYear()->whereIn('status', ['approuve', 'termine'])->count();
         $completedRequests = FormationRequest::thisYear()->completed()->count();
 
@@ -373,9 +389,9 @@ class DashboardController extends Controller
     }
 
     /**
-     * Taux de formation par département
+     * Taux de formation par localisation
      */
-    private function getDepartmentTrainingRate($userIds): float
+    private function getLocalisationTrainingRate($userIds): float
     {
         if ($userIds->isEmpty()) {
             return 0;
@@ -444,6 +460,31 @@ class DashboardController extends Controller
             'formations_populaires' => Formation::getPopularFormations(10),
             'demandes_par_mois' => FormationRequest::selectRaw('MONTH(requested_at) as month, count(*) as count')
                 ->whereYear('requested_at', now()->year)
+                ->groupBy('month')
+                ->get(),
+        ]);
+    }
+
+    /**
+     * API pour récupérer les stats communication (NOUVEAU)
+     */
+    public function getCommunicationStats()
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if (!$user->isAdministrateur()) {
+            abort(403);
+        }
+
+        return response()->json([
+            'commandes_ce_mois' => CommunicationOrder::whereMonth('ordered_at', now()->month)->count(),
+            'ca_ce_mois' => CommunicationOrder::whereMonth('ordered_at', now()->month)->sum('total_amount'),
+            'commandes_par_statut' => CommunicationOrder::selectRaw('status, count(*) as count')
+                ->groupBy('status')
+                ->get(),
+            'commandes_par_mois' => CommunicationOrder::selectRaw('MONTH(ordered_at) as month, count(*) as count, sum(total_amount) as total')
+                ->whereYear('ordered_at', now()->year)
                 ->groupBy('month')
                 ->get(),
         ]);

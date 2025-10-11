@@ -19,49 +19,46 @@
 
     @auth
         <!-- Navigation principale -->
-        <nav class="bg-white shadow-sm border-b border-gray-200">
+        <nav class="bg-white shadow-sm border-b border-gray-200" x-data="{ mobileMenuOpen: false }">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-16">
                     <div class="flex">
                         <!-- Logo -->
                         <div class="flex-shrink-0 flex items-center">
+                            <img src="/images/logo3d.png" alt="Logo" class="h-12 sm:h-16 lg:h-20 w-auto object-contain">
                             <h1 class="text-xl font-bold text-gray-900">
-                                📋 Intranet
+                                GEST'IMMO
                             </h1>
                         </div>
 
-                        <!-- Navigation links -->
+                        <!-- Navigation links - Desktop -->
                         <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
                             <a href="{{ route('dashboard') }}"
                                 class="@if (request()->routeIs('dashboard')) border-indigo-500 text-gray-900 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                                 🏠 Tableau de bord
                             </a>
-
-                            <a href="{{ route('news.index') }}"
-                                class="@if (request()->routeIs('news.*')) border-indigo-500 text-gray-900 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                                📰 Actualités
-                            </a>
-
+                            @if (auth()->user()->isManager() || auth()->user()->isAdministrateur())
+                                <a href="{{ route('news.index') }}"
+                                    class="@if (request()->routeIs('news.*')) border-indigo-500 text-gray-900 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                    📰 Actualités
+                                </a>
+                            @endif
                             <a href="{{ route('missions.index') }}"
                                 class="@if (request()->routeIs('missions.*')) border-indigo-500 text-gray-900 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                                 📁 Missions
                             </a>
-
-                            <a href="{{ route('requests.index') }}"
+                            <a href="{{ route('communication.index') }}"
                                 class="@if (request()->routeIs('requests.*')) border-indigo-500 text-gray-900 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                                📋 Demandes
+                                📋 Communication
                             </a>
-
                             <a href="{{ route('formations.index') }}"
                                 class="@if (request()->routeIs('formations.*')) border-indigo-500 text-gray-900 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                                 📚 Formations
                             </a>
-
                             <a href="{{ route('documentation.index') }}"
                                 class="@if (request()->routeIs('documentation.*')) border-indigo-500 text-gray-900 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                                 📖 Documentation
                             </a>
-
                             @if (auth()->user()->isManager() || auth()->user()->isAdministrateur())
                                 <a href="{{ route('team.index') }}"
                                     class="@if (request()->routeIs('team.*')) border-indigo-500 text-gray-900 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
@@ -71,18 +68,22 @@
                         </div>
                     </div>
 
-                    <!-- Profil utilisateur -->
+                    <!-- Profil utilisateur - Desktop -->
                     <div class="hidden sm:flex sm:items-center sm:ml-6">
-
-                        <!-- Dropdown profil -->
                         <div class="ml-3 relative" x-data="{ open: false }">
                             <button @click="open = !open"
                                 class="bg-white flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer">
                                 <span class="sr-only">Ouvrir le menu utilisateur</span>
-                                <div
-                                    class="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center text-white text-sm font-medium">
-                                    {{ substr(auth()->user()->first_name, 0, 1) }}{{ substr(auth()->user()->last_name, 0, 1) }}
-                                </div>
+                                @if (auth()->user()->avatar)
+                                    <img class="h-8 w-8 rounded-full object-cover border-2 border-gray-200"
+                                        src="{{ asset('storage/avatars/' . auth()->user()->avatar) }}"
+                                        alt="Photo de profil">
+                                @else
+                                    <div
+                                        class="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center text-white text-sm font-medium">
+                                        {{ substr(auth()->user()->first_name, 0, 1) }}{{ substr(auth()->user()->last_name, 0, 1) }}
+                                    </div>
+                                @endif
                             </button>
 
                             <div x-show="open" @click.away="open = false"
@@ -92,11 +93,10 @@
                                         <div class="font-medium">{{ auth()->user()->full_name }}</div>
                                         <div class="text-gray-500">{{ auth()->user()->position }}</div>
                                     </div>
-
-                                    <a href="{{ route('profile.edit')}}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <a href="{{ route('profile.edit') }}"
+                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                         👤 Mon profil
                                     </a>
-
                                     <form method="POST" action="{{ route('logout') }}" class="block">
                                         @csrf
                                         <button type="submit"
@@ -109,9 +109,9 @@
                         </div>
                     </div>
 
-                    <!-- Menu mobile -->
+                    <!-- Menu mobile button -->
                     <div class="-mr-2 flex items-center sm:hidden">
-                        <button x-data @click="$dispatch('toggle-mobile-menu')"
+                        <button @click="mobileMenuOpen = !mobileMenuOpen"
                             class="bg-white inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                             <span class="sr-only">Ouvrir le menu principal</span>
                             <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
@@ -119,6 +119,76 @@
                                     d="M4 6h16M4 12h16M4 18h16" />
                             </svg>
                         </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Menu mobile -->
+            <div x-show="mobileMenuOpen" class="sm:hidden">
+                <div class="pt-2 pb-3 space-y-1">
+                    <a href="{{ route('dashboard') }}"
+                        class="@if (request()->routeIs('dashboard')) bg-indigo-50 border-indigo-500 text-indigo-700 @else border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 @endif block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
+                        🏠 Tableau de bord
+                    </a>
+                    @if (auth()->user()->isManager() || auth()->user()->isAdministrateur())
+                        <a href="{{ route('news.index') }}"
+                            class="@if (request()->routeIs('news.*')) bg-indigo-50 border-indigo-500 text-indigo-700 @else border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 @endif block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
+                            📰 Actualités
+                        </a>
+                    @endif
+                    <a href="{{ route('missions.index') }}"
+                        class="@if (request()->routeIs('missions.*')) bg-indigo-50 border-indigo-500 text-indigo-700 @else border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 @endif block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
+                        📁 Missions
+                    </a>
+                    <a href="{{ route('communication.index') }}"
+                        class="@if (request()->routeIs('requests.*')) bg-indigo-50 border-indigo-500 text-indigo-700 @else border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 @endif block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
+                        📋 Communication
+                    </a>
+                    <a href="{{ route('formations.index') }}"
+                        class="@if (request()->routeIs('formations.*')) bg-indigo-50 border-indigo-500 text-indigo-700 @else border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 @endif block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
+                        📚 Formations
+                    </a>
+                    <a href="{{ route('documentation.index') }}"
+                        class="@if (request()->routeIs('documentation.*')) bg-indigo-50 border-indigo-500 text-indigo-700 @else border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 @endif block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
+                        📖 Documentation
+                    </a>
+                    @if (auth()->user()->isManager() || auth()->user()->isAdministrateur())
+                        <a href="{{ route('team.index') }}"
+                            class="@if (request()->routeIs('team.*')) bg-indigo-50 border-indigo-500 text-indigo-700 @else border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 @endif block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
+                            👥 Équipe
+                        </a>
+                    @endif
+                </div>
+
+                <!-- Profil mobile -->
+                <div class="pt-4 pb-3 border-t border-gray-200">
+                    <div class="flex items-center px-4">
+                        @if (auth()->user()->avatar)
+                            <img class="h-10 w-10 rounded-full object-cover"
+                                src="{{ asset('storage/avatars/' . auth()->user()->avatar) }}" alt="Photo de profil">
+                        @else
+                            <div
+                                class="h-10 w-10 rounded-full bg-indigo-500 flex items-center justify-center text-white text-sm font-medium">
+                                {{ substr(auth()->user()->first_name, 0, 1) }}{{ substr(auth()->user()->last_name, 0, 1) }}
+                            </div>
+                        @endif
+                        <div class="ml-3">
+                            <div class="text-base font-medium text-gray-800">{{ auth()->user()->full_name }}</div>
+                            <div class="text-sm font-medium text-gray-500">{{ auth()->user()->position }}</div>
+                        </div>
+                    </div>
+                    <div class="mt-3 space-y-1">
+                        <a href="{{ route('profile.edit') }}"
+                            class="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100">
+                            👤 Mon profil
+                        </a>
+                        <form method="POST" action="{{ route('logout') }}" class="block">
+                            @csrf
+                            <button type="submit"
+                                class="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100">
+                                🚪 Déconnexion
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>

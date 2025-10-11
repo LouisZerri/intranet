@@ -14,6 +14,8 @@ return new class extends Migration
             $table->text('description');
             $table->enum('status', ['en_attente', 'en_cours', 'termine', 'annule', 'en_retard'])->default('en_attente');
             $table->enum('priority', ['basse', 'normale', 'haute', 'urgente'])->default('normale');
+            $table->string('category')->nullable();
+            $table->string('subcategory')->nullable();
             $table->unsignedBigInteger('assigned_to');
             $table->unsignedBigInteger('created_by');
             $table->unsignedBigInteger('manager_id')->nullable();

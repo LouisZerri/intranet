@@ -5,10 +5,12 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MissionController;
 use App\Http\Controllers\NewsController;
-use App\Http\Controllers\InternalRequestController;
+use App\Http\Controllers\CommunicationController;
+use App\Http\Controllers\AdminCommunicationController;
 use App\Http\Controllers\FormationController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\DocumentationController;
+use App\Http\Controllers\ProfileController;
 
 // Routes publiques (sans authentification)
 Route::middleware('guest')->group(function () {
@@ -25,75 +27,33 @@ Route::middleware('auth')->group(function () {
     // Tableau de bord principal
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
-    // Routes par rôle - TOUS LES COLLABORATEURS
-    Route::middleware('role:collaborateur,manager,administrateur')->group(function () {
-        // Actualités - routes spécifiques en premier
-        Route::get('/actualites', [NewsController::class, 'index'])->name('news.index');
-        
-        // Missions
-        Route::get('/missions', [MissionController::class, 'index'])->name('missions.index');
-        
-        // Demandes internes - routes accessibles à tous les rôles
-        Route::get('/demandes', [InternalRequestController::class, 'index'])->name('requests.index');
-        Route::get('/demandes/create', [InternalRequestController::class, 'create'])->name('requests.create');
-        Route::post('/demandes', [InternalRequestController::class, 'store'])->name('requests.store');
-        
-        // Formations - routes accessibles à tous les rôles
-        Route::get('/formations', [FormationController::class, 'index'])->name('formations.index');
-        Route::get('/mes-formations', [FormationController::class, 'myRequests'])->name('formations.my-requests');
-        Route::post('/formations/{formation}/request', [FormationController::class, 'requestParticipation'])->name('formations.request');
-        Route::put('/formation-requests/{formationRequest}/complete', [FormationController::class, 'completeRequest'])->name('formation-requests.complete');
-        
-        // Documentation & Support - accessibles à tous les rôles
-        Route::get('/documentation', [DocumentationController::class, 'index'])->name('documentation.index');
-        Route::get('/documentation/contacts', [DocumentationController::class, 'contacts'])->name('documentation.contacts.index');
-        Route::get('/documentation/faq', [DocumentationController::class, 'faq'])->name('documentation.faq.index');
-        Route::get('/documentation/resources', [DocumentationController::class, 'resources'])->name('documentation.resources.index');
-        Route::get('/documentation/resources/{resource}/download', [DocumentationController::class, 'downloadResource'])->name('documentation.resources.download');
-    });
-    
-    // Routes manager et admin
-    Route::middleware('role:manager,administrateur')->group(function () {
-        // Gestion des actualités - routes de création/édition en premier
-        Route::get('/actualites/create', [NewsController::class, 'create'])->name('news.create');
-        Route::post('/actualites', [NewsController::class, 'store'])->name('news.store');
-        Route::get('/actualites/{news}/edit', [NewsController::class, 'edit'])->name('news.edit');
-        Route::put('/actualites/{news}', [NewsController::class, 'update'])->name('news.update');
-        Route::delete('/actualites/{news}', [NewsController::class, 'destroy'])->name('news.destroy');
-        
-        // Gestion des missions
-        Route::get('/missions/create', [MissionController::class, 'create'])->name('missions.create');
-        Route::post('/missions', [MissionController::class, 'store'])->name('missions.store');
-        Route::get('/missions/{mission}/edit', [MissionController::class, 'edit'])->name('missions.edit');
-        Route::put('/missions/{mission}', [MissionController::class, 'update'])->name('missions.update');
-        Route::delete('/missions/{mission}', [MissionController::class, 'destroy'])->name('missions.destroy');
-        
-        // Gestion des demandes internes (approbation/assignation)
-        Route::put('/demandes/{request}/approve', [InternalRequestController::class, 'approve'])->name('requests.approve');
-        Route::put('/demandes/{request}/reject', [InternalRequestController::class, 'reject'])->name('requests.reject');
-        Route::put('/demandes/{request}/assign', [InternalRequestController::class, 'assign'])->name('requests.assign');
-        Route::put('/demandes/{request}/complete', [InternalRequestController::class, 'complete'])->name('requests.complete');
-        
-        // Gestion des formations
+    // Routes admin uniquement - PLACÉES EN PREMIER pour éviter les conflits
+    Route::middleware('role:administrateur')->group(function () {
+        // Gestion des formations - CRÉATION réservée aux admins (AVANT les routes génériques)
         Route::get('/formations/create', [FormationController::class, 'create'])->name('formations.create');
         Route::post('/formations', [FormationController::class, 'store'])->name('formations.store');
-        Route::get('/gestion-formations', [FormationController::class, 'manageRequests'])->name('formations.manage');
-        Route::put('/formation-requests/{formationRequest}/approve', [FormationController::class, 'approveRequest'])->name('formation-requests.approve');
-        Route::put('/formation-requests/{formationRequest}/reject', [FormationController::class, 'rejectRequest'])->name('formation-requests.reject');
         
-        // Gestion équipe - ROUTES DANS LE BON ORDRE
-        Route::get('/equipe', [TeamController::class, 'index'])->name('team.index');
-    });
-    
-    // Routes admin uniquement
-    Route::middleware('role:administrateur')->group(function () {
-
-        // Administration des demandes (vue globale)
-        Route::get('/admin/demandes', [InternalRequestController::class, 'adminIndex'])->name('admin.requests.index');
-        Route::get('/admin/demandes/stats', [InternalRequestController::class, 'getStats'])->name('admin.requests.stats');
+        // Gestion des fichiers de formation (admin seulement)
+        Route::get('/formations/{formation}/files', [FormationController::class, 'manageFiles'])->name('formations.files.manage');
+        Route::post('/formations/{formation}/files', [FormationController::class, 'uploadFiles'])->name('formations.files.upload');
+        Route::delete('/formations/files/{file}', [FormationController::class, 'deleteFile'])->name('formations.files.delete');
+        Route::put('/formations/files/{file}', [FormationController::class, 'updateFileMetadata'])->name('formations.files.update');
+        Route::put('/formations/{formation}/files/reorder', [FormationController::class, 'reorderFiles'])->name('formations.files.reorder');
         
         // Administration des formations
         Route::get('/admin/formations/stats', [FormationController::class, 'stats'])->name('admin.formations.stats');
+        
+        // Gestion des produits de communication (admin seulement)
+        Route::get('/admin/communication/produits', [AdminCommunicationController::class, 'products'])->name('admin.communication.products');
+        Route::get('/admin/communication/produits/create', [AdminCommunicationController::class, 'createProduct'])->name('admin.communication.products.create');
+        Route::post('/admin/communication/produits', [AdminCommunicationController::class, 'storeProduct'])->name('admin.communication.products.store');
+        Route::get('/admin/communication/produits/{product}/edit', [AdminCommunicationController::class, 'editProduct'])->name('admin.communication.products.edit');
+        Route::put('/admin/communication/produits/{product}', [AdminCommunicationController::class, 'updateProduct'])->name('admin.communication.products.update');
+        Route::delete('/admin/communication/produits/{product}', [AdminCommunicationController::class, 'destroyProduct'])->name('admin.communication.products.destroy');
+        
+        // Gestion des commandes de communication (admin)
+        Route::get('/admin/communication/commandes', [AdminCommunicationController::class, 'orders'])->name('admin.communication.orders');
+        Route::put('/admin/communication/commandes/{order}/status', [AdminCommunicationController::class, 'updateOrderStatus'])->name('admin.communication.orders.update-status');
         
         // Gestion équipe avancée (admin seulement)
         Route::get('/equipe/create', [TeamController::class, 'create'])->name('team.create');
@@ -125,33 +85,86 @@ Route::middleware('auth')->group(function () {
         Route::delete('/documentation/resources/{resource}', [DocumentationController::class, 'destroyResource'])->name('documentation.resources.destroy');
     });
     
-    // Route show des actualités, missions, demandes et formations à la fin pour éviter les conflits
-    Route::middleware('role:collaborateur,manager,administrateur')->group(function () {
-        Route::get('/actualites/{news}', [NewsController::class, 'show'])->name('news.show');
-        Route::get('/missions/{mission}', [MissionController::class, 'show'])->name('missions.show');
-        Route::get('/demandes/{request}', [InternalRequestController::class, 'show'])->name('requests.show');
-        Route::get('/demandes/{request}/edit', [InternalRequestController::class, 'edit'])->name('requests.edit');
-        Route::put('/demandes/{request}', [InternalRequestController::class, 'update'])->name('requests.update');
-        Route::delete('/demandes/{request}', [InternalRequestController::class, 'destroy'])->name('requests.destroy');
+    // Routes manager et admin - PLACÉES APRÈS admin pour éviter les conflits
+    Route::middleware('role:manager,administrateur')->group(function () {
+        // Gestion des actualités - routes spécifiques AVANT les routes génériques
+        Route::get('/actualites/create', [NewsController::class, 'create'])->name('news.create');
+        Route::post('/actualites', [NewsController::class, 'store'])->name('news.store');
+        Route::get('/actualites/{news}/edit', [NewsController::class, 'edit'])->name('news.edit');
+        Route::put('/actualites/{news}', [NewsController::class, 'update'])->name('news.update');
+        Route::delete('/actualites/{news}', [NewsController::class, 'destroy'])->name('news.destroy');
         
-        // Routes show formations
-        Route::get('/formations/{formation}', [FormationController::class, 'show'])->name('formations.show');
+        // Gestion des formations - SEULEMENT GESTION DES DEMANDES pour managers
+        Route::get('/gestion-formations', [FormationController::class, 'manageRequests'])->name('formations.manage');
+        Route::put('/formation-requests/{formationRequest}/approve', [FormationController::class, 'approveRequest'])->name('formation-requests.approve');
+        Route::put('/formation-requests/{formationRequest}/reject', [FormationController::class, 'rejectRequest'])->name('formation-requests.reject');
         
-        // Routes équipe 
-        Route::get('/equipe/{teamMember}', [TeamController::class, 'show'])->name('team.show');
+        // Gestion équipe
+        Route::get('/equipe', [TeamController::class, 'index'])->name('team.index');
     });
     
-    // Routes profil utilisateur
-    Route::get('/profile', function () {
-        return view('profile.edit');
-    })->name('profile.edit');
-    
-    Route::put('/profile', function () {
-        return redirect()->route('profile.edit')->with('success', 'Profil mis à jour avec succès');
-    })->name('profile.update');
-    
-    // Route pour changement mot de passe
-    Route::put('/password', function () {
-        return redirect()->route('profile.edit')->with('success', 'Mot de passe mis à jour avec succès');
-    })->name('password.update');
+    // Routes par rôle - TOUS LES COLLABORATEURS
+    Route::middleware('role:collaborateur,manager,administrateur')->group(function () {
+        // Actualités - routes génériques APRÈS les routes spécifiques
+        Route::get('/actualites', [NewsController::class, 'index'])->name('news.index');
+        Route::get('/actualites/{news}', [NewsController::class, 'show'])->name('news.show');
+        
+        // Missions - Resource complète pour tous les rôles (permissions gérées dans le contrôleur)
+        Route::resource('missions', MissionController::class);
+        
+        // ROUTE API: Pour récupérer les sous-catégories dynamiquement
+        Route::get('/api/missions/subcategories', [MissionController::class, 'getSubcategories'])->name('missions.subcategories');
+        
+        // ============================================
+        // COMMUNICATION - Remplacement des demandes internes
+        // ============================================
+        
+        // Catalogue de produits de communication
+        Route::get('/communication', [CommunicationController::class, 'index'])->name('communication.index');
+        Route::get('/communication/produits/{product}', [CommunicationController::class, 'show'])->name('communication.show');
+        
+        // Panier
+        Route::get('/communication/panier', [CommunicationController::class, 'cart'])->name('communication.cart');
+        Route::post('/communication/panier/ajouter/{product}', [CommunicationController::class, 'addToCart'])->name('communication.add-to-cart');
+        Route::put('/communication/panier', [CommunicationController::class, 'updateCart'])->name('communication.update-cart');
+        Route::delete('/communication/panier', [CommunicationController::class, 'clearCart'])->name('communication.clear-cart');
+        
+        // Commandes
+        Route::post('/communication/commander', [CommunicationController::class, 'placeOrder'])->name('communication.place-order');
+        Route::get('/communication/commande/{order}/succes', [CommunicationController::class, 'orderSuccess'])->name('communication.order-success');
+        Route::get('/communication/mes-commandes', [CommunicationController::class, 'myOrders'])->name('communication.my-orders');
+        Route::get('/communication/commande/{order}', [CommunicationController::class, 'orderDetails'])->name('communication.order-details');
+        
+        // ============================================
+        // FIN COMMUNICATION
+        // ============================================
+        
+        // Formations - TOUS peuvent consulter et demander (routes spécifiques AVANT génériques)
+        Route::get('/mes-formations', [FormationController::class, 'myRequests'])->name('formations.my-requests');
+        Route::get('/formations', [FormationController::class, 'index'])->name('formations.index');
+        Route::get('/formations/{formation}', [FormationController::class, 'show'])->name('formations.show');
+        Route::post('/formations/{formation}/request', [FormationController::class, 'requestParticipation'])->name('formations.request');
+        Route::put('/formation-requests/{formationRequest}/complete', [FormationController::class, 'completeRequest'])->name('formation-requests.complete');
+        
+        // Téléchargement et visualisation des fichiers (tous les utilisateurs authentifiés)
+        Route::get('/formations/files/{file}/download', [FormationController::class, 'downloadFile'])->name('formations.files.download');
+        Route::get('/formations/files/{file}/view', [FormationController::class, 'viewFile'])->name('formations.files.view');
+        
+        // Documentation & Support
+        Route::get('/documentation', [DocumentationController::class, 'index'])->name('documentation.index');
+        Route::get('/documentation/contacts', [DocumentationController::class, 'contacts'])->name('documentation.contacts.index');
+        Route::get('/documentation/faq', [DocumentationController::class, 'faq'])->name('documentation.faq.index');
+        Route::get('/documentation/resources', [DocumentationController::class, 'resources'])->name('documentation.resources.index');
+        Route::get('/documentation/resources/{resource}/download', [DocumentationController::class, 'downloadResource'])->name('documentation.resources.download');
+        
+        // Équipe
+        Route::get('/equipe/{teamMember}', [TeamController::class, 'show'])->name('team.show');
+    });
+
+    // Routes profil utilisateur - ACCESSIBLES À TOUS LES UTILISATEURS AUTHENTIFIÉS
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.update-avatar');
+    Route::delete('/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('profile.remove-avatar');
+    Route::put('/password', [ProfileController::class, 'updatePassword'])->name('password.update');
 });

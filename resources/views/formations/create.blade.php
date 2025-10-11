@@ -35,7 +35,7 @@
             </p>
         </div>
 
-        <form method="POST" action="{{ route('formations.store') }}" class="p-6 space-y-6">
+        <form method="POST" action="{{ route('formations.store') }}" enctype="multipart/form-data" class="p-6 space-y-6">
             @csrf
 
             <!-- Informations générales -->
@@ -341,6 +341,87 @@
                 </div>
             </div>
 
+            <!-- NOUVELLE SECTION : Fichiers et ressources -->
+            <div class="space-y-6">
+                <h3 class="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">📁 Fichiers et ressources</h3>
+
+                <!-- Zone d'upload de fichiers -->
+                <div>
+                    <label for="formation_files" class="block text-sm font-medium text-gray-700 mb-2">
+                        📎 Fichiers de formation (supports, vidéos, audio, PDF...)
+                    </label>
+                    
+                    <!-- Drag & Drop Zone -->
+                    <div id="dropzone" class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-indigo-400 transition-colors cursor-pointer">
+                        <div class="text-center">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                            <div class="mt-4">
+                                <label for="formation_files" class="cursor-pointer">
+                                    <span class="mt-2 block text-sm font-medium text-gray-900">
+                                        Glissez vos fichiers ici ou cliquez pour parcourir
+                                    </span>
+                                    <span class="mt-1 block text-xs text-gray-500">
+                                        Tous types de fichiers acceptés (PDF, MP4, MP3, DOCX, PPTX, ZIP...) - Max 100MB par fichier
+                                    </span>
+                                </label>
+                                <input type="file" 
+                                       id="formation_files" 
+                                       name="formation_files[]" 
+                                       multiple 
+                                       class="hidden"
+                                       accept="*/*">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Types de fichiers supportés -->
+                    <div class="mt-3 text-xs text-gray-500">
+                        <p class="mb-2 font-medium">Types de fichiers supportés :</p>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <div class="flex items-center space-x-1">
+                                <span class="w-2 h-2 bg-red-500 rounded-full"></span>
+                                <span>Documents (PDF, DOC, PPT)</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                <span>Vidéos (MP4, AVI, MOV)</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                                <span>Audio (MP3, WAV, M4A)</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span class="w-2 h-2 bg-purple-500 rounded-full"></span>
+                                <span>Images (JPG, PNG, GIF)</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span class="w-2 h-2 bg-yellow-500 rounded-full"></span>
+                                <span>Archives (ZIP, RAR)</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span class="w-2 h-2 bg-gray-500 rounded-full"></span>
+                                <span>Autres formats</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    @error('formation_files')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    @error('formation_files.*')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Liste des fichiers sélectionnés -->
+                <div id="selected-files" class="hidden">
+                    <h4 class="text-sm font-medium text-gray-700 mb-3">Fichiers sélectionnés :</h4>
+                    <div id="files-list" class="space-y-2"></div>
+                </div>
+            </div>
+
             <!-- Objectifs et prérequis -->
             <div class="space-y-6">
                 <h3 class="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">🎯 Contenu pédagogique</h3>
@@ -447,7 +528,161 @@
 </div>
 
 <script>
-// Gestion des objectifs
+document.addEventListener('DOMContentLoaded', function() {
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('formation_files');
+    const selectedFilesDiv = document.getElementById('selected-files');
+    const filesList = document.getElementById('files-list');
+    let selectedFiles = [];
+
+    // Gestion du drag & drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, unhighlight, false);
+    });
+
+    dropzone.addEventListener('drop', handleDrop, false);
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleFiles);
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    function highlight() {
+        dropzone.classList.add('border-indigo-500', 'bg-indigo-50');
+    }
+
+    function unhighlight() {
+        dropzone.classList.remove('border-indigo-500', 'bg-indigo-50');
+    }
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        handleFiles({ target: { files: files } });
+    }
+
+    function handleFiles(e) {
+        const files = Array.from(e.target.files);
+        selectedFiles = [...selectedFiles, ...files];
+        
+        // Mise à jour de l'input file avec tous les fichiers
+        const dt = new DataTransfer();
+        selectedFiles.forEach(file => dt.items.add(file));
+        fileInput.files = dt.files;
+        
+        displaySelectedFiles();
+    }
+
+    function displaySelectedFiles() {
+        if (selectedFiles.length === 0) {
+            selectedFilesDiv.classList.add('hidden');
+            return;
+        }
+
+        selectedFilesDiv.classList.remove('hidden');
+        filesList.innerHTML = '';
+
+        selectedFiles.forEach((file, index) => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg border';
+            
+            const fileInfo = document.createElement('div');
+            fileInfo.className = 'flex items-center space-x-3';
+            
+            const fileIcon = getFileIcon(file.type);
+            const fileName = document.createElement('span');
+            fileName.className = 'text-sm font-medium text-gray-900';
+            fileName.textContent = file.name;
+            
+            const fileSize = document.createElement('span');
+            fileSize.className = 'text-xs text-gray-500';
+            fileSize.textContent = formatFileSize(file.size);
+            
+            fileInfo.appendChild(fileIcon);
+            fileInfo.appendChild(fileName);
+            fileInfo.appendChild(fileSize);
+            
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.className = 'text-red-600 hover:text-red-800';
+            removeButton.innerHTML = `
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            `;
+            removeButton.onclick = () => removeFile(index);
+            
+            fileItem.appendChild(fileInfo);
+            fileItem.appendChild(removeButton);
+            filesList.appendChild(fileItem);
+        });
+    }
+
+    function removeFile(index) {
+        selectedFiles.splice(index, 1);
+        
+        // Mise à jour de l'input file
+        const dt = new DataTransfer();
+        selectedFiles.forEach(file => dt.items.add(file));
+        fileInput.files = dt.files;
+        
+        displaySelectedFiles();
+    }
+
+    function getFileIcon(mimeType) {
+        const icon = document.createElement('div');
+        icon.className = 'w-8 h-8 flex items-center justify-center rounded text-white text-xs font-bold';
+        
+        if (mimeType.startsWith('video/')) {
+            icon.className += ' bg-blue-500';
+            icon.textContent = '🎥';
+        } else if (mimeType.startsWith('audio/')) {
+            icon.className += ' bg-green-500';
+            icon.textContent = '🎵';
+        } else if (mimeType.startsWith('image/')) {
+            icon.className += ' bg-purple-500';
+            icon.textContent = '🖼️';
+        } else if (mimeType.includes('pdf')) {
+            icon.className += ' bg-red-500';
+            icon.textContent = 'PDF';
+        } else if (mimeType.includes('word') || mimeType.includes('document')) {
+            icon.className += ' bg-blue-600';
+            icon.textContent = 'DOC';
+        } else if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) {
+            icon.className += ' bg-orange-500';
+            icon.textContent = 'PPT';
+        } else if (mimeType.includes('zip') || mimeType.includes('archive')) {
+            icon.className += ' bg-yellow-500';
+            icon.textContent = 'ZIP';
+        } else {
+            icon.className += ' bg-gray-500';
+            icon.textContent = '📄';
+        }
+        
+        return icon;
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+});
+
+// Gestion des objectifs (code existant)
 let objectiveCount = 1;
 
 function addObjective() {
@@ -474,7 +709,7 @@ function removeObjective(button) {
     }
 }
 
-// Gestion des prérequis
+// Gestion des prérequis (code existant)
 let prerequisiteCount = 1;
 
 function addPrerequisite() {
@@ -501,7 +736,7 @@ function removePrerequisite(button) {
     }
 }
 
-// Validation des dates
+// Code JavaScript existant pour les validations
 document.getElementById('start_date').addEventListener('change', function() {
     const startDate = new Date(this.value);
     const endDateInput = document.getElementById('end_date');
@@ -514,7 +749,6 @@ document.getElementById('start_date').addEventListener('change', function() {
         }
     }
     
-    // Mettre à jour la date min pour end_date
     endDateInput.min = this.value;
 });
 
@@ -531,20 +765,17 @@ document.getElementById('end_date').addEventListener('change', function() {
     }
 });
 
-// Auto-resize du textarea description
 document.getElementById('description').addEventListener('input', function() {
     this.style.height = 'auto';
     this.style.height = this.scrollHeight + 'px';
 });
 
-// Formatage automatique du coût
 document.getElementById('cost').addEventListener('blur', function() {
     if (this.value && !isNaN(this.value)) {
         this.value = parseFloat(this.value).toFixed(2);
     }
 });
 
-// Indication visuelle du niveau
 document.getElementById('level').addEventListener('change', function() {
     const levelColors = {
         'debutant': 'border-green-300 bg-green-50',
@@ -552,7 +783,6 @@ document.getElementById('level').addEventListener('change', function() {
         'avance': 'border-red-300 bg-red-50'
     };
     
-    // Reset classes
     this.className = this.className.replace(/border-\w+-300|bg-\w+-50/g, '');
     
     if (levelColors[this.value]) {
@@ -560,7 +790,6 @@ document.getElementById('level').addEventListener('change', function() {
     }
 });
 
-// Indication visuelle du format
 document.getElementById('format').addEventListener('change', function() {
     const formatColors = {
         'presentiel': 'border-blue-300 bg-blue-50',
@@ -568,7 +797,6 @@ document.getElementById('format').addEventListener('change', function() {
         'hybride': 'border-indigo-300 bg-indigo-50'
     };
     
-    // Reset classes
     this.className = this.className.replace(/border-\w+-300|bg-\w+-50/g, '');
     
     if (formatColors[this.value]) {

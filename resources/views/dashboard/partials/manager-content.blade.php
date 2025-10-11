@@ -1,3 +1,4 @@
+<!-- manager-content.blade.php -->
 <!-- Performance de l'équipe AVEC formations -->
 <div class="bg-white shadow rounded-lg mb-6">
     <div class="p-6 border-b border-gray-200">
@@ -11,13 +12,7 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Collaborateur</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Missions terminées</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CA ce mois</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">En retard</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Taux réussite</th>
-                            <!-- NOUVELLES COLONNES formations -->
-                            <th class="px-6 py-3 text-left text-xs font-medium text-purple-500 uppercase tracking-wider">Formation</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-blue-500 uppercase tracking-wider">Commandes</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
@@ -61,7 +56,6 @@
                                         <span class="text-xs text-gray-600">{{ number_format($perf['completion_rate'], 1) }}%</span>
                                     </div>
                                 </td>
-                                <!-- NOUVELLE colonne formations -->
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                                     <div class="text-center">
                                         <div class="text-sm font-medium text-purple-700">{{ $perf['heures_formation_annee'] ?? 0 }}h</div>
@@ -73,6 +67,12 @@
                                             @endif
                                         </div>
                                     </div>
+                                </td>
+                                <!-- NOUVELLE colonne commandes -->
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        {{ $perf['commandes_mois'] ?? 0 }}
+                                    </span>
                                 </td>
                             </tr>
                         @endforeach
@@ -89,50 +89,7 @@
     </div>
 </div>
 
-<!-- Demandes à approuver (internes) -->
-@if(isset($pending_requests_to_approve) && $pending_requests_to_approve->count() > 0)
-<div class="bg-white shadow rounded-lg mb-6">
-    <div class="p-6 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-900 flex items-center">
-            ✋ Demandes internes en attente d'approbation
-        </h2>
-    </div>
-    <div class="p-6">
-        <div class="space-y-4">
-            @foreach($pending_requests_to_approve as $request)
-                <div class="border border-yellow-200 bg-yellow-50 rounded-lg p-4">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <h3 class="font-medium text-gray-900">{{ $request->title }}</h3>
-                            <p class="text-sm text-gray-600 mt-1">{{ Str::limit($request->description, 120) }}</p>
-                            <div class="flex items-center mt-2 text-xs text-gray-500 space-x-4">
-                                <span>Par {{ $request->requester->full_name }}</span>
-                                <span>{{ $request->type_label }}</span>
-                                <span>{{ $request->requested_at->format('d/m/Y') }}</span>
-                                @if($request->estimated_cost)
-                                    <span>{{ number_format($request->estimated_cost, 2) }}€</span>
-                                @endif
-                            </div>
-                        </div>
-                        <div class="ml-4">
-                            <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
-                                En attente
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            @endforeach
-        </div>
-        <div class="mt-4 text-center">
-            <a href="{{ route('requests.index') }}" class="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
-                Traiter toutes les demandes →
-            </a>
-        </div>
-    </div>
-</div>
-@endif
-
-<!-- NOUVEAU : Demandes formations à approuver -->
+<!-- Demandes de formation à approuver -->
 @if(isset($pending_formation_requests) && $pending_formation_requests->count() > 0)
 <div class="bg-white shadow rounded-lg">
     <div class="p-6 border-b border-gray-200">
@@ -155,10 +112,13 @@
                                 <span>{{ $formationRequest->requested_at->format('d/m/Y') }}</span>
                             </div>
                         </div>
-                        <div class="ml-4">
+                        <div class="ml-4 flex flex-col space-y-2">
                             <span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
                                 Formation
                             </span>
+                            <a href="{{ route('formations.manage') }}" class="text-xs text-indigo-600 hover:text-indigo-500">
+                                Traiter →
+                            </a>
                         </div>
                     </div>
                 </div>

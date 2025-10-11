@@ -85,6 +85,74 @@
                 @enderror
             </div>
 
+            <!-- NOUVEAU: Catégorie et Sous-catégorie -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Catégorie -->
+                <div>
+                    <label for="category" class="block text-sm font-medium text-gray-700 mb-2">
+                        📁 Catégorie <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <select id="category" 
+                                name="category" 
+                                required
+                                class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 hover:border-gray-400 appearance-none bg-white cursor-pointer @error('category') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                            <option value="">Choisir une catégorie...</option>
+                            @foreach($categories as $value => $label)
+                                <option value="{{ $value }}" {{ old('category') === $value ? 'selected' : '' }}>
+                                    @if($value === 'location')🏠 {{ $label }}
+                                    @elseif($value === 'syndic')🏢 {{ $label }}
+                                    @else📋 {{ $label }}
+                                    @endif
+                                </option>
+                            @endforeach
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                    </div>
+                    @error('category')
+                        <p class="mt-1 text-sm text-red-600 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            {{ $message }}
+                        </p>
+                    @enderror
+                </div>
+
+                <!-- Sous-catégorie -->
+                <div>
+                    <label for="subcategory" class="block text-sm font-medium text-gray-700 mb-2">
+                        🏷️ Type de mission <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <select id="subcategory" 
+                                name="subcategory" 
+                                required
+                                disabled
+                                class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 hover:border-gray-400 appearance-none bg-white cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed @error('subcategory') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                            <option value="">Sélectionnez d'abord une catégorie...</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                    </div>
+                    @error('subcategory')
+                        <p class="mt-1 text-sm text-red-600 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            {{ $message }}
+                        </p>
+                    @enderror
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Assignation -->
                 <div>
@@ -365,6 +433,53 @@ document.querySelectorAll('textarea').forEach(function(textarea) {
         this.style.height = 'auto';
         this.style.height = this.scrollHeight + 'px';
     });
+});
+
+// NOUVEAU: Gestion des listes déroulantes en cascade
+document.getElementById('category').addEventListener('change', function() {
+    const categoryValue = this.value;
+    const subcategorySelect = document.getElementById('subcategory');
+    
+    // Réinitialiser la sous-catégorie
+    subcategorySelect.innerHTML = '<option value="">Chargement...</option>';
+    subcategorySelect.disabled = true;
+    
+    if (categoryValue) {
+        // Appel AJAX pour récupérer les sous-catégories
+        fetch(`{{ route('missions.subcategories') }}?category=${categoryValue}`)
+            .then(response => response.json())
+            .then(data => {
+                subcategorySelect.innerHTML = '<option value="">Choisir un type de mission...</option>';
+                
+                // Ajouter les sous-catégories
+                Object.keys(data).forEach(key => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = data[key];
+                    // Conserver la sélection précédente si elle existe
+                    if (key === '{{ old("subcategory") }}') {
+                        option.selected = true;
+                    }
+                    subcategorySelect.appendChild(option);
+                });
+                
+                subcategorySelect.disabled = false;
+            })
+            .catch(error => {
+                console.error('Erreur lors du chargement des sous-catégories:', error);
+                subcategorySelect.innerHTML = '<option value="">Erreur de chargement</option>';
+            });
+    } else {
+        subcategorySelect.innerHTML = '<option value="">Sélectionnez d\'abord une catégorie...</option>';
+    }
+});
+
+// Charger les sous-catégories au chargement si une catégorie est déjà sélectionnée
+document.addEventListener('DOMContentLoaded', function() {
+    const categorySelect = document.getElementById('category');
+    if (categorySelect.value) {
+        categorySelect.dispatchEvent(new Event('change'));
+    }
 });
 
 // Indication visuelle de la priorité

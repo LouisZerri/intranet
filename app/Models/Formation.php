@@ -56,6 +56,37 @@ class Formation extends Model
         return $this->hasMany(FormationRequest::class)->where('status', 'termine');
     }
 
+    public function files(): HasMany
+    {
+        return $this->hasMany(FormationFile::class);
+    }
+
+    public function publicFiles(): HasMany
+    {
+        return $this->hasMany(FormationFile::class)->where('is_public', true);
+    }
+
+    // Relations par type de fichier
+    public function documents(): HasMany
+    {
+        return $this->files()->where('type', 'document');
+    }
+
+    public function videos(): HasMany
+    {
+        return $this->files()->where('type', 'video');
+    }
+
+    public function audios(): HasMany
+    {
+        return $this->files()->where('type', 'audio');
+    }
+
+    public function images(): HasMany
+    {
+        return $this->files()->where('type', 'image');
+    }
+
     // Scopes
     public function scopeActive(Builder $query): Builder
     {
@@ -131,6 +162,42 @@ class Formation extends Model
         return $label;
     }
 
+    public function hasFiles(): bool
+    {
+        return $this->files()->count() > 0;
+    }
+
+    public function getFilesByType(): array
+    {
+        $files = $this->files()->ordered()->get()->groupBy('type');
+        
+        return [
+            'documents' => $files->get('document', collect()),
+            'videos' => $files->get('video', collect()),
+            'audios' => $files->get('audio', collect()),
+            'images' => $files->get('image', collect()),
+            'archives' => $files->get('archive', collect()),
+            'others' => $files->get('other', collect()),
+        ];
+    }
+
+    public function getTotalFilesSize(): int
+    {
+        return $this->files()->sum('size');
+    }
+
+    public function getFormattedTotalSizeAttribute(): string
+    {
+        $bytes = $this->getTotalFilesSize();
+        if ($bytes === 0) return '0 Bytes';
+        
+        $k = 1024;
+        $sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        $i = floor(log($bytes) / log($k));
+        
+        return round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
+    }
+
     // Méthodes pour les KPI
     public static function getPopularFormations(int $limit = 5)
     {
@@ -149,5 +216,16 @@ class Formation extends Model
                    ->whereNotNull('category')
                    ->groupBy('category')
                    ->get();
+    }
+
+    // Override delete pour supprimer les fichiers associés
+    public function delete(): bool
+    {
+        // Supprimer tous les fichiers associés
+        foreach ($this->files as $file) {
+            $file->delete();
+        }
+        
+        return parent::delete();
     }
 }

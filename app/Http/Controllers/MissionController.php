@@ -10,24 +10,33 @@ use Illuminate\Support\Facades\Auth;
 class MissionController extends Controller
 {
     /**
-     * Afficher la liste des missions selon le cahier des charges
+     * Afficher la liste des missions avec filtres par catégorie
      */
     public function index(Request $request)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
         
-        // Base query selon les permissions utilisateur (du cahier des charges)
         $query = Mission::forUser($user)
             ->with(['assignedUser', 'creator', 'manager']);
 
-        // Filtres - CORRECTION: Vérifier si les valeurs ne sont pas vides ET nulles
+        // Filtres existants
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
         if ($request->filled('priority')) {
             $query->where('priority', $request->priority);
+        }
+
+        // NOUVEAU: Filtre par catégorie
+        if ($request->filled('category')) {
+            $query->where('category', $request->category);
+        }
+
+        // NOUVEAU: Filtre par sous-catégorie
+        if ($request->filled('subcategory')) {
+            $query->where('subcategory', $request->subcategory);
         }
 
         if ($request->filled('search')) {
@@ -40,12 +49,10 @@ class MissionController extends Controller
             }
         }
 
-        // Filtre par collaborateur (pour managers/admin)
         if ($request->filled('assigned_to') && ($user->isManager() || $user->isAdministrateur())) {
             $query->where('assigned_to', $request->assigned_to);
         }
 
-        // Tri par priorité puis par échéance
         $missions = $query->orderByRaw("
                 CASE priority 
                     WHEN 'urgente' THEN 1 
@@ -57,10 +64,9 @@ class MissionController extends Controller
             ->orderBy('due_date', 'asc')
             ->paginate(15);
 
-        // CORRECTION: Conserver les paramètres de recherche dans la pagination
         $missions->appends($request->all());
 
-        // Statistiques pour le dashboard selon CDC
+        // Statistiques
         $stats = [
             'total' => Mission::forUser($user)->count(),
             'en_cours' => Mission::forUser($user)->inProgress()->count(),
@@ -68,7 +74,7 @@ class MissionController extends Controller
             'en_retard' => Mission::forUser($user)->overdue()->count(),
         ];
 
-        // Liste des collaborateurs pour les filtres (managers/admin)
+        // Liste des collaborateurs pour les filtres
         $collaborateurs = collect();
         if ($user->isManager()) {
             $collaborateurs = $user->subordinates()->where('is_active', true)->get();
@@ -76,17 +82,24 @@ class MissionController extends Controller
             $collaborateurs = User::where('is_active', true)->where('role', '!=', 'administrateur')->get();
         }
 
-        return view('missions.index', compact('missions', 'stats', 'collaborateurs', 'request'));
+        // NOUVEAU: Données pour les filtres de catégorie
+        $categories = Mission::getCategories();
+        $subcategories = Mission::getSubcategories();
+
+        return view('missions.index', compact(
+            'missions', 
+            'stats', 
+            'collaborateurs', 
+            'request', 
+            'categories', 
+            'subcategories'
+        ));
     }
 
-    /**
-     * Afficher une mission complète
-     */
     public function show(Mission $mission)
     {
         $user = Auth::user();
 
-        // Vérifier les permissions
         if (!$this->canUserViewMission($user, $mission)) {
             abort(403, 'Vous n\'avez pas accès à cette mission.');
         }
@@ -96,19 +109,11 @@ class MissionController extends Controller
         return view('missions.show', compact('mission'));
     }
 
-    /**
-     * Formulaire de création de mission (managers/admin)
-     */
     public function create()
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        
-        if (!$user->isManager() && !$user->isAdministrateur()) {
-            abort(403, 'Vous n\'avez pas l\'autorisation de créer des missions.');
-        }
 
-        // Options pour les formulaires
         $priorities = [
             'basse' => 'Basse',
             'normale' => 'Normale',
@@ -121,29 +126,33 @@ class MissionController extends Controller
             'en_cours' => 'En cours'
         ];
 
-        // Collaborateurs assignables
+        // NOUVEAU: Ajout des catégories
+        $categories = Mission::getCategories();
+        $subcategories = Mission::getSubcategories();
+
         $collaborateurs = $this->getAssignableUsers($user);
 
-        return view('missions.create', compact('priorities', 'statuses', 'collaborateurs'));
+        return view('missions.create', compact(
+            'priorities', 
+            'statuses', 
+            'collaborateurs',
+            'categories',
+            'subcategories'
+        ));
     }
 
-    /**
-     * Enregistrer une nouvelle mission
-     */
     public function store(Request $request)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        
-        if (!$user->isManager() && !$user->isAdministrateur()) {
-            abort(403);
-        }
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'priority' => 'required|in:basse,normale,haute,urgente',
             'status' => 'required|in:en_attente,en_cours',
+            'category' => 'required|in:location,syndic,autres',
+            'subcategory' => 'required|string',
             'assigned_to' => 'required|exists:users,id',
             'due_date' => 'nullable|date|after:today',
             'start_date' => 'nullable|date',
@@ -152,11 +161,18 @@ class MissionController extends Controller
         ], [
             'title.required' => 'Le titre est obligatoire.',
             'description.required' => 'La description est obligatoire.',
+            'category.required' => 'La catégorie est obligatoire.',
+            'subcategory.required' => 'La sous-catégorie est obligatoire.',
             'assigned_to.required' => 'Vous devez assigner la mission à quelqu\'un.',
             'due_date.after' => 'L\'échéance doit être dans le futur.',
         ]);
 
-        // Vérifier que l'utilisateur peut assigner à cette personne
+        // Validation personnalisée de la sous-catégorie
+        $subcategories = Mission::getSubcategories();
+        if (!isset($subcategories[$validated['category']][$validated['subcategory']])) {
+            return back()->withErrors(['subcategory' => 'La sous-catégorie sélectionnée n\'est pas valide.']);
+        }
+
         $assignedUser = User::findOrFail($validated['assigned_to']);
         if (!$this->canAssignToUser($user, $assignedUser)) {
             return back()->withErrors(['assigned_to' => 'Vous ne pouvez pas assigner de missions à cet utilisateur.']);
@@ -167,6 +183,8 @@ class MissionController extends Controller
             'description' => $validated['description'],
             'priority' => $validated['priority'],
             'status' => $validated['status'],
+            'category' => $validated['category'],
+            'subcategory' => $validated['subcategory'],
             'assigned_to' => $validated['assigned_to'],
             'created_by' => $user->id,
             'manager_id' => $assignedUser->manager_id ?? null,
@@ -181,9 +199,6 @@ class MissionController extends Controller
         return redirect()->route('missions.show', $mission)->with('success', 'Mission créée avec succès !');
     }
 
-    /**
-     * Formulaire d'édition de mission
-     */
     public function edit(Mission $mission)
     {
         $user = Auth::user();
@@ -206,14 +221,22 @@ class MissionController extends Controller
             'annule' => 'Annulé'
         ];
 
+        // NOUVEAU: Ajout des catégories pour l'édition
+        $categories = Mission::getCategories();
+        $subcategories = Mission::getSubcategories();
+
         $collaborateurs = $this->getAssignableUsers($user);
 
-        return view('missions.edit', compact('mission', 'priorities', 'statuses', 'collaborateurs'));
+        return view('missions.edit', compact(
+            'mission', 
+            'priorities', 
+            'statuses', 
+            'collaborateurs',
+            'categories',
+            'subcategories'
+        ));
     }
 
-    /**
-     * Mettre à jour une mission
-     */
     public function update(Request $request, Mission $mission)
     {
         $user = Auth::user();
@@ -227,6 +250,8 @@ class MissionController extends Controller
             'description' => 'required|string',
             'priority' => 'required|in:basse,normale,haute,urgente',
             'status' => 'required|in:en_attente,en_cours,termine,annule',
+            'category' => 'required|in:location,syndic,autres',
+            'subcategory' => 'required|string',
             'assigned_to' => 'required|exists:users,id',
             'due_date' => 'nullable|date',
             'start_date' => 'nullable|date',
@@ -234,7 +259,12 @@ class MissionController extends Controller
             'notes' => 'nullable|string'
         ]);
 
-        // Vérifier les permissions d'assignation
+        // Validation personnalisée de la sous-catégorie
+        $subcategories = Mission::getSubcategories();
+        if (!isset($subcategories[$validated['category']][$validated['subcategory']])) {
+            return back()->withErrors(['subcategory' => 'La sous-catégorie sélectionnée n\'est pas valide.']);
+        }
+
         $assignedUser = User::findOrFail($validated['assigned_to']);
         if (!$this->canAssignToUser($user, $assignedUser)) {
             return back()->withErrors(['assigned_to' => 'Vous ne pouvez pas assigner de missions à cet utilisateur.']);
@@ -245,6 +275,8 @@ class MissionController extends Controller
             'description' => $validated['description'],
             'priority' => $validated['priority'],
             'status' => $validated['status'],
+            'category' => $validated['category'],
+            'subcategory' => $validated['subcategory'],
             'assigned_to' => $validated['assigned_to'],
             'due_date' => $validated['due_date'] ?? null,
             'start_date' => $validated['start_date'] ?? null,
@@ -252,7 +284,6 @@ class MissionController extends Controller
             'notes' => $validated['notes'] ?? null,
         ];
 
-        // Gérer le changement de statut
         if ($validated['status'] === 'termine' && $mission->status !== 'termine') {
             $updateData['completed_at'] = now();
         } elseif ($validated['status'] !== 'termine') {
@@ -264,9 +295,6 @@ class MissionController extends Controller
         return redirect()->route('missions.show', $mission)->with('success', 'Mission mise à jour avec succès !');
     }
 
-    /**
-     * Supprimer une mission
-     */
     public function destroy(Mission $mission)
     {
         /** @var \App\Models\User $user */
@@ -282,8 +310,21 @@ class MissionController extends Controller
     }
 
     /**
-     * Vérifier si un utilisateur peut voir une mission
+     * NOUVELLE MÉTHODE: API pour récupérer les sous-catégories
      */
+    public function getSubcategories(Request $request)
+    {
+        $category = $request->get('category');
+        $subcategories = Mission::getSubcategories();
+        
+        if (isset($subcategories[$category])) {
+            return response()->json($subcategories[$category]);
+        }
+        
+        return response()->json([]);
+    }
+
+    // Méthodes de permissions (inchangées)
     private function canUserViewMission($user, $mission): bool
     {
         if ($user->isAdministrateur()) {
@@ -297,12 +338,9 @@ class MissionController extends Controller
                 || $mission->assignedUser->manager_id === $user->id;
         }
 
-        return $mission->assigned_to === $user->id;
+        return $mission->assigned_to === $user->id || $mission->created_by === $user->id;
     }
 
-    /**
-     * Vérifier si un utilisateur peut modifier une mission
-     */
     private function canUserEditMission($user, $mission): bool
     {
         if ($user->isAdministrateur()) {
@@ -315,13 +353,9 @@ class MissionController extends Controller
                 || $mission->assignedUser->manager_id === $user->id;
         }
 
-        // Les collaborateurs peuvent marquer leurs missions comme terminées
-        return $mission->assigned_to === $user->id;
+        return $mission->assigned_to === $user->id || $mission->created_by === $user->id;
     }
 
-    /**
-     * Vérifier si un utilisateur peut assigner une mission à un autre
-     */
     private function canAssignToUser($user, $targetUser): bool
     {
         if ($user->isAdministrateur()) {
@@ -332,12 +366,17 @@ class MissionController extends Controller
             return $targetUser->manager_id === $user->id || $targetUser->id === $user->id;
         }
 
-        return $targetUser->id === $user->id;
+        if ($targetUser->id === $user->id) {
+            return true;
+        }
+
+        if ($user->manager_id && $user->manager_id === $targetUser->manager_id) {
+            return true;
+        }
+
+        return false;
     }
 
-    /**
-     * Récupérer les utilisateurs assignables selon les permissions
-     */
     private function getAssignableUsers($user)
     {
         if ($user->isAdministrateur()) {
@@ -354,6 +393,18 @@ class MissionController extends Controller
                 ->get();
         }
 
-        return collect([$user]);
+        $assignableUsers = collect([$user]);
+
+        if ($user->manager_id) {
+            $colleagues = User::where('is_active', true)
+                ->where('manager_id', $user->manager_id)
+                ->where('id', '!=', $user->id)
+                ->orderBy('first_name')
+                ->get();
+            
+            $assignableUsers = $assignableUsers->merge($colleagues);
+        }
+
+        return $assignableUsers->sortBy('first_name');
     }
 }

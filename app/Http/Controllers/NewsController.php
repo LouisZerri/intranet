@@ -15,7 +15,7 @@ class NewsController extends Controller
     {
         $user = Auth::user();
         
-        // Récupération des actualités personnalisées selon le rôle et département
+        // Récupération des actualités personnalisées selon le rôle
         $query = News::published()
             ->forUser($user)
             ->with('author');
@@ -93,15 +93,10 @@ class NewsController extends Controller
             'urgent' => 'Urgent'
         ];
 
-        $roles = [
-            'collaborateur' => 'Collaborateurs',
-            'manager' => 'Managers',
-            'administrateur' => 'Administrateurs'
-        ];
+        // Rôles disponibles selon le type d'utilisateur
+        $roles = $this->getAvailableRoles($user);
 
-        $departments = $this->getAvailableDepartments();
-
-        return view('news.create', compact('priorities', 'roles', 'departments'));
+        return view('news.create', compact('priorities', 'roles'));
     }
 
     /**
@@ -122,7 +117,6 @@ class NewsController extends Controller
             'priority' => 'required|in:normal,important,urgent',
             'target_roles' => 'nullable|array',
             'target_roles.*' => 'in:collaborateur,manager,administrateur',
-            'target_departments' => 'nullable|array',
             'expires_at' => 'nullable|date|after:today',
             'publish_now' => 'boolean'
         ], [
@@ -132,12 +126,14 @@ class NewsController extends Controller
             'expires_at.after' => 'La date d\'expiration doit être dans le futur.',
         ]);
 
+        // Validation des rôles selon le type d'utilisateur
+        $this->validateTargetRoles($user, $validated['target_roles'] ?? []);
+
         $newsData = [
             'title' => $validated['title'],
             'content' => $validated['content'],
             'priority' => $validated['priority'],
-            'target_roles' => $validated['target_roles'] ?? null,
-            'target_departments' => $validated['target_departments'] ?? null,
+            'target_roles' => $this->getValidTargetRoles($user, $validated['target_roles'] ?? []),
             'expires_at' => $validated['expires_at'] ?? null,
             'author_id' => $user->id,
         ];
@@ -178,15 +174,10 @@ class NewsController extends Controller
             'urgent' => 'Urgent'
         ];
 
-        $roles = [
-            'collaborateur' => 'Collaborateurs',
-            'manager' => 'Managers',
-            'administrateur' => 'Administrateurs'
-        ];
+        // Rôles disponibles selon le type d'utilisateur
+        $roles = $this->getAvailableRoles($user);
 
-        $departments = $this->getAvailableDepartments();
-
-        return view('news.edit', compact('news', 'priorities', 'roles', 'departments'));
+        return view('news.edit', compact('news', 'priorities', 'roles'));
     }
 
     /**
@@ -207,17 +198,18 @@ class NewsController extends Controller
             'priority' => 'required|in:normal,important,urgent',
             'target_roles' => 'nullable|array',
             'target_roles.*' => 'in:collaborateur,manager,administrateur',
-            'target_departments' => 'nullable|array',
             'expires_at' => 'nullable|date',
             'status' => 'required|in:draft,published,archived'
         ]);
+
+        // Validation des rôles selon le type d'utilisateur
+        $this->validateTargetRoles($user, $validated['target_roles'] ?? []);
 
         $updateData = [
             'title' => $validated['title'],
             'content' => $validated['content'],
             'priority' => $validated['priority'],
-            'target_roles' => $validated['target_roles'] ?? null,
-            'target_departments' => $validated['target_departments'] ?? null,
+            'target_roles' => $this->getValidTargetRoles($user, $validated['target_roles'] ?? []),
             'expires_at' => $validated['expires_at'] ?? null,
             'status' => $validated['status'],
         ];
@@ -263,27 +255,63 @@ class NewsController extends Controller
             return false;
         }
 
-        // Vérification du département ciblé
-        if ($news->target_departments && !in_array($user->department, $news->target_departments)) {
-            return false;
-        }
-
         return true;
     }
 
     /**
-     * Récupérer la liste des départements disponibles
+     * Récupérer les rôles disponibles selon le type d'utilisateur
      */
-    private function getAvailableDepartments(): array
+    private function getAvailableRoles($user): array
     {
-        return \App\Models\User::where('is_active', true)
-            ->whereNotNull('department')
-            ->distinct()
-            ->pluck('department')
-            ->sort()
-            ->mapWithKeys(function ($dept) {
-                return [$dept => $dept];
-            })
-            ->toArray();
+        if ($user->isAdministrateur()) {
+            // L'admin peut cibler tous les rôles
+            return [
+                'collaborateur' => 'Collaborateurs',
+                'manager' => 'Managers',
+                'administrateur' => 'Administrateurs'
+            ];
+        } elseif ($user->isManager()) {
+            // Le manager peut seulement cibler les collaborateurs
+            return [
+                'collaborateur' => 'Collaborateurs (mon équipe)'
+            ];
+        }
+
+        return [];
+    }
+
+    /**
+     * Valider les rôles cibles selon le type d'utilisateur
+     */
+    private function validateTargetRoles($user, array $targetRoles): void
+    {
+        if ($user->isManager()) {
+            // Le manager ne peut cibler que les collaborateurs
+            foreach ($targetRoles as $role) {
+                if ($role !== 'collaborateur') {
+                    abort(403, 'En tant que manager, vous ne pouvez créer des actualités que pour votre équipe (collaborateurs).');
+                }
+            }
+        }
+    }
+
+    /**
+     * Obtenir les rôles cibles valides selon le type d'utilisateur
+     */
+    private function getValidTargetRoles($user, array $targetRoles): ?array
+    {
+        if (empty($targetRoles)) {
+            // Si aucun rôle spécifié, comportement par défaut selon le type d'utilisateur
+            if ($user->isManager()) {
+                // Le manager cible automatiquement les collaborateurs
+                return ['collaborateur'];
+            } else {
+                // L'admin peut cibler tout le monde
+                return null;
+            }
+        }
+
+        // Si des rôles sont spécifiés, les retourner après validation
+        return $targetRoles;
     }
 }

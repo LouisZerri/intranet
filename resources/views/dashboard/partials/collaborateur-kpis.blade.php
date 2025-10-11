@@ -1,3 +1,4 @@
+<!-- collaborateur-kpis.blade.php -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
     <!-- Dossiers en cours -->
     <div class="bg-white overflow-hidden shadow rounded-lg">
@@ -69,7 +70,7 @@
         </div>
     </div>
 
-    <!-- NOUVEAU : Heures de formation cette année -->
+    <!-- Heures de formation cette année -->
     <div class="bg-purple-50 overflow-hidden shadow rounded-lg border border-purple-200">
         <div class="p-5">
             <div class="flex items-center">
@@ -86,17 +87,17 @@
         </div>
     </div>
 
-    <!-- NOUVEAU : Demandes formation en attente -->
-    <div class="bg-indigo-50 overflow-hidden shadow rounded-lg border border-indigo-200">
+    <!-- NOUVEAU : Commandes ce mois (remplace demandes en attente) -->
+    <div class="bg-blue-50 overflow-hidden shadow rounded-lg border border-blue-200">
         <div class="p-5">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
-                    <span class="text-2xl">🎓</span>
+                    <span class="text-2xl">📦</span>
                 </div>
                 <div class="ml-5 w-0 flex-1">
                     <dl>
-                        <dt class="text-sm font-medium text-indigo-600 truncate">Formations en attente</dt>
-                        <dd class="text-lg font-medium text-indigo-900">{{ $kpis['demandes_formation_attente'] ?? 0 }}</dd>
+                        <dt class="text-sm font-medium text-blue-600 truncate">Commandes ce mois</dt>
+                        <dd class="text-lg font-medium text-blue-900">{{ $kpis['commandes_ce_mois'] ?? 0 }}</dd>
                     </dl>
                 </div>
             </div>

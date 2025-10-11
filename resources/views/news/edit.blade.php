@@ -184,78 +184,72 @@
                 </div>
             </div>
 
-            <!-- Ciblage -->
-            <div class="border-t border-gray-200 pt-6">
-                <div class="bg-gray-50 -m-6 p-6 rounded-t-lg">
-                    <h3 class="text-lg font-medium text-gray-900 mb-2 flex items-center">
-                        🎯 Ciblage de l'actualité
-                    </h3>
-                    <p class="text-sm text-gray-600">
-                        Modifiez qui peut voir cette actualité. Si aucune sélection n'est faite, elle sera visible par tous les collaborateurs.
-                    </p>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
-                    <!-- Rôles ciblés -->
-                    <div class="bg-white border border-gray-200 rounded-lg p-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-4 flex items-center">
-                            <svg class="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                            </svg>
-                            👥 Rôles concernés
-                        </label>
-                        <div class="space-y-3">
-                            @foreach($roles as $value => $label)
-                                <label class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer">
-                                    <input type="checkbox" 
-                                           name="target_roles[]" 
-                                           value="{{ $value }}"
-                                           {{ in_array($value, old('target_roles', $news->target_roles ?? [])) ? 'checked' : '' }}
-                                           class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 focus:ring-2">
-                                    <div class="ml-3 flex-1">
-                                        <span class="text-sm font-medium text-gray-900">{{ $label }}</span>
-                                        <p class="text-xs text-gray-500">
-                                            @if($value === 'collaborateur')
-                                                Tous les collaborateurs de base
-                                            @elseif($value === 'manager')
-                                                Responsables d'équipe et managers
-                                            @else
-                                                Administrateurs du système
-                                            @endif
-                                        </p>
-                                    </div>
-                                </label>
-                            @endforeach
-                        </div>
+            <!-- Ciblage - Seulement pour les administrateurs -->
+            @if(auth()->user()->isAdministrateur() && count($roles) > 1)
+                <div class="border-t border-gray-200 pt-6">
+                    <div class="bg-gray-50 -m-6 p-6 rounded-t-lg">
+                        <h3 class="text-lg font-medium text-gray-900 mb-2 flex items-center">
+                            🎯 Ciblage de l'actualité
+                        </h3>
+                        <p class="text-sm text-gray-600">
+                            Modifiez qui peut voir cette actualité. Si aucune sélection n'est faite, elle sera visible par tous les collaborateurs.
+                        </p>
                     </div>
 
-                    <!-- Départements ciblés -->
-                    <div class="bg-white border border-gray-200 rounded-lg p-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-4 flex items-center">
-                            <svg class="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    <div class="mt-6">
+                        <!-- Rôles ciblés -->
+                        <div class="bg-white border border-gray-200 rounded-lg p-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-4 flex items-center">
+                                <svg class="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                </svg>
+                                👥 Rôles concernés
+                            </label>
+                            <div class="space-y-3">
+                                @foreach($roles as $value => $label)
+                                    <label class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer">
+                                        <input type="checkbox" 
+                                               name="target_roles[]" 
+                                               value="{{ $value }}"
+                                               {{ in_array($value, old('target_roles', $news->target_roles ?? [])) ? 'checked' : '' }}
+                                               class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 focus:ring-2">
+                                        <div class="ml-3 flex-1">
+                                            <span class="text-sm font-medium text-gray-900">{{ $label }}</span>
+                                            <p class="text-xs text-gray-500">
+                                                @if($value === 'collaborateur')
+                                                    Tous les collaborateurs de base
+                                                @elseif($value === 'manager')
+                                                    Responsables d'équipe et managers
+                                                @else
+                                                    Administrateurs du système
+                                                @endif
+                                            </p>
+                                        </div>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @elseif(auth()->user()->isManager())
+                <!-- Message explicatif pour les managers -->
+                <div class="border-t border-gray-200 pt-6">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex items-start">
+                            <svg class="w-5 h-5 text-blue-400 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
-                            🏢 Départements concernés
-                        </label>
-                        <div class="space-y-3 max-h-64 overflow-y-auto">
-                            @forelse($departments as $value => $label)
-                                <label class="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer">
-                                    <input type="checkbox" 
-                                           name="target_departments[]" 
-                                           value="{{ $value }}"
-                                           {{ in_array($value, old('target_departments', $news->target_departments ?? [])) ? 'checked' : '' }}
-                                           class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 focus:ring-2">
-                                    <span class="ml-3 text-sm font-medium text-gray-900">{{ $label }}</span>
-                                </label>
-                            @empty
-                                <p class="text-sm text-gray-500 italic p-3 text-center">
-                                    Aucun département disponible
+                            <div>
+                                <h3 class="text-sm font-medium text-blue-800 mb-1">🎯 Destinataires de votre actualité</h3>
+                                <p class="text-sm text-blue-700">
+                                    Cette actualité sera automatiquement visible par <strong>tous les collaborateurs de votre équipe</strong>. 
+                                    En tant que manager, vous ne pouvez pas cibler d'autres rôles.
                                 </p>
-                            @endforelse
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            @endif
 
             <!-- Informations de publication -->
             @if($news->published_at)

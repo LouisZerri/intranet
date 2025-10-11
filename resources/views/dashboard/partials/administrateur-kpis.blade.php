@@ -1,4 +1,4 @@
-<!-- KPI Administrateur AVEC formations -->
+<!-- administrateur-kpis.blade.php -->
 <div class="space-y-6 mb-6">
     <!-- KPI Globaux -->
     <div>
@@ -55,8 +55,8 @@
                 </div>
             </div>
 
-            <!-- Taux validation demandes -->
-            <div class="bg-purple-50 overflow-hidden shadow rounded-lg border border-purple-200">
+            <!-- NOUVEAU : Commandes ce mois (remplace taux validation) -->
+            <div class="bg-cyan-50 overflow-hidden shadow rounded-lg border border-cyan-200">
                 <div class="p-5">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
@@ -64,15 +64,15 @@
                         </div>
                         <div class="ml-5 w-0 flex-1">
                             <dl>
-                                <dt class="text-sm font-medium text-purple-600 truncate">Taux validation</dt>
-                                <dd class="text-lg font-medium text-purple-900">{{ number_format($kpis['taux_validation_demandes'], 1) }}%</dd>
+                                <dt class="text-sm font-medium text-cyan-600 truncate">Commandes ce mois</dt>
+                                <dd class="text-lg font-medium text-cyan-900">{{ $kpis['commandes_ce_mois'] ?? 0 }}</dd>
                             </dl>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- FORMATIONS ACTIVES - CORRIGÉ -->
+            <!-- Formations actives -->
             <div class="bg-yellow-50 overflow-hidden shadow rounded-lg border border-yellow-200">
                 <div class="p-5">
                     <div class="flex items-center">
@@ -89,7 +89,7 @@
                 </div>
             </div>
 
-            <!-- NOUVEAU : Heures formation délivrées -->
+            <!-- Heures formation délivrées -->
             <div class="bg-indigo-50 overflow-hidden shadow rounded-lg border border-indigo-200">
                 <div class="p-5">
                     <div class="flex items-center">
@@ -111,7 +111,7 @@
     <!-- Graphique/Métriques supplémentaires -->
     <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg p-6">
         <h4 class="text-lg font-semibold mb-4">📊 Résumé mensuel</h4>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
             <div class="text-center">
                 <div class="text-2xl font-bold">{{ $kpis['missions_ouvertes_mois'] }}</div>
                 <div class="text-blue-100 text-sm">Nouvelles missions</div>
@@ -121,8 +121,12 @@
                 <div class="text-blue-100 text-sm">Chiffre d'affaires</div>
             </div>
             <div class="text-center">
-                <div class="text-2xl font-bold">{{ number_format($kpis['taux_validation_demandes'], 0) }}%</div>
-                <div class="text-blue-100 text-sm">Demandes validées</div>
+                <div class="text-2xl font-bold">{{ $kpis['commandes_ce_mois'] ?? 0 }}</div>
+                <div class="text-blue-100 text-sm">Commandes passées</div>
+            </div>
+            <div class="text-center">
+                <div class="text-2xl font-bold">{{ number_format($kpis['ca_commandes_mois'] ?? 0, 0, ',', ' ') }}€</div>
+                <div class="text-blue-100 text-sm">CA Communication</div>
             </div>
             <div class="text-center">
                 <div class="text-2xl font-bold">{{ $kpis['formations_actives'] ?? 0 }}</div>

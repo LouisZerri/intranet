@@ -23,6 +23,23 @@
                 <div class="flex-1">
                     <!-- Badges et métadonnées -->
                     <div class="flex flex-wrap items-center gap-3 mb-4">
+                        <!-- Catégorie -->
+                        @if($mission->category)
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                                @if($mission->category === 'location')🏠 {{ $mission->category_label }}
+                                @elseif($mission->category === 'syndic')🏢 {{ $mission->category_label }}
+                                @else📋 {{ $mission->category_label }}
+                                @endif
+                            </span>
+                        @endif
+
+                        <!-- Sous-catégorie -->
+                        @if($mission->subcategory)
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                                {{ $mission->subcategory_label }}
+                            </span>
+                        @endif
+
                         <!-- Priorité -->
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $mission->priority === 'urgente' ? 'bg-red-100 text-red-800' : ($mission->priority === 'haute' ? 'bg-orange-100 text-orange-800' : ($mission->priority === 'normale' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800')) }}">
                             @if($mission->priority === 'urgente')🔴 {{ $mission->priority_label }}

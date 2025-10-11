@@ -30,14 +30,14 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                     <span class="text-green-800 font-medium">
-                        ✅ Formation disponible - {{ $stats['available_places'] }} place(s) restante(s)
+                        Formation disponible - {{ $stats['available_places'] }} place(s) restante(s)
                     </span>
                 @else
                     <svg class="w-5 h-5 text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
                     <span class="text-red-800 font-medium">
-                        ❌ Formation complète ou non disponible
+                        Formation complète ou non disponible
                     </span>
                 @endif
             </div>
@@ -158,6 +158,172 @@
                             </li>
                         @endforeach
                     </ul>
+                </div>
+            @endif
+
+            <!-- NOUVELLE SECTION : Fichiers et ressources -->
+            @if($formation->files->count() > 0)
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">📁 Ressources et fichiers</h3>
+                    
+                    @php
+                        $publicFiles = $formation->files->where('is_public', true);
+                        $privateFiles = $formation->files->where('is_public', false);
+                        $userHasAccess = $userRequest && in_array($userRequest->status, ['approuve', 'termine']);
+                    @endphp
+
+                    <!-- Fichiers publics (toujours visibles) -->
+                    @if($publicFiles->count() > 0)
+                        <div class="mb-6">
+                            <h4 class="text-md font-medium text-gray-700 mb-3 flex items-center">
+                                <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m3-6V6a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-8"/>
+                                </svg>
+                                Ressources disponibles pour tous
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                @foreach($publicFiles as $file)
+                                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="flex-shrink-0">
+                                                    {!! $file->getFileTypeIcon() !!}
+                                                </div>
+                                                <div class="flex-1 min-w-0">
+                                                    <p class="text-sm font-medium text-gray-900 truncate">
+                                                        {{ $file->original_name }}
+                                                    </p>
+                                                    <p class="text-xs text-gray-500">
+                                                        {{ $file->getFormattedSize() }}
+                                                        @if($file->description)
+                                                            • {{ Str::limit($file->description, 50) }}
+                                                        @endif
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center space-x-2">
+                                                @if($file->isViewableInBrowser())
+                                                    <a href="{{ route('formations.files.view', $file) }}" 
+                                                       target="_blank"
+                                                       class="text-blue-600 hover:text-blue-800 p-1"
+                                                       title="Voir dans le navigateur">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                                        </svg>
+                                                    </a>
+                                                @endif
+                                                <a href="{{ route('formations.files.download', $file) }}" 
+                                                   class="text-green-600 hover:text-green-800 p-1"
+                                                   title="Télécharger">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                                                    </svg>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
+                    <!-- Fichiers privés -->
+                    @if($privateFiles->count() > 0)
+                        <div>
+                            <h4 class="text-md font-medium text-gray-700 mb-3 flex items-center">
+                                <svg class="w-5 h-5 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                                Ressources pour les participants inscrits
+                            </h4>
+                            
+                            @if($userHasAccess)
+                                <!-- L'utilisateur a accès -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    @foreach($privateFiles as $file)
+                                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 hover:bg-blue-100 transition-colors">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center space-x-3">
+                                                    <div class="flex-shrink-0">
+                                                        {!! $file->getFileTypeIcon() !!}
+                                                    </div>
+                                                    <div class="flex-1 min-w-0">
+                                                        <p class="text-sm font-medium text-gray-900 truncate">
+                                                            {{ $file->original_name }}
+                                                        </p>
+                                                        <p class="text-xs text-gray-500">
+                                                            {{ $file->getFormattedSize() }}
+                                                            @if($file->description)
+                                                                • {{ Str::limit($file->description, 50) }}
+                                                            @endif
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-center space-x-2">
+                                                    @if($file->isViewableInBrowser())
+                                                        <a href="{{ route('formations.files.view', $file) }}" 
+                                                           target="_blank"
+                                                           class="text-blue-600 hover:text-blue-800 p-1"
+                                                           title="Voir dans le navigateur">
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                                            </svg>
+                                                        </a>
+                                                    @endif
+                                                    <a href="{{ route('formations.files.download', $file) }}" 
+                                                       class="text-green-600 hover:text-green-800 p-1"
+                                                       title="Télécharger">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                                                        </svg>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <!-- L'utilisateur n'a pas accès -->
+                                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                    <div class="flex items-start">
+                                        <svg class="w-5 h-5 text-yellow-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L3.232 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                                        </svg>
+                                        <div>
+                                            <h4 class="text-sm font-medium text-yellow-900">Accès restreint</h4>
+                                            <p class="text-sm text-yellow-700 mt-1">
+                                                {{ $privateFiles->count() }} fichier(s) supplémentaire(s) disponible(s) après inscription et validation de votre demande.
+                                            </p>
+                                            @if(!$userRequest)
+                                                <p class="text-sm text-yellow-700 mt-2">
+                                                    Faites une demande de participation pour y accéder.
+                                                </p>
+                                            @elseif($userRequest->status === 'en_attente')
+                                                <p class="text-sm text-yellow-700 mt-2">
+                                                    Votre demande est en attente de validation.
+                                                </p>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+                </div>
+            @else
+                <!-- Message si pas de fichiers -->
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                    <div class="text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                        </svg>
+                        <h4 class="mt-2 text-sm font-medium text-gray-900">Aucun fichier disponible</h4>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Cette formation ne contient pas encore de ressources téléchargeables.
+                        </p>
+                    </div>
                 </div>
             @endif
 

@@ -17,6 +17,8 @@ class Mission extends Model
         'description',
         'status',
         'priority',
+        'category',
+        'subcategory',
         'assigned_to',
         'created_by',
         'manager_id',
@@ -35,6 +37,52 @@ class Mission extends Model
         'due_date' => 'date',
         'completed_at' => 'datetime',
     ];
+
+    // Catégories et sous-catégories de missions
+    public static function getCategories(): array
+    {
+        return [
+            'location' => 'Location',
+            'syndic' => 'Syndic',
+            'autres' => 'Autres'
+        ];
+    }
+
+    public static function getSubcategories(): array
+    {
+        return [
+            'location' => [
+                'visite_locataire' => 'Visite avec locataire potentiel',
+                'etat_lieux_entree' => 'État des lieux d\'entrée',
+                'etat_lieux_sortie' => 'État des lieux de sortie',
+                'gestion_charges' => 'Gestion des charges locatives',
+                'revision_loyer' => 'Révision de loyer',
+                'recouvrement' => 'Recouvrement de loyers',
+                'travaux_locatif' => 'Suivi travaux locatifs',
+                'regularisation_charges' => 'Régularisation des charges',
+            ],
+            'syndic' => [
+                'ag_copropriete' => 'Assemblée générale de copropriété',
+                'conseil_syndical' => 'Réunion conseil syndical',
+                'devis_travaux' => 'Demande de devis travaux',
+                'suivi_travaux' => 'Suivi de travaux copropriété',
+                'gestion_sinistre' => 'Gestion de sinistre',
+                'budget_previsionnel' => 'Élaboration budget prévisionnel',
+                'appels_fonds' => 'Gestion appels de fonds',
+                'comptabilite_syndic' => 'Comptabilité de copropriété',
+            ],
+            'autres' => [
+                'prospection_commerciale' => 'Prospection commerciale',
+                'formation_interne' => 'Formation interne',
+                'reporting_direction' => 'Reporting direction',
+                'veille_juridique' => 'Veille juridique',
+                'relation_client' => 'Relation client',
+                'administration' => 'Tâches administratives',
+                'projet_special' => 'Projet spécial',
+                'audit_interne' => 'Audit interne',
+            ]
+        ];
+    }
 
     // Relations
     public function assignedUser(): BelongsTo
@@ -62,6 +110,7 @@ class Mission extends Model
         if ($user->isManager()) {
             return $query->where(function ($q) use ($user) {
                 $q->where('assigned_to', $user->id)
+                  ->orWhere('created_by', $user->id)
                   ->orWhere('manager_id', $user->id)
                   ->orWhereHas('assignedUser', function ($subQ) use ($user) {
                       $subQ->where('manager_id', $user->id);
@@ -69,7 +118,10 @@ class Mission extends Model
             });
         }
 
-        return $query->where('assigned_to', $user->id);
+        return $query->where(function ($q) use ($user) {
+            $q->where('assigned_to', $user->id)
+              ->orWhere('created_by', $user->id);
+        });
     }
 
     public function scopeInProgress(Builder $query): Builder
@@ -86,6 +138,14 @@ class Mission extends Model
     {
         return $query->where('due_date', '<', now())
                     ->whereNotIn('status', ['termine', 'annule']);
+    }
+
+    public function scopeByCategory(Builder $query, string $category = null): Builder
+    {
+        if ($category) {
+            return $query->where('category', $category);
+        }
+        return $query;
     }
 
     public function scopeThisMonth(Builder $query): Builder
@@ -117,6 +177,19 @@ class Mission extends Model
         ");
     }
 
+    // Accesseurs pour les catégories
+    public function getCategoryLabelAttribute(): string
+    {
+        $categories = self::getCategories();
+        return $categories[$this->category] ?? 'Non défini';
+    }
+
+    public function getSubcategoryLabelAttribute(): string
+    {
+        $subcategories = self::getSubcategories();
+        return $subcategories[$this->category][$this->subcategory] ?? 'Non défini';
+    }
+
     // Méthodes utilitaires
     public function isOverdue(): bool
     {
@@ -130,25 +203,16 @@ class Mission extends Model
         return $this->status === 'termine';
     }
 
-    /**
-     * Calcule le nombre de jours jusqu'à l'échéance (CORRECTION)
-     * Retourne un entier pour éviter les décimales
-     */
     public function getDaysUntilDue(): int
     {
         if (!$this->due_date) {
             return 0;
         }
 
-        // CORRECTION: Utiliser diffInDays avec false pour obtenir un nombre signé
-        // et arrondir à l'entier le plus proche
         $days = now()->startOfDay()->diffInDays($this->due_date->startOfDay(), false);
         return (int) round($days);
     }
 
-    /**
-     * Retourne un texte formaté pour l'affichage de l'échéance
-     */
     public function getDueStatusAttribute(): string
     {
         if (!$this->due_date) {
@@ -169,9 +233,6 @@ class Mission extends Model
         }
     }
 
-    /**
-     * Couleur pour l'affichage de l'échéance
-     */
     public function getDueColorAttribute(): string
     {
         if (!$this->due_date) {
@@ -181,13 +242,13 @@ class Mission extends Model
         $days = $this->getDaysUntilDue();
         
         if ($days < 0) {
-            return 'red';     // En retard
+            return 'red';
         } elseif ($days <= 1) {
-            return 'orange';  // Urgent (aujourd'hui ou demain)
+            return 'orange';
         } elseif ($days <= 3) {
-            return 'yellow';  // Proche
+            return 'yellow';
         } else {
-            return 'green';   // Temps suffisant
+            return 'green';
         }
     }
 
@@ -291,14 +352,12 @@ class Mission extends Model
     protected static function booted()
     {
         static::updating(function ($mission) {
-            // Marquer automatiquement les missions en retard
             if ($mission->due_date && 
                 $mission->due_date->isPast() && 
                 !in_array($mission->status, ['termine', 'annule'])) {
                 $mission->status = 'en_retard';
             }
 
-            // Définir la date de completion
             if ($mission->status === 'termine' && !$mission->completed_at) {
                 $mission->completed_at = now();
             }

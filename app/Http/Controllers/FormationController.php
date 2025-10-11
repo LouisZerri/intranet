@@ -5,11 +5,21 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Formation;
 use App\Models\FormationRequest;
+use App\Models\FormationFile;
 use App\Models\User;
+use App\Services\FormationFileService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class FormationController extends Controller
 {
+    protected FormationFileService $fileService;
+
+    public function __construct(FormationFileService $fileService)
+    {
+        $this->fileService = $fileService;
+    }
+
     /**
      * Catalogue des formations disponibles
      */
@@ -80,7 +90,9 @@ class FormationController extends Controller
     {
         $user = Auth::user();
         
-        $formation->load(['creator']);
+        $formation->load(['creator', 'files' => function($query) {
+            $query->public()->ordered();
+        }]);
         
         // Vérifier si l'utilisateur a déjà fait une demande
         $userRequest = FormationRequest::where('formation_id', $formation->id)
@@ -96,19 +108,23 @@ class FormationController extends Controller
             'available_places' => $formation->getAvailablePlaces(),
         ];
 
-        return view('formations.show', compact('formation', 'userRequest', 'stats'));
+        // Organiser les fichiers par type
+        $filesByType = $formation->getFilesByType();
+
+        return view('formations.show', compact('formation', 'userRequest', 'stats', 'filesByType'));
     }
 
     /**
-     * Formulaire de création de formation (managers/admin)
+     * Formulaire de création de formation (admin seulement)
      */
     public function create()
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
         
-        if (!$user->isManager() && !$user->isAdministrateur()) {
-            abort(403);
+        // Seuls les administrateurs peuvent créer des formations
+        if (!$user->isAdministrateur()) {
+            abort(403, 'Seuls les administrateurs peuvent créer des formations.');
         }
 
         $categories = Formation::active()->whereNotNull('category')->distinct()->pluck('category');
@@ -126,8 +142,9 @@ class FormationController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
         
-        if (!$user->isManager() && !$user->isAdministrateur()) {
-            abort(403);
+        // Seuls les administrateurs peuvent créer des formations
+        if (!$user->isAdministrateur()) {
+            abort(403, 'Seuls les administrateurs peuvent créer des formations.');
         }
 
         $validated = $request->validate([
@@ -145,6 +162,8 @@ class FormationController extends Controller
             'location' => 'nullable|string|max:255',
             'prerequisites' => 'nullable|array',
             'objectives' => 'nullable|array',
+            'formation_files' => 'nullable|array',
+            'formation_files.*' => 'file|max:102400', // 100MB max par fichier
         ]);
 
         $formationData = array_merge($validated, [
@@ -152,7 +171,26 @@ class FormationController extends Controller
             'is_active' => true,
         ]);
 
+        // Retirer les fichiers des données de formation
+        unset($formationData['formation_files']);
+
         $formation = Formation::create($formationData);
+
+        // Traiter les fichiers uploadés
+        if ($request->hasFile('formation_files')) {
+            $results = $this->fileService->storeMultipleFiles(
+                $formation, 
+                $request->file('formation_files')
+            );
+
+            // Ajouter les messages de succès/erreur pour les fichiers
+            if (!empty($results['success'])) {
+                session()->flash('files_success', count($results['success']) . ' fichier(s) uploadé(s) avec succès.');
+            }
+            if (!empty($results['errors'])) {
+                session()->flash('files_errors', $results['errors']);
+            }
+        }
 
         return redirect()->route('formations.show', $formation)
                         ->with('success', 'Formation créée avec succès !');
@@ -218,6 +256,211 @@ class FormationController extends Controller
 
         return redirect()->route('formations.show', $formation)
                         ->with('success', 'Votre demande de participation a été envoyée avec succès !');
+    }
+
+    /**
+     * Télécharger un fichier de formation
+     */
+    public function downloadFile(FormationFile $file, Request $request)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        // Vérifier si le fichier est public ou si l'utilisateur a accès
+        if (!$file->is_public && !$user->isAdministrateur()) {
+            // Vérifier si l'utilisateur a une demande approuvée pour cette formation
+            $hasAccess = FormationRequest::where('formation_id', $file->formation_id)
+                                        ->where('user_id', $user->id)
+                                        ->whereIn('status', ['approuve', 'termine'])
+                                        ->exists();
+            
+            if (!$hasAccess) {
+                abort(403, 'Vous n\'avez pas accès à ce fichier.');
+            }
+        }
+
+        // Vérifier le token si fourni
+        if ($request->has('token')) {
+            if (!$this->fileService->verifyDownloadToken($file, $request->token)) {
+                abort(403, 'Token de téléchargement invalide.');
+            }
+        }
+
+        // Vérifier que le fichier existe
+        if (!Storage::disk('public')->exists($file->path)) {
+            abort(404, 'Fichier non trouvé.');
+        }
+
+        // Télécharger le fichier
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+        $disk = Storage::disk('public');
+        return $disk->download($file->path, $file->original_name);
+    }
+
+    /**
+     * Voir un fichier dans le navigateur
+     */
+    public function viewFile(FormationFile $file, Request $request)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        // Vérifier l'accès (même logique que downloadFile)
+        if (!$file->is_public && !$user->isAdministrateur()) {
+            $hasAccess = FormationRequest::where('formation_id', $file->formation_id)
+                                        ->where('user_id', $user->id)
+                                        ->whereIn('status', ['approuve', 'termine'])
+                                        ->exists();
+            
+            if (!$hasAccess) {
+                abort(403, 'Vous n\'avez pas accès à ce fichier.');
+            }
+        }
+
+        // Vérifier que le fichier peut être affiché dans le navigateur
+        if (!$file->isViewableInBrowser()) {
+            return $this->downloadFile($file, $request);
+        }
+
+        // Vérifier que le fichier existe
+        if (!Storage::disk('public')->exists($file->path)) {
+            abort(404, 'Fichier non trouvé.');
+        }
+
+        // Afficher le fichier
+        return response()->file(
+            Storage::disk('public')->path($file->path),
+            [
+                'Content-Type' => $file->mime_type,
+                'Content-Disposition' => 'inline; filename="' . $file->original_name . '"'
+            ]
+        );
+    }
+
+    /**
+     * Gestion des fichiers (admin seulement)
+     */
+    public function manageFiles(Formation $formation)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        
+        if (!$user->isAdministrateur()) {
+            abort(403);
+        }
+
+        $formation->load(['files' => function($query) {
+            $query->ordered();
+        }]);
+
+        $filesByType = $formation->getFilesByType();
+        $stats = $this->fileService->getFormationFilesStats($formation);
+
+        return view('formations.manage-files', compact('formation', 'filesByType', 'stats'));
+    }
+
+    /**
+     * Upload de fichiers additionnels
+     */
+    public function uploadFiles(Request $request, Formation $formation)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        
+        if (!$user->isAdministrateur()) {
+            abort(403);
+        }
+
+        $request->validate([
+            'files' => 'required|array',
+            'files.*' => 'file|max:102400', // 100MB max
+        ]);
+
+        $results = $this->fileService->storeMultipleFiles(
+            $formation, 
+            $request->file('files')
+        );
+
+        if (!empty($results['success'])) {
+            $message = count($results['success']) . ' fichier(s) uploadé(s) avec succès.';
+            if (!empty($results['errors'])) {
+                $message .= ' Erreurs: ' . implode(', ', $results['errors']);
+            }
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+
+        return response()->json([
+            'success' => false, 
+            'message' => 'Erreurs lors de l\'upload: ' . implode(', ', $results['errors'])
+        ]);
+    }
+
+    /**
+     * Supprimer un fichier
+     */
+    public function deleteFile(FormationFile $file)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        
+        if (!$user->isAdministrateur()) {
+            abort(403);
+        }
+
+        if ($this->fileService->deleteFile($file)) {
+            return response()->json(['success' => true, 'message' => 'Fichier supprimé avec succès.']);
+        }
+
+        return response()->json(['success' => false, 'message' => 'Erreur lors de la suppression.']);
+    }
+
+    /**
+     * Mettre à jour les métadonnées d'un fichier
+     */
+    public function updateFileMetadata(Request $request, FormationFile $file)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        
+        if (!$user->isAdministrateur()) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'description' => 'nullable|string|max:500',
+            'is_public' => 'boolean',
+            'sort_order' => 'integer|min:0',
+        ]);
+
+        if ($this->fileService->updateFileMetadata($file, $validated)) {
+            return response()->json(['success' => true, 'message' => 'Métadonnées mises à jour.']);
+        }
+
+        return response()->json(['success' => false, 'message' => 'Erreur lors de la mise à jour.']);
+    }
+
+    /**
+     * Réorganiser les fichiers
+     */
+    public function reorderFiles(Request $request, Formation $formation)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        
+        if (!$user->isAdministrateur()) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'file_ids' => 'required|array',
+            'file_ids.*' => 'integer|exists:formation_files,id',
+        ]);
+
+        if ($this->fileService->reorderFiles($formation, $validated['file_ids'])) {
+            return response()->json(['success' => true, 'message' => 'Ordre des fichiers mis à jour.']);
+        }
+
+        return response()->json(['success' => false, 'message' => 'Erreur lors de la réorganisation.']);
     }
 
     /**
@@ -362,6 +605,8 @@ class FormationController extends Controller
             'completion_rate' => $this->getCompletionRate(),
             'average_rating' => FormationRequest::completed()->whereNotNull('rating')->avg('rating'),
             'total_hours_delivered' => FormationRequest::completed()->sum('hours_completed'),
+            'total_files' => FormationFile::count(),
+            'total_files_size' => FormationFile::sum('size'),
         ];
 
         $popularFormations = Formation::getPopularFormations();

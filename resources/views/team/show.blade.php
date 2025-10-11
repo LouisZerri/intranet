@@ -70,6 +70,18 @@
                             <label class="block text-sm font-medium text-gray-500">Département</label>
                             <div class="mt-1 text-sm text-gray-900">{{ $teamMember->department ?? 'Non renseigné' }}</div>
                         </div>
+
+                        <!-- Localisation - NOUVEAU -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500">Localisation</label>
+                            <div class="mt-1 text-sm text-gray-900 flex items-center">
+                                <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                                {{ $teamMember->localisation ?? 'Non renseigné' }}
+                            </div>
+                        </div>
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-500">Poste</label>
@@ -124,6 +136,15 @@
                                     <div class="ml-3">
                                         <div class="text-sm font-medium text-gray-900">{{ $subordinate->full_name }}</div>
                                         <div class="text-sm text-gray-500">{{ $subordinate->position ?? 'Poste non défini' }}</div>
+                                        @if($subordinate->localisation)
+                                            <div class="text-xs text-gray-400 flex items-center mt-1">
+                                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                </svg>
+                                                {{ $subordinate->localisation }}
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                                 <a href="{{ route('team.show', $subordinate) }}" class="text-indigo-600 hover:text-indigo-500 text-sm">

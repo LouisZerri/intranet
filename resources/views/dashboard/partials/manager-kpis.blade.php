@@ -1,4 +1,4 @@
-<!-- KPI Manager AVEC formations intégrées -->
+<!-- manager-kpis.blade.php -->
 <div class="space-y-6 mb-6">
     <!-- KPI Personnels -->
     <div>
@@ -74,7 +74,7 @@
                 </div>
             </div>
 
-            <!-- NOUVEAU : Heures formation personnelles -->
+            <!-- Heures formation personnelles -->
             <div class="bg-purple-50 overflow-hidden shadow rounded-lg border border-purple-200">
                 <div class="p-5">
                     <div class="flex items-center">
@@ -150,24 +150,24 @@
                 </div>
             </div>
 
-            <!-- Demandes équipe -->
-            <div class="bg-purple-50 overflow-hidden shadow rounded-lg border border-purple-200">
+            <!-- NOUVEAU : Commandes équipe (remplace demandes) -->
+            <div class="bg-cyan-50 overflow-hidden shadow rounded-lg border border-cyan-200">
                 <div class="p-5">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
-                            <span class="text-2xl">🧾</span>
+                            <span class="text-2xl">📦</span>
                         </div>
                         <div class="ml-5 w-0 flex-1">
                             <dl>
-                                <dt class="text-sm font-medium text-purple-600 truncate">Demandes à traiter</dt>
-                                <dd class="text-lg font-medium text-purple-900">{{ $kpis['demandes_equipe_en_attente'] }}</dd>
+                                <dt class="text-sm font-medium text-cyan-600 truncate">Commandes équipe</dt>
+                                <dd class="text-lg font-medium text-cyan-900">{{ $kpis['commandes_equipe_mois'] ?? 0 }}</dd>
                             </dl>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- NOUVEAU : Taux collaborateurs formés -->
+            <!-- Taux collaborateurs formés -->
             <div class="bg-indigo-50 overflow-hidden shadow rounded-lg border border-indigo-200">
                 <div class="p-5">
                     <div class="flex items-center">
@@ -184,6 +184,7 @@
                 </div>
             </div>
             
+            <!-- Formations à approuver -->
             <div class="bg-yellow-50 overflow-hidden shadow rounded-lg border border-yellow-200">
                 <div class="p-5">
                     <div class="flex items-center">

@@ -193,9 +193,9 @@
                                         id="role" 
                                         class="block w-full pl-10 pr-8 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors appearance-none bg-white @error('role') border-red-300 ring-red-500 @enderror">
                                     <option value="">Choisir un rôle</option>
-                                    <option value="collaborateur" {{ old('role') === 'collaborateur' ? 'selected' : '' }}>👨‍💼 Collaborateur</option>
-                                    <option value="manager" {{ old('role') === 'manager' ? 'selected' : '' }}>👔 Manager</option>
-                                    <option value="administrateur" {{ old('role') === 'administrateur' ? 'selected' : '' }}>⚙️ Administrateur</option>
+                                    <option value="collaborateur" {{ old('role') === 'collaborateur' ? 'selected' : '' }}>Collaborateur</option>
+                                    <option value="manager" {{ old('role') === 'manager' ? 'selected' : '' }}>Manager</option>
+                                    <option value="administrateur" {{ old('role') === 'administrateur' ? 'selected' : '' }}>Administrateur</option>
                                 </select>
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -232,15 +232,9 @@
                                 <input type="text" 
                                        name="department" 
                                        id="department" 
-                                       value="{{ old('department') }}" 
-                                       list="departments" 
-                                       placeholder="Commercial, IT, RH..."
+                                       value="{{ old('department') }}"
+                                       placeholder="Commercial, RH, IT..."
                                        class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors @error('department') border-red-300 ring-red-500 @enderror">
-                                <datalist id="departments">
-                                    @foreach($departments as $dept)
-                                        <option value="{{ $dept }}">
-                                    @endforeach
-                                </datalist>
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
@@ -248,6 +242,50 @@
                                 </div>
                             </div>
                             @error('department')
+                                <p class="mt-2 text-sm text-red-600 flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                    </svg>
+                                    {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+
+                        <!-- Localisation (Département français) - NOUVEAU -->
+                        <div>
+                            <label for="localisation" class="block text-sm font-medium text-gray-700 mb-2">
+                                <span class="flex items-center">
+                                    <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                    Localisation <span class="text-red-500">*</span>
+                                </span>
+                            </label>
+                            <div class="relative">
+                                <select name="localisation" 
+                                        id="localisation" 
+                                        class="block w-full pl-10 pr-8 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors appearance-none bg-white @error('localisation') border-red-300 ring-red-500 @enderror">
+                                    <option value="">Choisir un département</option>
+                                    @foreach($departementsFrancais as $dept)
+                                        <option value="{{ $dept }}" {{ old('localisation') === $dept ? 'selected' : '' }}>
+                                            {{ $dept }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                </div>
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            @error('localisation')
                                 <p class="mt-2 text-sm text-red-600 flex items-center">
                                     <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
@@ -307,7 +345,7 @@
                                     <option value="">Aucun manager</option>
                                     @foreach($managers as $manager)
                                         <option value="{{ $manager->id }}" {{ old('manager_id') == $manager->id ? 'selected' : '' }}>
-                                            👔 {{ $manager->full_name }} - {{ $manager->department }}
+                                            {{ $manager->full_name }} - {{ $manager->position ?? 'Manager' }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -469,13 +507,14 @@
                 </svg>
             </div>
             <div class="ml-3">
-                <h3 class="text-sm font-medium text-blue-800">💡 Conseils</h3>
+                <h3 class="text-sm font-medium text-blue-800">Conseils</h3>
                 <div class="mt-2 text-sm text-blue-700">
                     <ul class="list-disc list-inside space-y-1">
                         <li>Choisissez un mot de passe sécurisé d'au moins 8 caractères</li>
                         <li>L'utilisateur recevra ses identifiants par email après création</li>
                         <li>Un collaborateur peut être assigné à un manager pour le suivi</li>
                         <li>L'objectif CA est optionnel mais recommandé pour les commerciaux</li>
+                        <li>La localisation correspond au département français où travaille l'utilisateur</li>
                     </ul>
                 </div>
             </div>
