@@ -26,7 +26,7 @@ class FormationController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        
+
         // Base query
         $query = Formation::available()->with(['creator']);
 
@@ -46,10 +46,10 @@ class FormationController extends Controller
         if ($request->filled('search')) {
             $searchTerm = trim($request->search);
             if (!empty($searchTerm)) {
-                $query->where(function($q) use ($searchTerm) {
+                $query->where(function ($q) use ($searchTerm) {
                     $q->where('title', 'like', "%{$searchTerm}%")
-                      ->orWhere('description', 'like', "%{$searchTerm}%")
-                      ->orWhere('provider', 'like', "%{$searchTerm}%");
+                        ->orWhere('description', 'like', "%{$searchTerm}%")
+                        ->orWhere('provider', 'like', "%{$searchTerm}%");
                 });
             }
         }
@@ -57,7 +57,7 @@ class FormationController extends Controller
         // Tri
         $sortBy = $request->get('sort', 'title');
         $sortOrder = $request->get('order', 'asc');
-        
+
         if (in_array($sortBy, ['title', 'duration_hours', 'cost', 'start_date'])) {
             $query->orderBy($sortBy, $sortOrder);
         } else {
@@ -89,15 +89,19 @@ class FormationController extends Controller
     public function show(Formation $formation)
     {
         $user = Auth::user();
-        
-        $formation->load(['creator', 'files' => function($query) {
-            $query->public()->ordered();
-        }]);
-        
+
+        // CORRECTION : Charger TOUS les fichiers, pas seulement les publics
+        $formation->load([
+            'creator',
+            'files' => function ($query) {
+                $query->ordered(); // Enlever le filtre ->public()
+            }
+        ]);
+
         // Vérifier si l'utilisateur a déjà fait une demande
         $userRequest = FormationRequest::where('formation_id', $formation->id)
-                                      ->where('user_id', $user->id)
-                                      ->first();
+            ->where('user_id', $user->id)
+            ->first();
 
         // Statistiques de la formation
         $stats = [
@@ -108,10 +112,10 @@ class FormationController extends Controller
             'available_places' => $formation->getAvailablePlaces(),
         ];
 
-        // Organiser les fichiers par type
-        $filesByType = $formation->getFilesByType();
+        // Organiser les fichiers par type (si cette méthode existe)
+        // $filesByType = $formation->getFilesByType();
 
-        return view('formations.show', compact('formation', 'userRequest', 'stats', 'filesByType'));
+        return view('formations.show', compact('formation', 'userRequest', 'stats'));
     }
 
     /**
@@ -121,7 +125,7 @@ class FormationController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        
+
         // Seuls les administrateurs peuvent créer des formations
         if (!$user->isAdministrateur()) {
             abort(403, 'Seuls les administrateurs peuvent créer des formations.');
@@ -141,7 +145,7 @@ class FormationController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        
+
         // Seuls les administrateurs peuvent créer des formations
         if (!$user->isAdministrateur()) {
             abort(403, 'Seuls les administrateurs peuvent créer des formations.');
@@ -179,7 +183,7 @@ class FormationController extends Controller
         // Traiter les fichiers uploadés
         if ($request->hasFile('formation_files')) {
             $results = $this->fileService->storeMultipleFiles(
-                $formation, 
+                $formation,
                 $request->file('formation_files')
             );
 
@@ -193,7 +197,7 @@ class FormationController extends Controller
         }
 
         return redirect()->route('formations.show', $formation)
-                        ->with('success', 'Formation créée avec succès !');
+            ->with('success', 'Formation créée avec succès !');
     }
 
     /**
@@ -202,11 +206,11 @@ class FormationController extends Controller
     public function myRequests()
     {
         $user = Auth::user();
-        
+
         $requests = FormationRequest::where('user_id', $user->id)
-                                   ->with(['formation', 'approver'])
-                                   ->orderBy('requested_at', 'desc')
-                                   ->paginate(10);
+            ->with(['formation', 'approver'])
+            ->orderBy('requested_at', 'desc')
+            ->paginate(10);
 
         $stats = [
             'total' => $requests->total(),
@@ -233,8 +237,8 @@ class FormationController extends Controller
 
         // Vérifier si l'utilisateur a déjà fait une demande
         $existingRequest = FormationRequest::where('formation_id', $formation->id)
-                                          ->where('user_id', $user->id)
-                                          ->first();
+            ->where('user_id', $user->id)
+            ->first();
 
         if ($existingRequest) {
             return back()->withErrors(['error' => 'Vous avez déjà fait une demande pour cette formation.']);
@@ -255,7 +259,7 @@ class FormationController extends Controller
         ]);
 
         return redirect()->route('formations.show', $formation)
-                        ->with('success', 'Votre demande de participation a été envoyée avec succès !');
+            ->with('success', 'Votre demande de participation a été envoyée avec succès !');
     }
 
     /**
@@ -270,10 +274,10 @@ class FormationController extends Controller
         if (!$file->is_public && !$user->isAdministrateur()) {
             // Vérifier si l'utilisateur a une demande approuvée pour cette formation
             $hasAccess = FormationRequest::where('formation_id', $file->formation_id)
-                                        ->where('user_id', $user->id)
-                                        ->whereIn('status', ['approuve', 'termine'])
-                                        ->exists();
-            
+                ->where('user_id', $user->id)
+                ->whereIn('status', ['approuve', 'termine'])
+                ->exists();
+
             if (!$hasAccess) {
                 abort(403, 'Vous n\'avez pas accès à ce fichier.');
             }
@@ -308,10 +312,10 @@ class FormationController extends Controller
         // Vérifier l'accès (même logique que downloadFile)
         if (!$file->is_public && !$user->isAdministrateur()) {
             $hasAccess = FormationRequest::where('formation_id', $file->formation_id)
-                                        ->where('user_id', $user->id)
-                                        ->whereIn('status', ['approuve', 'termine'])
-                                        ->exists();
-            
+                ->where('user_id', $user->id)
+                ->whereIn('status', ['approuve', 'termine'])
+                ->exists();
+
             if (!$hasAccess) {
                 abort(403, 'Vous n\'avez pas accès à ce fichier.');
             }
@@ -344,12 +348,12 @@ class FormationController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        
+
         if (!$user->isAdministrateur()) {
             abort(403);
         }
 
-        $formation->load(['files' => function($query) {
+        $formation->load(['files' => function ($query) {
             $query->ordered();
         }]);
 
@@ -366,7 +370,7 @@ class FormationController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        
+
         if (!$user->isAdministrateur()) {
             abort(403);
         }
@@ -377,7 +381,7 @@ class FormationController extends Controller
         ]);
 
         $results = $this->fileService->storeMultipleFiles(
-            $formation, 
+            $formation,
             $request->file('files')
         );
 
@@ -390,7 +394,7 @@ class FormationController extends Controller
         }
 
         return response()->json([
-            'success' => false, 
+            'success' => false,
             'message' => 'Erreurs lors de l\'upload: ' . implode(', ', $results['errors'])
         ]);
     }
@@ -402,7 +406,7 @@ class FormationController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        
+
         if (!$user->isAdministrateur()) {
             abort(403);
         }
@@ -421,7 +425,7 @@ class FormationController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        
+
         if (!$user->isAdministrateur()) {
             abort(403);
         }
@@ -446,7 +450,7 @@ class FormationController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        
+
         if (!$user->isAdministrateur()) {
             abort(403);
         }
@@ -470,7 +474,7 @@ class FormationController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        
+
         if (!$user->isManager() && !$user->isAdministrateur()) {
             abort(403);
         }
@@ -496,7 +500,7 @@ class FormationController extends Controller
 
         // Options pour les filtres
         $formations = Formation::active()->orderBy('title')->get();
-        
+
         $stats = [
             'total' => FormationRequest::forUser($user)->count(),
             'pending' => FormationRequest::forUser($user)->pending()->count(),
@@ -514,7 +518,7 @@ class FormationController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        
+
         if (!$user->isManager() && !$user->isAdministrateur()) {
             abort(403);
         }
@@ -540,7 +544,7 @@ class FormationController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        
+
         if (!$user->isManager() && !$user->isAdministrateur()) {
             abort(403);
         }
@@ -563,7 +567,7 @@ class FormationController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        
+
         // Vérifier permissions
         if (!$user->isManager() && !$user->isAdministrateur() && $formationRequest->user_id !== $user->id) {
             abort(403);
@@ -593,7 +597,7 @@ class FormationController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        
+
         if (!$user->isAdministrateur()) {
             abort(403);
         }
@@ -611,7 +615,7 @@ class FormationController extends Controller
 
         $popularFormations = Formation::getPopularFormations();
         $categoriesStats = Formation::getCategoriesStats();
-        
+
         return view('formations.stats', compact('stats', 'popularFormations', 'categoriesStats'));
     }
 
@@ -622,7 +626,7 @@ class FormationController extends Controller
     {
         $total = FormationRequest::whereIn('status', ['approuve', 'termine'])->count();
         $completed = FormationRequest::completed()->count();
-        
+
         return $total > 0 ? round(($completed / $total) * 100, 2) : 0;
     }
 }

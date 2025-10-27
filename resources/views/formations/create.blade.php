@@ -737,11 +737,11 @@ function removePrerequisite(button) {
 }
 
 // Code JavaScript existant pour les validations
-document.getElementById('start_date').addEventListener('change', function() {
+document.getElementById('start_date').addEventListener('blur', function() {
     const startDate = new Date(this.value);
     const endDateInput = document.getElementById('end_date');
     
-    if (endDateInput.value) {
+    if (endDateInput.value && this.value) {
         const endDate = new Date(endDateInput.value);
         if (startDate > endDate) {
             alert('La date de début ne peut pas être postérieure à la date de fin');
@@ -749,14 +749,16 @@ document.getElementById('start_date').addEventListener('change', function() {
         }
     }
     
-    endDateInput.min = this.value;
+    if (this.value) {
+        endDateInput.min = this.value;
+    }
 });
 
-document.getElementById('end_date').addEventListener('change', function() {
+document.getElementById('end_date').addEventListener('blur', function() {
     const endDate = new Date(this.value);
     const startDateInput = document.getElementById('start_date');
     
-    if (startDateInput.value) {
+    if (startDateInput.value && this.value) {
         const startDate = new Date(startDateInput.value);
         if (endDate < startDate) {
             alert('La date de fin ne peut pas être antérieure à la date de début');
