@@ -113,6 +113,39 @@ class FormationRequest extends Model
         return $this->status === 'en_attente';
     }
 
+    /**
+     * Vérifie si un utilisateur peut approuver cette demande
+     * Règles :
+     * - La demande doit être en attente
+     * - L'utilisateur ne peut pas approuver sa propre demande
+     * - Admin peut approuver toutes les demandes (sauf les siennes)
+     * - Manager peut approuver les demandes de son équipe uniquement
+     */
+    public function canBeApprovedBy(User $user): bool
+    {
+        // La demande doit être en attente
+        if (!$this->canBeApproved()) {
+            return false;
+        }
+
+        // RÈGLE CRITIQUE : On ne peut pas approuver sa propre demande
+        if ($this->user_id === $user->id) {
+            return false;
+        }
+
+        // Admin peut approuver toutes les demandes (sauf les siennes)
+        if ($user->isAdministrateur()) {
+            return true;
+        }
+
+        // Manager peut approuver les demandes de son équipe uniquement
+        if ($user->isManager()) {
+            return $this->user->manager_id === $user->id;
+        }
+
+        return false;
+    }
+
     public function getDaysWaiting(): int
     {
         return $this->requested_at->diffInDays(now());
@@ -150,17 +183,28 @@ class FormationRequest extends Model
         };
     }
 
-    // Méthodes pour workflow
-    public function approve(User $approver): bool
+    public function getPriorityColorAttribute(): string
     {
-        if (!$this->canBeApproved()) {
+        return match($this->priority) {
+            'haute' => 'red',
+            'normale' => 'orange',
+            'basse' => 'gray',
+            default => 'gray'
+        };
+    }
+
+    // Méthodes pour workflow
+    public function approve(User $approver, ?string $comments = null): bool
+    {
+        if (!$this->canBeApprovedBy($approver)) {
             return false;
         }
 
         $this->update([
             'status' => 'approuve',
             'approved_by' => $approver->id,
-            'approved_at' => now()
+            'approved_at' => now(),
+            'manager_comments' => $comments
         ]);
 
         return true;
@@ -168,7 +212,7 @@ class FormationRequest extends Model
 
     public function reject(User $approver, string $comments): bool
     {
-        if (!$this->canBeApproved()) {
+        if (!$this->canBeApprovedBy($approver)) {
             return false;
         }
 

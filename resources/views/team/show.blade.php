@@ -231,8 +231,8 @@
                     </div>
                     
                     <div class="flex justify-between items-center">
-                        <span class="text-sm text-gray-500">Demandes en attente</span>
-                        <span class="text-sm font-medium text-yellow-600">{{ $userStats['demandes_en_attente'] }}</span>
+                        <span class="text-sm text-gray-500">Commandes en attente</span>
+                        <span class="text-sm font-medium text-yellow-600">{{ $userStats['commandes_en_attente'] }}</span>
                     </div>
                 </div>
             </div>

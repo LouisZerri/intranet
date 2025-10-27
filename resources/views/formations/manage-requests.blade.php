@@ -130,6 +130,15 @@
                                     @endif
                                 </div>
 
+                                {{-- Alerte si c'est sa propre demande --}}
+                                @if($formationRequest->user_id === auth()->id())
+                                    <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                        <p class="text-sm text-blue-800">
+                                            <strong>ℹ️ C'est votre propre demande</strong> - Vous ne pouvez pas l'approuver ou la rejeter vous-même.
+                                        </p>
+                                    </div>
+                                @endif
+
                                 @if($formationRequest->manager_comments)
                                     <div class="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                                         <p class="text-sm text-gray-700"><strong>Commentaire manager:</strong> {{ $formationRequest->manager_comments }}</p>
@@ -148,7 +157,8 @@
                                 @endif
                             </div>
 
-                            @if($formationRequest->status === 'en_attente')
+                            {{-- N'afficher les boutons QUE si l'utilisateur peut approuver cette demande --}}
+                            @if($formationRequest->canBeApprovedBy(auth()->user()))
                                 <div class="ml-4 flex flex-col space-y-2">
                                     <button 
                                         onclick="approveRequest({{ $formationRequest->id }})"

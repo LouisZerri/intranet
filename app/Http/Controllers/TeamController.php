@@ -203,14 +203,14 @@ class TeamController extends Controller
 
         $teamMember->load(['manager', 'subordinates']);
 
-        // Statistiques utilisateur
+        // Statistiques utilisateur - CORRIGÉ
         $userStats = [
             'missions_en_cours' => $teamMember->assignedMissions()->inProgress()->count(),
             'missions_terminees_mois' => $teamMember->getCompletedMissionsThisMonth(),
             'ca_mois' => $teamMember->getCurrentMonthRevenue(),
             'missions_en_retard' => $teamMember->getOverdueMissions(),
             'heures_formation_annee' => $teamMember->getFormationHoursThisYear(),
-            'demandes_en_attente' => $teamMember->getPendingInternalRequests(),
+            'commandes_en_attente' => $teamMember->getPendingOrdersCount(), // CORRECTION: remplace getPendingInternalRequests()
         ];
 
         // Missions récentes
@@ -358,12 +358,11 @@ class TeamController extends Controller
             return back()->withErrors(['error' => 'Vous ne pouvez pas supprimer votre propre compte.']);
         }
 
-        // Vérifier s'il a des missions ou demandes en cours
-        $hasPendingItems = $teamMember->assignedMissions()->inProgress()->exists() ||
-                          $teamMember->internalRequests()->pending()->exists();
+        // Vérifier s'il a des missions en cours
+        $hasPendingMissions = $teamMember->assignedMissions()->inProgress()->exists();
 
-        if ($hasPendingItems) {
-            return back()->withErrors(['error' => 'Impossible de supprimer cet utilisateur car il a des missions ou demandes en cours.']);
+        if ($hasPendingMissions) {
+            return back()->withErrors(['error' => 'Impossible de supprimer cet utilisateur car il a des missions en cours.']);
         }
 
         $name = $teamMember->full_name;
