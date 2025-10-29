@@ -620,6 +620,33 @@ class FormationController extends Controller
     }
 
     /**
+     * Supprimer une formation (admin seulement)
+     */
+    public function destroy(Formation $formation)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if (!$user->isAdministrateur()) {
+            abort(403, 'Seuls les administrateurs peuvent supprimer des formations.');
+        }
+
+        try {
+            $formationTitle = $formation->title;
+            
+            // La suppression des fichiers est gérée automatiquement par le modèle Formation
+            // grâce à la méthode delete() override qui supprime tous les fichiers associés
+            $formation->delete();
+
+            return redirect()->route('formations.index')
+                ->with('success', "La formation \"{$formationTitle}\" et tous ses fichiers ont été supprimés avec succès.");
+                
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Erreur lors de la suppression de la formation : ' . $e->getMessage()]);
+        }
+    }
+
+    /**
      * Calculer le taux de completion
      */
     private function getCompletionRate(): float

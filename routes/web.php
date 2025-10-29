@@ -31,6 +31,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:administrateur')->group(function () {
         // Gestion des formations - CRÉATION réservée aux admins (AVANT les routes génériques)
         Route::get('/formations/create', [FormationController::class, 'create'])->name('formations.create');
+        Route::delete('/formations/{formation}', [FormationController::class, 'destroy'])->name('formations.destroy');
         Route::post('/formations', [FormationController::class, 'store'])->name('formations.store');
         
         // Gestion des fichiers de formation (admin seulement)

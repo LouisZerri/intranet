@@ -56,7 +56,21 @@
         <div class="p-6 border-b border-gray-200">
             <div class="flex items-start justify-between">
                 <div class="flex-1">
-                    <h1 class="text-2xl font-bold text-gray-900">{{ $formation->title }}</h1>
+                    <div class="flex items-center justify-between mb-2">
+                        <h1 class="text-2xl font-bold text-gray-900">{{ $formation->title }}</h1>
+                        
+                        {{-- Bouton de suppression pour les administrateurs --}}
+                        @if(Auth::user()->isAdministrateur())
+                            <button onclick="confirmDelete()" 
+                                    class="ml-4 inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 shadow-md hover:shadow-lg">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                                Supprimer
+                            </button>
+                        @endif
+                    </div>
+                    
                     <div class="flex items-center mt-2 space-x-4">
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                             @if($formation->format === 'presentiel')
@@ -161,7 +175,7 @@
                 </div>
             @endif
 
-            <!-- NOUVELLE SECTION : Fichiers et ressources -->
+            <!-- SECTION : Fichiers et ressources -->
             @if($formation->files->count() > 0)
                 <div>
                     <h3 class="text-lg font-medium text-gray-900 mb-4">📁 Ressources et fichiers</h3>
@@ -570,6 +584,68 @@
 </div>
 @endif
 
+{{-- Modal de confirmation de suppression (admin seulement) --}}
+@if(Auth::user()->isAdministrateur())
+<div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 lg:w-1/3 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+            </div>
+            
+            <h3 class="text-lg font-medium text-gray-900 text-center mb-2">
+                Confirmer la suppression
+            </h3>
+            
+            <div class="mt-2 px-7 py-3">
+                <p class="text-sm text-gray-600 text-center mb-4">
+                    Êtes-vous sûr de vouloir supprimer définitivement cette formation ?
+                </p>
+                
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                    <div class="flex items-start">
+                        <svg class="w-5 h-5 text-red-400 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        <div class="text-sm text-red-800">
+                            <p class="font-semibold mb-1">⚠️ Action irréversible</p>
+                            <ul class="list-disc list-inside space-y-1 text-xs">
+                                <li>Tous les fichiers associés seront supprimés</li>
+                                <li>Les demandes de participation seront conservées pour historique</li>
+                                <li>Cette action ne peut pas être annulée</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <p class="text-sm text-gray-700 text-center font-medium mb-4">
+                    Formation : <span class="text-gray-900">"{{ $formation->title }}"</span>
+                </p>
+            </div>
+            
+            <div class="flex justify-center space-x-3 px-4 py-3">
+                <button onclick="hideDeleteModal()" 
+                        type="button"
+                        class="px-4 py-2 bg-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                    Annuler
+                </button>
+                
+                <form method="POST" action="{{ route('formations.destroy', $formation) }}" class="inline">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" 
+                            class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        Oui, supprimer définitivement
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
 <script>
 function showRequestModal() {
     document.getElementById('requestModal').classList.remove('hidden');
@@ -579,10 +655,29 @@ function hideRequestModal() {
     document.getElementById('requestModal').classList.add('hidden');
 }
 
-// Fermer le modal si on clique en dehors
+// Fonctions pour le modal de suppression
+@if(Auth::user()->isAdministrateur())
+function confirmDelete() {
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function hideDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+}
+
+// Fermer le modal de suppression si on clique en dehors
 window.addEventListener('click', function(event) {
-    const modal = document.getElementById('requestModal');
-    if (event.target === modal) {
+    const deleteModal = document.getElementById('deleteModal');
+    if (event.target === deleteModal) {
+        hideDeleteModal();
+    }
+});
+@endif
+
+// Fermer le modal de demande si on clique en dehors
+window.addEventListener('click', function(event) {
+    const requestModal = document.getElementById('requestModal');
+    if (event.target === requestModal) {
         hideRequestModal();
     }
 });
