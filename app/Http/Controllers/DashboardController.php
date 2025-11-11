@@ -9,6 +9,8 @@ use App\Models\CommunicationOrder;
 use App\Models\News;
 use App\Models\Formation;
 use App\Models\FormationRequest;
+use App\Models\Quote;
+use App\Models\Invoice;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -51,6 +53,28 @@ class DashboardController extends Controller
      */
     private function getCollaborateurData(User $user): array
     {
+        // KPI Commerciaux
+        $devisCeMois = Quote::where('user_id', $user->id)
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+
+        $caFactureMois = Invoice::where('user_id', $user->id)
+            ->where('status', '!=', 'brouillon')
+            ->whereMonth('issued_at', now()->month)
+            ->whereYear('issued_at', now()->year)
+            ->sum('total_ht');
+
+        $caPayeMois = Invoice::where('user_id', $user->id)
+            ->where('status', 'payee')
+            ->whereMonth('paid_at', now()->month)
+            ->whereYear('paid_at', now()->year)
+            ->sum('total_ht');
+
+        $caEnAttente = Invoice::where('user_id', $user->id)
+            ->where('status', 'emise')
+            ->sum('total_ht');
+
         return [
             'role_label' => 'Collaborateur',
             'kpis' => [
@@ -58,9 +82,17 @@ class DashboardController extends Controller
                 'missions_terminees_mois' => $user->getCompletedMissionsThisMonth(),
                 'chiffre_affaires' => $user->getCurrentMonthRevenue(),
                 'missions_en_retard' => $user->getOverdueMissions(),
-                // Communication (remplace demandes internes)
+                
+                // KPI Commerciaux
+                'devis_ce_mois' => $devisCeMois,
+                'ca_facture_mois' => $caFactureMois,
+                'ca_paye_mois' => $caPayeMois,
+                'ca_en_attente' => $caEnAttente,
+                
+                // Communication
                 'commandes_ce_mois' => $user->getOrdersThisMonth(),
                 'montant_commandes_mois' => $user->getOrdersAmountThisMonth(),
+                
                 // Formations
                 'heures_formation_annee' => $user->getFormationHoursThisYear(),
                 'formations_terminees' => $user->getCompletedFormationsCount(),
@@ -78,13 +110,27 @@ class DashboardController extends Controller
                 ->orderBy('due_date')
                 ->take(5)
                 ->get(),
+            
+            // Données commerciales
+            'recent_quotes' => Quote::where('user_id', $user->id)
+                ->with('client')
+                ->orderBy('created_at', 'desc')
+                ->take(5)
+                ->get(),
+            'recent_invoices' => Invoice::where('user_id', $user->id)
+                ->with(['client', 'payments'])
+                ->orderBy('created_at', 'desc')
+                ->take(5)
+                ->get(),
+            
             // Formations récentes
             'recent_formations' => $user->formationRequests()
                 ->with(['formation'])
                 ->orderBy('requested_at', 'desc')
                 ->take(3)
                 ->get(),
-            // Commandes récentes (NOUVEAU)
+            
+            // Commandes récentes
             'recent_orders' => $user->communicationOrders()
                 ->with(['items.product'])
                 ->orderBy('ordered_at', 'desc')
@@ -101,6 +147,26 @@ class DashboardController extends Controller
         $teamMembers = $user->subordinates()->where('is_active', true)->get();
         $teamIds = $teamMembers->pluck('id')->toArray();
 
+        // KPI commerciaux équipe
+        $devisEquipeMois = Quote::whereIn('user_id', $teamIds)
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+
+        $caFactureEquipe = Invoice::whereIn('user_id', $teamIds)
+            ->where('status', '!=', 'brouillon')
+            ->whereMonth('issued_at', now()->month)
+            ->whereYear('issued_at', now()->year)
+            ->sum('total_ht');
+
+        $caPayeEquipe = Invoice::whereIn('user_id', $teamIds)
+            ->where('status', 'payee')
+            ->whereMonth('paid_at', now()->month)
+            ->whereYear('paid_at', now()->year)
+            ->sum('total_ht');
+
+        $tauxTransformation = $this->calculateConversionRate($teamIds);
+
         return [
             'role_label' => 'Manager',
             'kpis' => [
@@ -111,17 +177,24 @@ class DashboardController extends Controller
                 'missions_en_retard' => $user->getOverdueMissions(),
                 'heures_formation_annee' => $user->getFormationHoursThisYear(),
 
-                // KPI équipe
+                // KPI équipe missions
                 'chiffre_affaires_equipe' => Mission::getTeamRevenue($user, now()->startOfMonth(), now()->endOfMonth()),
                 'equipe_size' => $teamMembers->count(),
-                'missions_equipe_en_retard' => Mission::whereIn('assigned_to', $teamIds)
-                    ->overdue()
-                    ->count(),
-                // Communication équipe (remplace demandes)
+                'missions_equipe_en_retard' => Mission::whereIn('assigned_to', $teamIds)->overdue()->count(),
+                
+                // KPI commerciaux équipe
+                'devis_equipe_mois' => $devisEquipeMois,
+                'ca_facture_equipe' => $caFactureEquipe,
+                'ca_paye_equipe' => $caPayeEquipe,
+                'ca_commercial_equipe' => $caPayeEquipe,
+                'taux_transformation' => $tauxTransformation,
+                
+                // Communication équipe
                 'commandes_equipe_mois' => CommunicationOrder::whereIn('user_id', $teamIds)
                     ->whereMonth('ordered_at', now()->month)
                     ->whereYear('ordered_at', now()->year)
                     ->count(),
+                
                 // Formations équipe
                 'taux_collaborateurs_formes' => $this->getTeamTrainingRate($teamMembers),
                 'formations_equipe_en_attente' => FormationRequest::whereIn('user_id', $teamIds)
@@ -131,11 +204,27 @@ class DashboardController extends Controller
             ],
             'team_members' => $teamMembers,
             'team_performance' => $this->getTeamPerformance($teamMembers),
+            
             // Demandes de formation à approuver
             'pending_formation_requests' => FormationRequest::whereIn('user_id', $teamIds)
                 ->pending()
                 ->with(['user', 'formation'])
                 ->take(5)
+                ->get(),
+            
+            // Devis récents équipe
+            'recent_team_quotes' => Quote::whereIn('user_id', $teamIds)
+                ->with(['user', 'client'])
+                ->orderBy('created_at', 'desc')
+                ->take(10)
+                ->get(),
+            
+            // Factures en attente équipe
+            'pending_team_invoices' => Invoice::whereIn('user_id', $teamIds)
+                ->where('status', 'emise')
+                ->with(['user', 'client'])
+                ->orderBy('due_date')
+                ->take(10)
                 ->get(),
         ];
     }
@@ -145,7 +234,22 @@ class DashboardController extends Controller
      */
     private function getAdministrateurData(User $user): array
     {
-        $thisMonth = now()->startOfMonth();
+        // KPI commerciaux globaux
+        $devisCeMois = Quote::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+
+        $caFactureMois = Invoice::where('status', '!=', 'brouillon')
+            ->whereMonth('issued_at', now()->month)
+            ->whereYear('issued_at', now()->year)
+            ->sum('total_ht');
+
+        $caPayeMois = Invoice::where('status', 'payee')
+            ->whereMonth('paid_at', now()->month)
+            ->whereYear('paid_at', now()->year)
+            ->sum('total_ht');
+
+        $tauxTransformationGlobal = $this->calculateGlobalConversionRate();
 
         return [
             'role_label' => 'Administrateur',
@@ -153,13 +257,23 @@ class DashboardController extends Controller
                 'utilisateurs_actifs' => User::where('is_active', true)->count(),
                 'missions_ouvertes_mois' => Mission::thisMonth()->count(),
                 'ca_total_mois' => Mission::completedThisMonth()->sum('revenue') ?: 0,
-                // Communication (remplace taux validation demandes)
+                
+                // KPI commerciaux
+                'devis_ce_mois' => $devisCeMois,
+                'ca_facture_mois' => $caFactureMois,
+                'ca_paye_mois' => $caPayeMois,
+                'taux_transformation_global' => $tauxTransformationGlobal,
+                'factures_en_attente' => Invoice::where('status', 'emise')->count(),
+                'ca_en_attente' => Invoice::where('status', 'emise')->sum('total_ht'),
+                
+                // Communication
                 'commandes_ce_mois' => CommunicationOrder::whereMonth('ordered_at', now()->month)
                     ->whereYear('ordered_at', now()->year)
                     ->count(),
                 'ca_commandes_mois' => CommunicationOrder::whereMonth('ordered_at', now()->month)
                     ->whereYear('ordered_at', now()->year)
                     ->sum('total_amount') ?: 0,
+                
                 // Formations
                 'formations_actives' => Formation::active()->count(),
                 'demandes_formation_mois' => FormationRequest::whereMonth('requested_at', now()->month)
@@ -172,14 +286,29 @@ class DashboardController extends Controller
             ],
             'recent_activities' => $this->getRecentActivities(),
             'localisation_stats' => $this->getLocalisationStats(),
-            // Commandes récentes (remplace pending_requests)
+            
+            // Commandes récentes
             'recent_orders' => CommunicationOrder::with(['user', 'items.product'])
                 ->orderBy('ordered_at', 'desc')
                 ->take(10)
                 ->get(),
+            
             // Formations populaires
             'popular_formations' => Formation::getPopularFormations(5),
             'formation_categories_stats' => Formation::getCategoriesStats(),
+            
+            // Pipeline commercial
+            'pipeline_stats' => $this->getPipelineStats(),
+            'top_performers' => $this->getTopPerformers(),
+            'recent_quotes' => Quote::with(['user', 'client'])
+                ->orderBy('created_at', 'desc')
+                ->take(10)
+                ->get(),
+            'overdue_invoices' => Invoice::where('status', 'en_retard')
+                ->with(['user', 'client'])
+                ->orderBy('due_date')
+                ->take(10)
+                ->get(),
         ];
     }
 
@@ -204,17 +333,35 @@ class DashboardController extends Controller
         $performance = [];
 
         foreach ($teamMembers as $member) {
+            // KPI commerciaux membre
+            $devisMembre = Quote::where('user_id', $member->id)
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count();
+
+            $caFactureMembre = Invoice::where('user_id', $member->id)
+                ->where('status', '!=', 'brouillon')
+                ->whereMonth('issued_at', now()->month)
+                ->whereYear('issued_at', now()->year)
+                ->sum('total_ht');
+
             $performance[] = [
                 'user' => $member,
                 'missions_terminees' => $member->getCompletedMissionsThisMonth(),
                 'ca_mois' => $member->getCurrentMonthRevenue(),
                 'missions_en_retard' => $member->getOverdueMissions(),
                 'completion_rate' => Mission::getCompletionRate($member, now()->startOfMonth(), now()->endOfMonth()),
+                
+                // KPI commerciaux
+                'devis_mois' => $devisMembre,
+                'ca_facture_mois' => $caFactureMembre,
+                
                 // Formations
                 'heures_formation_annee' => $member->getFormationHoursThisYear(),
                 'formations_terminees' => $member->getCompletedFormationsCount(),
                 'est_forme_cette_annee' => $member->isTrainedThisYear(),
-                // Communication (NOUVEAU)
+                
+                // Communication
                 'commandes_mois' => $member->getOrdersThisMonth(),
             ];
         }
@@ -246,7 +393,42 @@ class DashboardController extends Controller
             ];
         }
 
-        // Commandes de communication (REMPLACE demandes internes)
+        // Devis créés
+        $recentQuotes = Quote::with(['user', 'client'])
+            ->where('created_at', '>=', now()->subDays(7))
+            ->orderBy('created_at', 'desc')
+            ->take(3)
+            ->get();
+
+        foreach ($recentQuotes as $quote) {
+            $activities[] = [
+                'type' => 'Devis créé',
+                'date' => $quote->created_at,
+                'description' => "{$quote->user->full_name} a créé le devis {$quote->quote_number} pour {$quote->client->display_name}",
+                'icon' => '📄',
+                'color' => 'indigo'
+            ];
+        }
+
+        // Factures payées
+        $recentPaidInvoices = Invoice::with(['user', 'client'])
+            ->where('status', 'payee')
+            ->where('paid_at', '>=', now()->subDays(7))
+            ->orderBy('paid_at', 'desc')
+            ->take(3)
+            ->get();
+
+        foreach ($recentPaidInvoices as $invoice) {
+            $activities[] = [
+                'type' => 'Facture payée',
+                'date' => $invoice->paid_at,
+                'description' => "Facture {$invoice->invoice_number} payée - {$invoice->client->display_name} ({$invoice->formatted_total_ttc})",
+                'icon' => '💰',
+                'color' => 'green'
+            ];
+        }
+
+        // Commandes de communication
         $recentOrders = CommunicationOrder::with('user')
             ->where('ordered_at', '>=', now()->subDays(7))
             ->orderBy('ordered_at', 'desc')
@@ -259,7 +441,7 @@ class DashboardController extends Controller
                 'date' => $order->ordered_at,
                 'description' => "Commande {$order->order_number} de {$order->user->full_name} ({$order->items->count()} article(s))",
                 'icon' => '📦',
-                'color' => 'green'
+                'color' => 'cyan'
             ];
         }
 
@@ -280,29 +462,12 @@ class DashboardController extends Controller
             ];
         }
 
-        // Demandes de formations
-        $recentFormationRequests = FormationRequest::with(['user', 'formation'])
-            ->where('requested_at', '>=', now()->subDays(7))
-            ->orderBy('requested_at', 'desc')
-            ->take(3)
-            ->get();
-
-        foreach ($recentFormationRequests as $request) {
-            $activities[] = [
-                'type' => 'Demande formation',
-                'date' => $request->requested_at,
-                'description' => "{$request->user->full_name} a demandé la formation '{$request->formation->title}'",
-                'icon' => '🎓',
-                'color' => 'indigo'
-            ];
-        }
-
         // Trier par date décroissante
         usort($activities, function ($a, $b) {
             return $b['date'] <=> $a['date'];
         });
 
-        return array_slice($activities, 0, 10);
+        return array_slice($activities, 0, 15);
     }
 
     /**
@@ -321,6 +486,13 @@ class DashboardController extends Controller
         foreach ($localisations as $loc) {
             $locUsers = User::where('localisation', $loc->localisation)->pluck('id');
 
+            // KPI commerciaux par localisation
+            $caFactureLoc = Invoice::whereIn('user_id', $locUsers)
+                ->where('status', '!=', 'brouillon')
+                ->whereMonth('issued_at', now()->month)
+                ->whereYear('issued_at', now()->year)
+                ->sum('total_ht');
+
             $stats[] = [
                 'name' => $loc->localisation,
                 'users' => $loc->user_count,
@@ -330,13 +502,16 @@ class DashboardController extends Controller
                 'ca_mois' => Mission::whereIn('assigned_to', $locUsers)
                     ->completedThisMonth()
                     ->sum('revenue') ?: 0,
+                'ca_facture_mois' => $caFactureLoc,
+                
                 // Formations
                 'heures_formation_annee' => FormationRequest::whereIn('user_id', $locUsers)
                     ->completed()
                     ->thisYear()
                     ->sum('hours_completed'),
                 'taux_formes_annee' => $this->getLocalisationTrainingRate($locUsers),
-                // Communication (NOUVEAU)
+                
+                // Communication
                 'commandes_mois' => CommunicationOrder::whereIn('user_id', $locUsers)
                     ->whereMonth('ordered_at', now()->month)
                     ->whereYear('ordered_at', now()->year)
@@ -345,6 +520,106 @@ class DashboardController extends Controller
         }
 
         return $stats;
+    }
+
+    /**
+     * Pipeline commercial (devis → facture → paiement)
+     */
+    private function getPipelineStats(): array
+    {
+        return [
+            'devis_brouillon' => Quote::where('status', 'brouillon')->count(),
+            'devis_envoyes' => Quote::where('status', 'envoye')->count(),
+            'devis_acceptes' => Quote::where('status', 'accepte')->count(),
+            'factures_brouillon' => Invoice::where('status', 'brouillon')->count(),
+            'factures_emises' => Invoice::where('status', 'emise')->count(),
+            'factures_payees' => Invoice::where('status', 'payee')->count(),
+            'factures_en_retard' => Invoice::where('status', 'en_retard')->count(),
+        ];
+    }
+
+    /**
+     * Top performers
+     */
+    private function getTopPerformers(): array
+    {
+        $users = User::where('is_active', true)
+            ->whereIn('role', ['collaborateur', 'manager'])
+            ->get();
+
+        $performers = [];
+
+        foreach ($users as $user) {
+            $caFacture = Invoice::where('user_id', $user->id)
+                ->where('status', '!=', 'brouillon')
+                ->whereMonth('issued_at', now()->month)
+                ->whereYear('issued_at', now()->year)
+                ->sum('total_ht');
+
+            if ($caFacture > 0) {
+                $performers[] = [
+                    'user' => $user,
+                    'ca_facture' => $caFacture,
+                    'devis_count' => Quote::where('user_id', $user->id)
+                        ->whereMonth('created_at', now()->month)
+                        ->whereYear('created_at', now()->year)
+                        ->count(),
+                ];
+            }
+        }
+
+        // Trier par CA décroissant
+        usort($performers, function($a, $b) {
+            return $b['ca_facture'] <=> $a['ca_facture'];
+        });
+
+        return array_slice($performers, 0, 10);
+    }
+
+    /**
+     * Calculer le taux de transformation (devis acceptés / devis envoyés)
+     */
+    private function calculateConversionRate(array $userIds): float
+    {
+        $devisEnvoyes = Quote::whereIn('user_id', $userIds)
+            ->whereIn('status', ['envoye', 'accepte', 'refuse'])
+            ->whereMonth('sent_at', now()->month)
+            ->whereYear('sent_at', now()->year)
+            ->count();
+
+        $devisAcceptes = Quote::whereIn('user_id', $userIds)
+            ->where('status', 'accepte')
+            ->whereMonth('sent_at', now()->month)
+            ->whereYear('sent_at', now()->year)
+            ->count();
+
+        if ($devisEnvoyes == 0) {
+            return 0;
+        }
+
+        return round(($devisAcceptes / $devisEnvoyes) * 100, 1);
+    }
+
+    /**
+     * Taux de transformation global
+     */
+    private function calculateGlobalConversionRate(): float
+    {
+        $devisEnvoyes = Quote::whereIn('status', ['envoye', 'accepte', 'refuse'])
+            ->whereMonth('sent_at', now()->month)
+            ->whereYear('sent_at', now()->year)
+            ->count();
+
+        $devisAcceptes = Quote::where('status', 'accepte')
+            ->whereMonth('sent_at', now()->month)
+            ->whereYear('sent_at', now()->year)
+            ->count();
+
+        if ($devisEnvoyes == 0) {
+            return 0;
+        }
+
+        return round(($devisAcceptes / $devisEnvoyes) * 100, 1);
     }
 
     /**
@@ -405,88 +680,5 @@ class DashboardController extends Controller
             ->count();
 
         return $totalUsers > 0 ? round(($trainedUsers / $totalUsers) * 100, 1) : 0;
-    }
-
-    /**
-     * Vue rapide des échéances urgentes
-     */
-    public function getUpcomingDeadlines()
-    {
-        $user = Auth::user();
-
-        $missions = Mission::forUser($user)
-            ->inProgress()
-            ->whereNotNull('due_date')
-            ->where('due_date', '>=', now())
-            ->where('due_date', '<=', now()->addDays(7))
-            ->with(['assignedUser', 'creator'])
-            ->orderBy('due_date')
-            ->get();
-
-        $deadlinesData = $missions->map(function ($mission) {
-            return [
-                'id' => $mission->id,
-                'title' => $mission->title,
-                'assigned_user' => $mission->assignedUser->full_name,
-                'due_date' => $mission->due_date->format('d/m/Y'),
-                'days_until_due' => $mission->getDaysUntilDue(),
-                'due_status' => $mission->due_status,
-                'due_color' => $mission->due_color,
-                'priority' => $mission->priority_label,
-                'priority_color' => $mission->priority_color,
-            ];
-        });
-
-        return response()->json($deadlinesData);
-    }
-
-    /**
-     * API pour récupérer les stats formations
-     */
-    public function getFormationStats()
-    {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-
-        if (!$user->isAdministrateur()) {
-            abort(403);
-        }
-
-        return response()->json([
-            'formations_actives' => Formation::active()->count(),
-            'demandes_ce_mois' => FormationRequest::whereMonth('requested_at', now()->month)->count(),
-            'heures_delivrees_annee' => FormationRequest::completed()->thisYear()->sum('hours_completed'),
-            'taux_completion' => $this->getGlobalFormationCompletionRate(),
-            'formations_populaires' => Formation::getPopularFormations(10),
-            'demandes_par_mois' => FormationRequest::selectRaw('MONTH(requested_at) as month, count(*) as count')
-                ->whereYear('requested_at', now()->year)
-                ->groupBy('month')
-                ->get(),
-        ]);
-    }
-
-    /**
-     * API pour récupérer les stats communication (NOUVEAU)
-     */
-    public function getCommunicationStats()
-    {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-
-        if (!$user->isAdministrateur()) {
-            abort(403);
-        }
-
-        return response()->json([
-            'commandes_ce_mois' => CommunicationOrder::whereMonth('ordered_at', now()->month)->count(),
-            'ca_ce_mois' => CommunicationOrder::whereMonth('ordered_at', now()->month)->sum('total_amount'),
-            'commandes_par_statut' => CommunicationOrder::selectRaw('status, count(*) as count')
-                ->groupBy('status')
-                ->get(),
-            'commandes_par_mois' => CommunicationOrder::selectRaw('MONTH(ordered_at) as month, count(*) as count, sum(total_amount) as total')
-                ->whereYear('ordered_at', now()->year)
-                ->groupBy('month')
-                ->get(),
-        ]);
     }
 }

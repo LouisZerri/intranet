@@ -1,4 +1,99 @@
 <!-- collaborateur-content.blade.php -->
+
+<!-- Section Devis & Factures récents -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Devis récents -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+                    📄 Mes devis récents
+                </h2>
+                <a href="{{ route('quotes.index') }}" class="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
+                    Voir tout →
+                </a>
+            </div>
+        </div>
+        <div class="p-6">
+            @if(isset($recent_quotes) && $recent_quotes->count() > 0)
+                <div class="space-y-3">
+                    @foreach($recent_quotes->take(5) as $quote)
+                        <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="font-medium text-sm text-gray-900">{{ $quote->quote_number }}</div>
+                                    <div class="text-xs text-gray-600 mt-1">{{ $quote->client->display_name }}</div>
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        {{ number_format($quote->total_ht, 2, ',', ' ') }}€ HT
+                                    </div>
+                                </div>
+                                <div class="ml-3 flex flex-col items-end">
+                                    <span class="px-2 py-1 text-xs rounded-full bg-{{ $quote->status_color }}-100 text-{{ $quote->status_color }}-800">
+                                        {{ $quote->status_label }}
+                                    </span>
+                                    <span class="text-xs text-gray-400 mt-1">{{ $quote->created_at->format('d/m/Y') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <div class="text-center py-8 bg-gray-50 rounded-lg">
+                    <span class="text-4xl">📄</span>
+                    <p class="text-gray-500 mt-2 text-sm">Aucun devis récent</p>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    <!-- Factures récentes -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+                    💰 Mes factures récentes
+                </h2>
+                <a href="{{ route('invoices.index') }}" class="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
+                    Voir tout →
+                </a>
+            </div>
+        </div>
+        <div class="p-6">
+            @if(isset($recent_invoices) && $recent_invoices->count() > 0)
+                <div class="space-y-3">
+                    @foreach($recent_invoices->take(5) as $invoice)
+                        <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="font-medium text-sm text-gray-900">{{ $invoice->invoice_number }}</div>
+                                    <div class="text-xs text-gray-600 mt-1">{{ $invoice->client->display_name }}</div>
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        {{ number_format($invoice->total_ht, 2, ',', ' ') }}€ HT
+                                        @if($invoice->due_date)
+                                            • Échéance: {{ $invoice->due_date->format('d/m/Y') }}
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="ml-3 flex flex-col items-end">
+                                    <span class="px-2 py-1 text-xs rounded-full bg-{{ $invoice->status_color }}-100 text-{{ $invoice->status_color }}-800">
+                                        {{ $invoice->status_label }}
+                                    </span>
+                                    <span class="text-xs text-gray-400 mt-1">{{ $invoice->issued_at->format('d/m/Y') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <div class="text-center py-8 bg-gray-50 rounded-lg">
+                    <span class="text-4xl">💰</span>
+                    <p class="text-gray-500 mt-2 text-sm">Aucune facture récente</p>
+                </div>
+            @endif
+        </div>
+    </div>
+</div>
+
 <!-- Missions récentes du collaborateur -->
 <div class="bg-white shadow rounded-lg mb-6">
     <div class="p-6 border-b border-gray-200">
@@ -118,7 +213,7 @@
         </div>
     </div>
 
-    <!-- NOUVEAU : Section Communication (remplace demandes internes) -->
+    <!-- Section Communication -->
     <div class="bg-white shadow rounded-lg">
         <div class="p-6 border-b border-gray-200">
             <div class="flex items-center justify-between">

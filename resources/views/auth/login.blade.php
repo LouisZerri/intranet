@@ -83,16 +83,6 @@
             </div>
         </form>
 
-        <!-- Informations de test -->
-        <div class="mt-8 bg-blue-50 border border-blue-200 rounded-md p-4">
-            <h3 class="text-sm font-medium text-blue-800 mb-2">🧪 Comptes de test :</h3>
-            <div class="text-xs text-blue-700 space-y-1">
-                <div><strong>Admin :</strong> admin@intranet.com / password</div>
-                <div><strong>Manager :</strong> marie.dupont@intranet.com / password</div>
-                <div><strong>Collaborateur :</strong> jean.moreau@intranet.com / password</div>
-            </div>
-        </div>
-
         <!-- Footer -->
         <div class="text-center text-xs text-gray-500">
             <p>&copy; 2025 Intranet Collaborateurs. Tous droits réservés.</p>

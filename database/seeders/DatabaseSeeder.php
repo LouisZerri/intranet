@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             FaqSeeder::class,
             ResourceSeeder::class,
             FormationFileSeeder::class,
+            CommercialModuleSeeder::class
         ]);
     }
 }

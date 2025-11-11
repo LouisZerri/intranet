@@ -19,46 +19,95 @@
 
     @auth
         <!-- Navigation principale -->
-        <nav class="bg-white shadow-sm border-b border-gray-200" x-data="{ mobileMenuOpen: false }">
+        <nav class="bg-white shadow-sm border-b border-gray-200" x-data="{ mobileMenuOpen: false, commercialOpen: false, adminOpen: false }">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-16">
                     <div class="flex">
                         <!-- Logo -->
                         <div class="flex-shrink-0 flex items-center">
                             <img src="/images/logo3d.png" alt="Logo" class="h-12 sm:h-16 lg:h-20 w-auto object-contain">
-                            <h1 class="text-xl font-bold text-gray-900">
-                                GEST'IMMO
-                            </h1>
+                            <h1 class="text-xl font-bold text-gray-900">GEST'IMMO</h1>
                         </div>
 
                         <!-- Navigation links - Desktop -->
                         <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
+                            {{-- Accueil --}}
                             <a href="{{ route('dashboard') }}"
                                 class="@if (request()->routeIs('dashboard')) border-indigo-500 text-gray-900 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                                🏠 Tableau de bord
+                                🏠 Accueil
                             </a>
+
+                            {{-- Actualités (Manager/Admin) --}}
                             @if (auth()->user()->isManager() || auth()->user()->isAdministrateur())
                                 <a href="{{ route('news.index') }}"
                                     class="@if (request()->routeIs('news.*')) border-indigo-500 text-gray-900 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                                     📰 Actualités
                                 </a>
                             @endif
+
+                            {{-- Missions --}}
                             <a href="{{ route('missions.index') }}"
                                 class="@if (request()->routeIs('missions.*')) border-indigo-500 text-gray-900 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                                 📁 Missions
                             </a>
+
+                            {{-- Commercial - Dropdown --}}
+                            <div class="relative inline-flex items-center" x-data="{ open: false }">
+                                <button @click="open = !open"
+                                    class="@if (request()->routeIs('clients.*') ||
+                                            request()->routeIs('quotes.*') ||
+                                            request()->routeIs('invoices.*') ||
+                                            request()->routeIs('urssaf.*')) border-indigo-500 text-gray-900 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium h-16">
+                                    💼 Commercial
+                                    <svg class="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+
+                                <div x-show="open" @click.away="open = false"
+                                    class="absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50"
+                                    style="top: 100%;">
+                                    <div class="py-1">
+                                        <a href="{{ route('clients.index') }}"
+                                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            👥 Clients
+                                        </a>
+                                        <a href="{{ route('quotes.index') }}"
+                                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            📄 Devis
+                                        </a>
+                                        <a href="{{ route('invoices.index') }}"
+                                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            💰 Factures
+                                        </a>
+                                        <a href="{{ route('urssaf.index') }}"
+                                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            📊 URSSAF
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Communication --}}
                             <a href="{{ route('communication.index') }}"
-                                class="@if (request()->routeIs('requests.*')) border-indigo-500 text-gray-900 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                class="@if (request()->routeIs('communication.*')) border-indigo-500 text-gray-900 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                                 📋 Communication
                             </a>
+
+                            {{-- Formations --}}
                             <a href="{{ route('formations.index') }}"
                                 class="@if (request()->routeIs('formations.*')) border-indigo-500 text-gray-900 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                                 📚 Formations
                             </a>
+
+                            {{-- Documentation --}}
                             <a href="{{ route('documentation.index') }}"
                                 class="@if (request()->routeIs('documentation.*')) border-indigo-500 text-gray-900 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                                 📖 Documentation
                             </a>
+
+                            {{-- Équipe (Manager/Admin) --}}
                             @if (auth()->user()->isManager() || auth()->user()->isAdministrateur())
                                 <a href="{{ route('team.index') }}"
                                     class="@if (request()->routeIs('team.*')) border-indigo-500 text-gray-900 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
@@ -128,30 +177,54 @@
                 <div class="pt-2 pb-3 space-y-1">
                     <a href="{{ route('dashboard') }}"
                         class="@if (request()->routeIs('dashboard')) bg-indigo-50 border-indigo-500 text-indigo-700 @else border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 @endif block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
-                        🏠 Tableau de bord
+                        🏠 Accueil
                     </a>
+
                     @if (auth()->user()->isManager() || auth()->user()->isAdministrateur())
                         <a href="{{ route('news.index') }}"
                             class="@if (request()->routeIs('news.*')) bg-indigo-50 border-indigo-500 text-indigo-700 @else border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 @endif block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
                             📰 Actualités
                         </a>
                     @endif
+
                     <a href="{{ route('missions.index') }}"
                         class="@if (request()->routeIs('missions.*')) bg-indigo-50 border-indigo-500 text-indigo-700 @else border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 @endif block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
                         📁 Missions
                     </a>
+
+                    {{-- Commercial (Mobile) --}}
+                    <div x-data="{ commercialOpen: false }">
+                        <button @click="commercialOpen = !commercialOpen"
+                            class="w-full text-left border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
+                            💼 Commercial
+                        </button>
+                        <div x-show="commercialOpen" class="pl-6 space-y-1">
+                            <a href="{{ route('clients.index') }}"
+                                class="block py-2 text-sm text-gray-600 hover:text-gray-800">👥 Clients</a>
+                            <a href="{{ route('quotes.index') }}"
+                                class="block py-2 text-sm text-gray-600 hover:text-gray-800">📄 Devis</a>
+                            <a href="{{ route('invoices.index') }}"
+                                class="block py-2 text-sm text-gray-600 hover:text-gray-800">💰 Factures</a>
+                            <a href="{{ route('urssaf.index') }}"
+                                class="block py-2 text-sm text-gray-600 hover:text-gray-800">📊 URSSAF</a>
+                        </div>
+                    </div>
+
                     <a href="{{ route('communication.index') }}"
-                        class="@if (request()->routeIs('requests.*')) bg-indigo-50 border-indigo-500 text-indigo-700 @else border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 @endif block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
+                        class="@if (request()->routeIs('communication.*')) bg-indigo-50 border-indigo-500 text-indigo-700 @else border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 @endif block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
                         📋 Communication
                     </a>
+
                     <a href="{{ route('formations.index') }}"
                         class="@if (request()->routeIs('formations.*')) bg-indigo-50 border-indigo-500 text-indigo-700 @else border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 @endif block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
                         📚 Formations
                     </a>
+
                     <a href="{{ route('documentation.index') }}"
                         class="@if (request()->routeIs('documentation.*')) bg-indigo-50 border-indigo-500 text-indigo-700 @else border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 @endif block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
                         📖 Documentation
                     </a>
+
                     @if (auth()->user()->isManager() || auth()->user()->isAdministrateur())
                         <a href="{{ route('team.index') }}"
                             class="@if (request()->routeIs('team.*')) bg-indigo-50 border-indigo-500 text-indigo-700 @else border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 @endif block pl-3 pr-4 py-2 border-l-4 text-base font-medium">

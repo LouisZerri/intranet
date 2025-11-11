@@ -13,6 +13,7 @@ class Mission extends Model
     use HasFactory;
 
     protected $fillable = [
+        'quote_id', // NOUVEAU : Lien vers le devis d'origine
         'title',
         'description',
         'status',
@@ -98,6 +99,14 @@ class Mission extends Model
     public function manager(): BelongsTo
     {
         return $this->belongsTo(User::class, 'manager_id');
+    }
+
+    /**
+     * NOUVEAU : Relation avec le devis d'origine
+     */
+    public function quote(): BelongsTo
+    {
+        return $this->belongsTo(Quote::class);
     }
 
     // Scopes

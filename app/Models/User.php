@@ -19,6 +19,8 @@ class User extends Authenticatable
         'password',
         'role',
         'phone',
+        'siret',
+        'urssaf_fixed_charges',
         'department',
         'localisation',
         'position',
@@ -39,6 +41,7 @@ class User extends Authenticatable
         'last_login_at' => 'datetime',
         'revenue_target' => 'decimal:2',
         'is_active' => 'boolean',
+        'urssaf_fixed_charges' => 'array'
     ];
 
     // =====================================
@@ -145,7 +148,7 @@ class User extends Authenticatable
         if ($this->avatar && file_exists(storage_path('app/public/avatars/' . $this->avatar))) {
             return asset('storage/avatars/' . $this->avatar);
         }
-        
+
         return $this->getDefaultAvatarUrl();
     }
 
@@ -401,13 +404,13 @@ class User extends Authenticatable
         }
 
         $totalMembers = $this->subordinates()->count();
-        
+
         if ($totalMembers == 0) {
             return 0;
         }
 
         $trainedMembers = $this->getTrainedTeamMembersCount();
-        
+
         return round(($trainedMembers / $totalMembers) * 100, 2);
     }
 
@@ -424,5 +427,26 @@ class User extends Authenticatable
         static::updating(function ($user) {
             // Actions lors de la mise à jour d'un utilisateur
         });
+    }
+
+    /**
+     * Obtenir le CA net URSSAF (avec déduction des charges forfaitaires)
+     * CDC Section D - Option bonus
+     */
+    public function getNetURSSAFRevenue(\Carbon\Carbon $startDate, \Carbon\Carbon $endDate): array
+    {
+        $data = \App\Models\Invoice::getURSSAFRevenue($this, $startDate, $endDate);
+
+        // Charges forfaitaires (communication, RC pro, etc.)
+        $fixedCharges = $this->urssaf_fixed_charges ?? [];
+        $totalCharges = collect($fixedCharges)->sum('amount');
+
+        // Calcul du CA net déclarable URSSAF
+        $data['total_charges'] = $totalCharges;
+        $data['net_ht'] = $data['total_ht'] - $totalCharges;
+        $data['net_ttc'] = $data['total_ttc'] - $totalCharges;
+        $data['charges_detail'] = $fixedCharges;
+
+        return $data;
     }
 }

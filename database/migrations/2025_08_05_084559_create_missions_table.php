@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('missions', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('quote_id')->nullable()->constrained()->onDelete('set null');
             $table->string('title');
             $table->text('description');
             $table->enum('status', ['en_attente', 'en_cours', 'termine', 'annule', 'en_retard'])->default('en_attente');

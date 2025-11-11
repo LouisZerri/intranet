@@ -123,7 +123,6 @@ class UserSeeder extends Seeder
     {
         // Administrateur
         $admin = User::create([
-            'name' => 'Admin Système',
             'first_name' => 'Admin',
             'last_name' => 'Système',
             'email' => 'admin@intranet.com',
@@ -139,7 +138,6 @@ class UserSeeder extends Seeder
 
         // Managers
         $manager1 = User::create([
-            'name' => 'Marie Dupont',
             'first_name' => 'Marie',
             'last_name' => 'Dupont',
             'email' => 'marie.dupont@intranet.com',
@@ -155,7 +153,6 @@ class UserSeeder extends Seeder
         ]);
 
         $manager2 = User::create([
-            'name' => 'Pierre Martin',
             'first_name' => 'Pierre',
             'last_name' => 'Martin',
             'email' => 'pierre.martin@intranet.com',
@@ -171,7 +168,6 @@ class UserSeeder extends Seeder
         ]);
 
         $manager3 = User::create([
-            'name' => 'Sophie Leroy',
             'first_name' => 'Sophie',
             'last_name' => 'Leroy',
             'email' => 'sophie.leroy@intranet.com',
@@ -188,7 +184,6 @@ class UserSeeder extends Seeder
 
         // Collaborateurs équipe Commercial (Manager: Marie Dupont)
         User::create([
-            'name' => 'Jean Moreau',
             'first_name' => 'Jean',
             'last_name' => 'Moreau',
             'email' => 'jean.moreau@intranet.com',
@@ -204,7 +199,6 @@ class UserSeeder extends Seeder
         ]);
 
         User::create([
-            'name' => 'Claire Bernard',
             'first_name' => 'Claire',
             'last_name' => 'Bernard',
             'email' => 'claire.bernard@intranet.com',
@@ -220,7 +214,6 @@ class UserSeeder extends Seeder
         ]);
 
         User::create([
-            'name' => 'Thomas Petit',
             'first_name' => 'Thomas',
             'last_name' => 'Petit',
             'email' => 'thomas.petit@intranet.com',
@@ -237,7 +230,6 @@ class UserSeeder extends Seeder
 
         // Collaborateurs équipe Marketing (Manager: Pierre Martin)
         User::create([
-            'name' => 'Amélie Rousseau',
             'first_name' => 'Amélie',
             'last_name' => 'Rousseau',
             'email' => 'amelie.rousseau@intranet.com',
@@ -253,7 +245,6 @@ class UserSeeder extends Seeder
         ]);
 
         User::create([
-            'name' => 'Nicolas Blanc',
             'first_name' => 'Nicolas',
             'last_name' => 'Blanc',
             'email' => 'nicolas.blanc@intranet.com',
@@ -270,7 +261,6 @@ class UserSeeder extends Seeder
 
         // Collaborateurs équipe RH (Manager: Sophie Leroy)
         User::create([
-            'name' => 'Julie Garnier',
             'first_name' => 'Julie',
             'last_name' => 'Garnier',
             'email' => 'julie.garnier@intranet.com',
@@ -286,7 +276,6 @@ class UserSeeder extends Seeder
         ]);
 
         User::create([
-            'name' => 'Vincent Durand',
             'first_name' => 'Vincent',
             'last_name' => 'Durand',
             'email' => 'vincent.durand@intranet.com',
@@ -303,7 +292,6 @@ class UserSeeder extends Seeder
 
         // Collaborateurs sans manager direct (rattachés à l'admin)
         User::create([
-            'name' => 'Laura Simon',
             'first_name' => 'Laura',
             'last_name' => 'Simon',
             'email' => 'laura.simon@intranet.com',
@@ -318,7 +306,6 @@ class UserSeeder extends Seeder
         ]);
 
         User::create([
-            'name' => 'Antoine Michel',
             'first_name' => 'Antoine',
             'last_name' => 'Michel',
             'email' => 'antoine.michel@intranet.com',

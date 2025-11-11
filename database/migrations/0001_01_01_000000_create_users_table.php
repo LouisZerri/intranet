@@ -27,6 +27,8 @@ return new class extends Migration
 
             // Informations professionnelles
             $table->string('phone')->nullable();
+            $table->string('siret', 14)->nullable();
+            $table->json('urssaf_fixed_charges')->nullable();
             $table->string('department')->nullable();
             $table->string('localisation')->nullable();
             $table->string('position')->nullable();
