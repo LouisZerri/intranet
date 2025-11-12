@@ -6,6 +6,7 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\InvoicePayment;
 use App\Models\Client;
+use App\Models\PredefinedService;
 use App\Models\Quote;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -84,13 +85,14 @@ class InvoiceController extends Controller
     {
         $clients = Client::active()->orderBy('name')->get();
         $quote = null;
+        $predefinedServices = PredefinedService::active()->ordered()->get(); // AJOUTEZ CETTE LIGNE
 
         // Si création depuis un devis
         if ($request->filled('quote_id')) {
             $quote = Quote::with('items')->findOrFail($request->quote_id);
         }
 
-        return view('invoices.create', compact('clients', 'quote'));
+        return view('invoices.create', compact('clients', 'quote', 'predefinedServices')); // Modifiez ici
     }
 
     /**
@@ -190,8 +192,9 @@ class InvoiceController extends Controller
 
         $invoice->load('items');
         $clients = Client::active()->orderBy('name')->get();
+        $predefinedServices = PredefinedService::active()->ordered()->get();
 
-        return view('invoices.edit', compact('invoice', 'clients'));
+        return view('invoices.edit', compact('invoice', 'clients', 'predefinedServices'));
     }
 
     /**

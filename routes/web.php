@@ -186,6 +186,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/api/clients/search', [ClientController::class, 'search'])->name('clients.search'); // API autocomplete
 
         // DEVIS (Workflow complet CDC - Section A)
+        Route::get('/quotes/predefined-services', [QuoteController::class, 'getPredefinedServices'])->name('quotes.predefined-services');
         Route::resource('quotes', QuoteController::class);
         Route::post('/quotes/{quote}/send', [QuoteController::class, 'send'])->name('quotes.send');
         Route::post('/quotes/{quote}/accept', [QuoteController::class, 'accept'])->name('quotes.accept'); // → Créer mission auto
@@ -193,6 +194,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/quotes/{quote}/convert', [QuoteController::class, 'convertToInvoice'])->name('quotes.convert');
         Route::get('/quotes/{quote}/pdf', [QuoteController::class, 'viewPdf'])->name('quotes.pdf');
         Route::get('/quotes/{quote}/pdf/download', [QuoteController::class, 'downloadPdf'])->name('quotes.pdf.download');
+        
         
         // FACTURES (Workflow complet CDC - Section B)
         Route::resource('invoices', InvoiceController::class);

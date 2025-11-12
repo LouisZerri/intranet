@@ -6,6 +6,7 @@ use App\Models\Quote;
 use App\Models\QuoteItem;
 use App\Models\Client;
 use App\Mail\QuoteSentMail;
+use App\Models\PredefinedService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -78,8 +79,9 @@ class QuoteController extends Controller
     {
         $clients = Client::active()->orderBy('name')->get();
         $services = Quote::getAvailableServices();
+        $predefinedServices = PredefinedService::active()->ordered()->get(); // AJOUT
 
-        return view('quotes.create', compact('clients', 'services'));
+        return view('quotes.create', compact('clients', 'services', 'predefinedServices'));
     }
 
     /**
@@ -185,7 +187,7 @@ class QuoteController extends Controller
         $user = Auth::user();
 
         if (!$this->canUserEditQuote($user, $quote)) {
-            abort(403, 'Vous ne pouvez pas modifier ce devis.');
+            abort(403);
         }
 
         if (!$quote->canBeEdited()) {
@@ -195,8 +197,9 @@ class QuoteController extends Controller
         $quote->load('items');
         $clients = Client::active()->orderBy('name')->get();
         $services = Quote::getAvailableServices();
+        $predefinedServices = PredefinedService::active()->ordered()->get(); // AJOUT
 
-        return view('quotes.edit', compact('quote', 'clients', 'services'));
+        return view('quotes.edit', compact('quote', 'clients', 'services', 'predefinedServices'));
     }
 
     /**
@@ -555,5 +558,23 @@ class QuoteController extends Controller
         $filename = preg_replace('/-+/', '-', $filename);
 
         return $filename;
+    }
+
+    /**
+     * API pour récupérer les prestations prédéfinies selon la catégorie
+     */
+    public function getPredefinedServices(Request $request)
+    {
+        $category = $request->get('category');
+
+        $query = PredefinedService::active()->ordered();
+
+        if ($category) {
+            $query->byCategory($category);
+        }
+
+        $services = $query->get();
+
+        return response()->json($services);
     }
 }

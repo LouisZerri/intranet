@@ -73,6 +73,65 @@
                         </div>
                     </div>
 
+                    {{-- Prestations prédéfinies --}}
+                    <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2">
+                                <span class="text-2xl">⚡</span>
+                                <h2 class="text-lg font-semibold text-green-900">Prestations prédéfinies</h2>
+                            </div>
+                            <button type="button" 
+                                    onclick="togglePredefinedServices()"
+                                    class="text-green-600 hover:text-green-800 text-sm font-medium">
+                                <span id="toggle-text">Afficher</span> ▼
+                            </button>
+                        </div>
+                        
+                        <p class="text-sm text-green-700 mb-4">
+                            Cliquez sur une prestation pour l'ajouter automatiquement avec son tarif
+                        </p>
+
+                        <div id="predefined-services-list" class="hidden space-y-2 max-h-96 overflow-y-auto">
+                            @if(isset($predefinedServices) && $predefinedServices->count() > 0)
+                                @foreach($predefinedServices as $service)
+                                    <div class="prestation-item bg-white border border-green-200 rounded-lg p-3 hover:bg-green-50 transition cursor-pointer"
+                                         data-category="{{ $service->category }}"
+                                         onclick="addPredefinedService(
+                                             {{ Js::from($service->name) }}, 
+                                             {{ $service->default_quantity }}, 
+                                             {{ $service->default_price }}, 
+                                             {{ $service->default_tva_rate }},
+                                             {{ Js::from($service->description ?? '') }}
+                                         )">
+                                        <div class="flex justify-between items-start">
+                                            <div class="flex-1">
+                                                <p class="font-medium text-gray-900">{{ $service->name }}</p>
+                                                @if($service->description)
+                                                    <p class="text-xs text-gray-600 mt-1">{{ $service->description }}</p>
+                                                @endif
+                                                <div class="flex items-center gap-2 mt-1">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                                        {{ $service->category_label }}
+                                                    </span>
+                                                    <span class="text-xs text-gray-500">{{ $service->unit }}</span>
+                                                </div>
+                                            </div>
+                                            <div class="text-right ml-4">
+                                                <p class="text-lg font-bold text-green-600">{{ $service->formatted_price }}</p>
+                                                <p class="text-xs text-gray-500">TVA {{ $service->default_tva_rate }}%</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            @else
+                                <div class="text-center py-8 text-gray-500">
+                                    <p>Aucune prestation prédéfinie disponible.</p>
+                                    <p class="text-xs mt-2">Contactez l'administrateur pour en ajouter.</p>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
                     {{-- Lignes de la facture --}}
                     <div class="bg-white shadow rounded-lg p-6">
                         <div class="flex justify-between items-center mb-4">
@@ -82,7 +141,7 @@
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                                 </svg>
-                                Ajouter une ligne
+                                Ligne vide
                             </button>
                         </div>
 
@@ -154,6 +213,7 @@
                     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                         <h3 class="text-sm font-semibold text-blue-900 mb-3">💡 Aide</h3>
                         <ul class="space-y-2 text-sm text-blue-800">
+                            <li>• Cliquez sur une prestation prédéfinie pour l'ajouter rapidement</li>
                             <li>• Le client est obligatoire</li>
                             <li>• Ajoutez au moins une ligne à la facture</li>
                             <li>• Les totaux se calculent automatiquement</li>
@@ -226,6 +286,31 @@
 
     <script>
         let lineIndex = 0;
+
+        // Toggle affichage des prestations prédéfinies
+        function togglePredefinedServices() {
+            const list = document.getElementById('predefined-services-list');
+            const toggleText = document.getElementById('toggle-text');
+            
+            list.classList.toggle('hidden');
+            toggleText.textContent = list.classList.contains('hidden') ? 'Afficher' : 'Masquer';
+        }
+
+        // Ajouter une prestation prédéfinie
+        function addPredefinedService(description, quantity, unit_price, tva_rate, fullDescription = '') {
+            // Si on a une description complète, on la combine avec le nom
+            const finalDescription = fullDescription ? `${description}\n${fullDescription}` : description;
+            addLine(finalDescription, quantity, unit_price, tva_rate);
+            
+            // Notification visuelle
+            const btn = event.target.closest('.prestation-item');
+            if (btn) {
+                btn.classList.add('bg-green-100', 'border-green-400');
+                setTimeout(() => {
+                    btn.classList.remove('bg-green-100', 'border-green-400');
+                }, 500);
+            }
+        }
 
         // Ajouter une ligne
         function addLine(description = '', quantity = 1, unit_price = '', tva_rate = 20) {
@@ -329,7 +414,7 @@
                 // Charger les lignes depuis le devis
                 @foreach($quote->items as $item)
                     addLine(
-                        @json($item->description),
+                        {{ Js::from($item->description) }},
                         {{ $item->quantity }},
                         {{ $item->unit_price }},
                         {{ $item->tva_rate }}
