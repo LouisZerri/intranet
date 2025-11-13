@@ -127,22 +127,22 @@
             margin-top: 5px;
         }
 
-        .status-draft {
+        .status-brouillon {
             background-color: #FEF3C7;
             color: #92400E;
         }
 
-        .status-sent {
+        .status-envoye {
             background-color: #DBEAFE;
             color: #1E40AF;
         }
 
-        .status-accepted {
+        .status-accepte {
             background-color: #D1FAE5;
             color: #065F46;
         }
 
-        .status-refused {
+        .status-refuse {
             background-color: #FEE2E2;
             color: #991B1B;
         }
@@ -270,27 +270,16 @@
             color: #4B5563;
         }
 
-        /* Pied de page */
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 2px solid #E5E7EB;
-            font-size: 8pt;
-            color: #6B7280;
-            text-align: center;
-            line-height: 1.6;
-        }
-
-        .footer-highlight {
-            font-weight: bold;
-            color: #4F46E5;
-        }
-
         /* Signature */
         .signature-section {
             margin-top: 40px;
-            display: table;
-            width: 100%;
+            text-align: right;
+        }
+
+        .signature-image {
+            max-width: 200px;
+            max-height: 80px;
+            margin-bottom: 10px;
         }
 
         .signature-box {
@@ -314,6 +303,22 @@
             padding-top: 5px;
             font-size: 8pt;
             color: #6B7280;
+        }
+
+        /* Pied de page */
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #E5E7EB;
+            font-size: 8pt;
+            color: #6B7280;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        .footer-highlight {
+            font-weight: bold;
+            color: #4F46E5;
         }
 
         /* Validité */
@@ -353,14 +358,23 @@
         <div class="header">
             <div class="header-content">
                 <div class="header-left">
-                    <div class="company-name">GEST'IMMO</div>
+                    <div class="company-name">{{ $userInfo['full_name'] }}</div>
                     <div class="company-info">
-                        35 Rue Aliénor d'Aquitaine<br>
-                        19360 Malemort<br>
-                        Tél : 06 13 25 05 96<br>
-                        Email : contact@gestimmo-presta.fr<br>
-                        SIRET : 99087741700016<br>
-                        TVA : FR42990877417
+                        @if($userInfo['professional_address'])
+                            {{ $userInfo['professional_address'] }}<br>
+                        @endif
+                        @if($userInfo['professional_postal_code'] || $userInfo['professional_city'])
+                            {{ $userInfo['professional_postal_code'] }} {{ $userInfo['professional_city'] }}<br>
+                        @endif
+                        @if($userInfo['phone'])
+                            Tél : {{ $userInfo['phone'] }}<br>
+                        @endif
+                        @if($userInfo['email'])
+                            Email : {{ $userInfo['email'] }}<br>
+                        @endif
+                        @if($userInfo['rsac_number'])
+                            RSAC : {{ $userInfo['rsac_number'] }}<br>
+                        @endif
                     </div>
                 </div>
                 <div class="header-right">
@@ -384,10 +398,12 @@
             <div class="party party-left">
                 <div class="party-title">Émetteur</div>
                 <div class="party-content">
-                    <strong>{{ $quote->user->full_name }}</strong>
-                    {{ $quote->user->email }}<br>
-                    @if ($quote->user->phone)
-                        Tél : {{ $quote->user->phone }}
+                    <strong>{{ $userInfo['full_name'] }}</strong>
+                    @if($userInfo['email'])
+                        {{ $userInfo['email'] }}<br>
+                    @endif
+                    @if($userInfo['phone'])
+                        Tél : {{ $userInfo['phone'] }}
                     @endif
                 </div>
             </div>
@@ -414,11 +430,6 @@
             </div>
         </div>
 
-        {{-- Objet --}}
-        <div class="mb-10">
-            <strong>Objet :</strong> {{ $quote->service_label }}
-        </div>
-
         {{-- Validité --}}
         @if ($quote->validity_date && $quote->status === 'envoye')
             <div class="validity-box">
@@ -440,7 +451,13 @@
             <tbody>
                 @foreach ($quote->items as $item)
                     <tr>
-                        <td>{{ $item->description }}</td>
+                        <td>
+                            @if(strpos($item->description, "\n") !== false)
+                                {!! nl2br(e($item->description)) !!}
+                            @else
+                                {{ $item->description }}
+                            @endif
+                        </td>
                         <td class="text-center">{{ $item->quantity }}</td>
                         <td class="text-right">{{ number_format($item->unit_price, 2, ',', ' ') }} €</td>
                         <td class="text-center">{{ $item->tva_rate }}%</td>
@@ -490,31 +507,40 @@
             </div>
         @endif
 
-        {{-- Signatures --}}
-        @if ($quote->status === 'envoye')
+        {{-- Signature --}}
+        @if($userInfo['has_signature'] && $userInfo['signature_url'])
             <div class="signature-section">
-                <div class="signature-box">
-                    <div class="signature-label">Le prestataire</div>
-                    <div class="signature-line">Signature et cachet</div>
-                </div>
-                <div class="signature-box">
-                    <div class="signature-label">Le client<br>(Bon pour accord)</div>
-                    <div class="signature-line">Signature précédée de "Bon pour accord"</div>
-                </div>
+                <img src="{{ $userInfo['signature_url'] }}" class="signature-image" alt="Signature">
+                <div style="font-size: 9pt; color: #666;">{{ $userInfo['full_name'] }}</div>
+            </div>
+        @endif
+
+        {{-- Texte de pied de page personnalisé --}}
+        @if($userInfo['footer_text'])
+            <div style="margin-top: 30px; padding: 15px; background-color: #EEF2FF; text-align: center; font-style: italic; font-size: 9pt; color: #4F46E5;">
+                {{ $userInfo['footer_text'] }}
             </div>
         @endif
 
         {{-- Pied de page avec mentions légales --}}
         <div class="footer">
-            <p>
-                <span class="footer-highlight">GEST'IMMO</span> - Micro-entreprise<br>
-                35 Rue Aliénor d'Aquitaine, 19360 Malemort<br>
-                SIRET : 99087741700016 - TVA : FR42990877417<br>
-            </p>
+            @if($userInfo['legal_mentions'])
+                <p style="white-space: pre-line;">{{ $userInfo['legal_mentions'] }}</p>
+            @else
+                <p>
+                    <span class="footer-highlight">{{ $userInfo['full_name'] }}</span><br>
+                    @if($userInfo['professional_address'])
+                        {{ $userInfo['professional_address'] }},
+                        {{ $userInfo['professional_postal_code'] }} {{ $userInfo['professional_city'] }}<br>
+                    @endif
+                    @if($userInfo['rsac_number'])
+                        RSAC : {{ $userInfo['rsac_number'] }}<br>
+                    @endif
+                </p>
+            @endif
             <p style="margin-top: 10px; font-size: 7pt;">
                 Conformément à la loi "Informatique et Libertés", vous disposez d'un droit d'accès et de rectification
-                des données vous concernant.<br>
-                En cas de litige, seuls les tribunaux compétents de Tulle seront saisis.
+                des données vous concernant.
             </p>
         </div>
     </div>

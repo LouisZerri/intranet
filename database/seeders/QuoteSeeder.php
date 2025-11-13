@@ -24,40 +24,25 @@ class QuoteSeeder extends Seeder
             return;
         }
 
-        $services = [
-            'location' => 'Location',
-            'etat_lieux_entree' => 'État des lieux d\'entrée',
-            'etat_lieux_sortie' => 'État des lieux de sortie',
-            'gestion' => 'Gestion locative',
-            'syndic' => 'Syndic de copropriété',
-        ];
-
+        // Prestations génériques (sans catégorisation par service)
         $prestations = [
-            'location' => [
-                ['desc' => 'Mise en location d\'un appartement T3', 'prix' => 850.00],
-                ['desc' => 'Gestion locative mensuelle', 'prix' => 120.00],
-                ['desc' => 'Recherche et sélection locataire', 'prix' => 650.00],
-            ],
-            'etat_lieux_entree' => [
-                ['desc' => 'État des lieux d\'entrée - Appartement', 'prix' => 180.00],
-                ['desc' => 'État des lieux d\'entrée - Maison', 'prix' => 250.00],
-                ['desc' => 'Photos et rapport détaillé', 'prix' => 80.00],
-            ],
-            'etat_lieux_sortie' => [
-                ['desc' => 'État des lieux de sortie - Appartement', 'prix' => 180.00],
-                ['desc' => 'État des lieux de sortie - Maison', 'prix' => 250.00],
-                ['desc' => 'Évaluation des dégradations', 'prix' => 120.00],
-            ],
-            'gestion' => [
-                ['desc' => 'Gestion complète d\'un bien locatif', 'prix' => 450.00],
-                ['desc' => 'Suivi des charges et régularisation', 'prix' => 180.00],
-                ['desc' => 'Gestion des travaux', 'prix' => 320.00],
-            ],
-            'syndic' => [
-                ['desc' => 'Gestion syndic copropriété (honoraires mensuels)', 'prix' => 890.00],
-                ['desc' => 'Assemblée générale annuelle', 'prix' => 450.00],
-                ['desc' => 'Suivi travaux copropriété', 'prix' => 380.00],
-            ],
+            ['desc' => 'Mise en location - Studio', 'details' => 'Mise en location d\'un studio (moins de 30m²)', 'prix' => 350.00],
+            ['desc' => 'Mise en location - T2/T3', 'details' => 'Mise en location d\'un T2 ou T3 (30-70m²)', 'prix' => 450.00],
+            ['desc' => 'Mise en location - T4+', 'details' => 'Mise en location d\'un T4 ou plus (70m²+)', 'prix' => 650.00],
+            ['desc' => 'État des lieux d\'entrée - Studio', 'details' => 'Réalisation état des lieux d\'entrée pour studio', 'prix' => 120.00],
+            ['desc' => 'État des lieux d\'entrée - Appartement', 'details' => 'Réalisation état des lieux d\'entrée pour appartement', 'prix' => 180.00],
+            ['desc' => 'État des lieux d\'entrée - Maison', 'details' => 'Réalisation état des lieux d\'entrée pour maison', 'prix' => 200.00],
+            ['desc' => 'État des lieux de sortie - Studio', 'details' => 'Réalisation état des lieux de sortie pour studio', 'prix' => 120.00],
+            ['desc' => 'État des lieux de sortie - Appartement', 'details' => 'Réalisation état des lieux de sortie pour appartement', 'prix' => 180.00],
+            ['desc' => 'État des lieux de sortie - Maison', 'details' => 'Réalisation état des lieux de sortie pour maison', 'prix' => 200.00],
+            ['desc' => 'Gestion locative mensuelle', 'details' => 'Gestion complète du bien locatif (loyers, charges, travaux)', 'prix' => 120.00],
+            ['desc' => 'Recherche et sélection locataire', 'details' => 'Présélection et vérification des dossiers locataires', 'prix' => 650.00],
+            ['desc' => 'Suivi des charges et régularisation', 'details' => 'Gestion annuelle des charges locatives', 'prix' => 180.00],
+            ['desc' => 'Gestion des travaux', 'details' => 'Coordination et suivi des travaux dans le bien', 'prix' => 320.00],
+            ['desc' => 'Syndic de copropriété', 'details' => 'Gestion syndic (honoraires mensuels)', 'prix' => 890.00],
+            ['desc' => 'Assemblée générale annuelle', 'details' => 'Organisation et tenue de l\'AG annuelle', 'prix' => 450.00],
+            ['desc' => 'Photos et rapport détaillé', 'details' => 'Reportage photo professionnel et rapport complet', 'prix' => 80.00],
+            ['desc' => 'Évaluation des dégradations', 'details' => 'Expertise et chiffrage des dégradations constatées', 'prix' => 120.00],
         ];
 
         $statusDistribution = [
@@ -74,7 +59,6 @@ class QuoteSeeder extends Seeder
             for ($i = 0; $i < $count; $i++) {
                 $client = $clients->random();
                 $user = $collaborateurs->random();
-                $service = array_rand($services);
                 
                 // Dates en fonction du statut
                 $createdAt = match($status) {
@@ -89,7 +73,6 @@ class QuoteSeeder extends Seeder
                     'quote_number' => Quote::generateQuoteNumber(),
                     'client_id' => $client->id,
                     'user_id' => $user->id,
-                    'service' => $service,
                     'status' => $status,
                     'validity_date' => $status === 'envoye' ? Carbon::now()->addDays(30) : 
                                       ($status === 'brouillon' ? null : Carbon::now()->subDays(rand(1, 10))),
@@ -98,8 +81,9 @@ class QuoteSeeder extends Seeder
                     'converted_at' => $status === 'converti' ? $createdAt->copy()->addDays(rand(15, 25)) : null,
                     'discount_percentage' => rand(0, 100) > 70 ? rand(5, 15) : null,
                     'internal_notes' => rand(0, 100) > 60 ? 'Note interne sur ce devis' : null,
-                    'client_notes' => 'Merci de votre confiance. Conditions de paiement : 30 jours.',
+                    'client_notes' => 'Merci de votre confiance. N\'hésitez pas à me contacter pour toute question.',
                     'payment_terms' => 'Paiement à 30 jours fin de mois',
+                    'delivery_terms' => rand(0, 100) > 50 ? 'Intervention sous 7 jours ouvrés' : null,
                     'signed_electronically' => in_array($status, ['accepte', 'converti']) ? (rand(0, 100) > 50) : false,
                     'signature_date' => in_array($status, ['accepte', 'converti']) && rand(0, 100) > 50 ? 
                                        $createdAt->copy()->addDays(rand(2, 7)) : null,
@@ -107,24 +91,28 @@ class QuoteSeeder extends Seeder
                     'updated_at' => $createdAt,
                 ]);
 
-                // Ajouter des lignes au devis
-                $items = $prestations[$service];
-                $numItems = rand(1, min(3, count($items)));
+                // Ajouter des lignes au devis (entre 1 et 4 prestations)
+                $numItems = rand(1, 4);
                 
-                // array_rand retourne un int si numItems = 1, ou un array si numItems > 1
-                $randomKeys = array_rand($items, $numItems);
+                // Sélectionner des prestations aléatoires
+                $randomKeys = array_rand($prestations, min($numItems, count($prestations)));
                 if (!is_array($randomKeys)) {
-                    $randomKeys = [$randomKeys]; // Convertir en tableau si un seul élément
+                    $randomKeys = [$randomKeys];
                 }
                 
-                foreach ($randomKeys as $key) {
+                foreach ($randomKeys as $index => $key) {
+                    $prestation = $prestations[$key];
+                    
+                    // Combiner le titre et les détails sur 2 lignes
+                    $description = $prestation['desc'] . "\n" . $prestation['details'];
+                    
                     QuoteItem::create([
                         'quote_id' => $quote->id,
-                        'description' => $items[$key]['desc'],
+                        'description' => $description,
                         'quantity' => rand(1, 3),
-                        'unit_price' => $items[$key]['prix'],
+                        'unit_price' => $prestation['prix'],
                         'tva_rate' => 20.00,
-                        'sort_order' => $key,
+                        'sort_order' => $index,
                     ]);
                 }
 

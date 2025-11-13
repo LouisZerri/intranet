@@ -7,6 +7,7 @@ use App\Models\QuoteItem;
 use App\Models\Client;
 use App\Mail\QuoteSentMail;
 use App\Models\PredefinedService;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -15,9 +16,6 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class QuoteController extends Controller
 {
-    /**
-     * Liste des devis avec filtres
-     */
     public function index(Request $request)
     {
         /** @var \App\Models\User $user */
@@ -25,17 +23,10 @@ class QuoteController extends Controller
 
         $query = Quote::forUser($user)->with(['client', 'user']);
 
-        // Filtre par statut
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // Filtre par service
-        if ($request->filled('service')) {
-            $query->where('service', $request->service);
-        }
-
-        // Recherche par client
         if ($request->filled('search')) {
             $search = $request->search;
             $query->whereHas('client', function ($q) use ($search) {
@@ -44,7 +35,6 @@ class QuoteController extends Controller
             });
         }
 
-        // Filtre par collaborateur (pour managers/admins)
         if ($request->filled('user_id') && ($user->isManager() || $user->isAdministrateur())) {
             $query->where('user_id', $request->user_id);
         }
@@ -52,7 +42,6 @@ class QuoteController extends Controller
         $quotes = $query->orderBy('created_at', 'desc')->paginate(15);
         $quotes->appends($request->all());
 
-        // Statistiques
         $stats = [
             'total' => Quote::forUser($user)->count(),
             'brouillon' => Quote::forUser($user)->draft()->count(),
@@ -62,36 +51,25 @@ class QuoteController extends Controller
             'refuse' => Quote::forUser($user)->refused()->count(),
         ];
 
-        // Taux de transformation
         $totalSent = $stats['envoye'] + $stats['accepte'] + $stats['converti'] + $stats['refuse'];
         $totalAccepted = $stats['accepte'] + $stats['converti'];
         $conversionRate = $totalSent > 0 ? round(($totalAccepted / $totalSent) * 100, 1) : 0;
 
-        $services = Quote::getAvailableServices();
-
-        return view('quotes.index', compact('quotes', 'stats', 'conversionRate', 'services', 'request'));
+        return view('quotes.index', compact('quotes', 'stats', 'conversionRate', 'request'));
     }
 
-    /**
-     * Formulaire intelligent de création (CDC)
-     */
     public function create()
     {
         $clients = Client::active()->orderBy('name')->get();
-        $services = Quote::getAvailableServices();
-        $predefinedServices = PredefinedService::active()->ordered()->get(); // AJOUT
+        $predefinedServices = PredefinedService::active()->ordered()->get();
 
-        return view('quotes.create', compact('clients', 'services', 'predefinedServices'));
+        return view('quotes.create', compact('clients', 'predefinedServices'));
     }
 
-    /**
-     * Création d'un devis avec lignes
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
-            'service' => 'required|in:' . implode(',', array_keys(Quote::getAvailableServices())),
             'validity_date' => 'nullable|date|after:today',
             'discount_percentage' => 'nullable|numeric|min:0|max:100',
             'discount_amount' => 'nullable|numeric|min:0',
@@ -99,8 +77,6 @@ class QuoteController extends Controller
             'client_notes' => 'nullable|string',
             'payment_terms' => 'nullable|string',
             'delivery_terms' => 'nullable|string',
-
-            // Lignes du devis
             'items' => 'required|array|min:1',
             'items.*.description' => 'required|string',
             'items.*.quantity' => 'required|numeric|min:0.01',
@@ -108,7 +84,6 @@ class QuoteController extends Controller
             'items.*.tva_rate' => 'required|numeric|min:0|max:100',
         ], [
             'client_id.required' => 'Vous devez sélectionner un client.',
-            'service.required' => 'Vous devez sélectionner un type de prestation.',
             'items.required' => 'Vous devez ajouter au moins une ligne au devis.',
             'items.*.description.required' => 'La description est obligatoire pour chaque ligne.',
             'items.*.quantity.required' => 'La quantité est obligatoire.',
@@ -117,12 +92,10 @@ class QuoteController extends Controller
 
         DB::beginTransaction();
         try {
-            // Créer le devis
             $quote = Quote::create([
                 'quote_number' => Quote::generateQuoteNumber(),
                 'client_id' => $validated['client_id'],
                 'user_id' => Auth::id(),
-                'service' => $validated['service'],
                 'status' => 'brouillon',
                 'validity_date' => $validated['validity_date'] ?? null,
                 'discount_percentage' => $validated['discount_percentage'] ?? null,
@@ -133,7 +106,6 @@ class QuoteController extends Controller
                 'delivery_terms' => $validated['delivery_terms'] ?? null,
             ]);
 
-            // Ajouter les lignes
             foreach ($validated['items'] as $index => $item) {
                 QuoteItem::create([
                     'quote_id' => $quote->id,
@@ -145,7 +117,6 @@ class QuoteController extends Controller
                 ]);
             }
 
-            // Recalculer les totaux
             $quote->refresh();
             $quote->calculateTotals();
             $quote->save();
@@ -160,15 +131,11 @@ class QuoteController extends Controller
         }
     }
 
-    /**
-     * Afficher un devis
-     */
     public function show(Quote $quote)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        // Vérifier les permissions
         if (!$this->canUserViewQuote($user, $quote)) {
             abort(403, 'Vous n\'avez pas accès à ce devis.');
         }
@@ -178,9 +145,6 @@ class QuoteController extends Controller
         return view('quotes.show', compact('quote'));
     }
 
-    /**
-     * Formulaire d'édition
-     */
     public function edit(Quote $quote)
     {
         /** @var \App\Models\User $user */
@@ -196,15 +160,11 @@ class QuoteController extends Controller
 
         $quote->load('items');
         $clients = Client::active()->orderBy('name')->get();
-        $services = Quote::getAvailableServices();
-        $predefinedServices = PredefinedService::active()->ordered()->get(); // AJOUT
+        $predefinedServices = PredefinedService::active()->ordered()->get();
 
-        return view('quotes.edit', compact('quote', 'clients', 'services', 'predefinedServices'));
+        return view('quotes.edit', compact('quote', 'clients', 'predefinedServices'));
     }
 
-    /**
-     * Mise à jour d'un devis
-     */
     public function update(Request $request, Quote $quote)
     {
         /** @var \App\Models\User $user */
@@ -220,7 +180,6 @@ class QuoteController extends Controller
 
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
-            'service' => 'required|in:' . implode(',', array_keys(Quote::getAvailableServices())),
             'validity_date' => 'nullable|date|after:today',
             'discount_percentage' => 'nullable|numeric|min:0|max:100',
             'discount_amount' => 'nullable|numeric|min:0',
@@ -237,10 +196,8 @@ class QuoteController extends Controller
 
         DB::beginTransaction();
         try {
-            // Mettre à jour le devis
             $quote->update([
                 'client_id' => $validated['client_id'],
-                'service' => $validated['service'],
                 'validity_date' => $validated['validity_date'] ?? null,
                 'discount_percentage' => $validated['discount_percentage'] ?? null,
                 'discount_amount' => $validated['discount_amount'] ?? null,
@@ -250,10 +207,8 @@ class QuoteController extends Controller
                 'delivery_terms' => $validated['delivery_terms'] ?? null,
             ]);
 
-            // Supprimer les anciennes lignes
             $quote->items()->delete();
 
-            // Ajouter les nouvelles lignes
             foreach ($validated['items'] as $index => $item) {
                 QuoteItem::create([
                     'quote_id' => $quote->id,
@@ -265,7 +220,6 @@ class QuoteController extends Controller
                 ]);
             }
 
-            // Recalculer les totaux
             $quote->refresh();
             $quote->calculateTotals();
             $quote->save();
@@ -280,9 +234,6 @@ class QuoteController extends Controller
         }
     }
 
-    /**
-     * Envoyer le devis au client par email
-     */
     public function send(Quote $quote)
     {
         /** @var \App\Models\User $user */
@@ -292,7 +243,6 @@ class QuoteController extends Controller
             abort(403);
         }
 
-        // Vérifications
         if ($quote->status !== 'brouillon') {
             return back()->with('error', 'Seuls les devis en brouillon peuvent être envoyés.');
         }
@@ -303,21 +253,20 @@ class QuoteController extends Controller
 
         DB::beginTransaction();
         try {
-            // 1. Générer le PDF
             $quote->load(['client', 'user', 'items']);
-            $pdf = Pdf::loadView('quotes.pdf', compact('quote'))
+            $userInfo = $this->getUserProfessionalInfo($quote->user);
+
+            $pdf = Pdf::loadView('quotes.pdf', compact('quote', 'userInfo'))
                 ->setPaper('a4', 'portrait');
 
             $pdfContent = $pdf->output();
 
-            // 2. Changer le statut
             $quote->status = 'envoye';
             $quote->sent_at = now();
             $quote->save();
 
-            // 3. Envoyer l'email avec le PDF en pièce jointe
             Mail::to($quote->client->email)
-                ->cc($quote->user->email) // Copie au commercial
+                ->cc($quote->user->email)
                 ->send(new QuoteSentMail($quote, $pdfContent));
 
             DB::commit();
@@ -338,9 +287,6 @@ class QuoteController extends Controller
         }
     }
 
-    /**
-     * Accepter le devis → Création automatique mission (CDC)
-     */
     public function accept(Quote $quote)
     {
         /** @var \App\Models\User $user */
@@ -356,7 +302,6 @@ class QuoteController extends Controller
 
         DB::beginTransaction();
         try {
-            // NOUVEAU : Gestion signature électronique (CDC Section A)
             $quote->signed_electronically = true;
             $quote->signature_date = now();
 
@@ -376,9 +321,6 @@ class QuoteController extends Controller
         }
     }
 
-    /**
-     * Refuser le devis (CDC)
-     */
     public function refuse(Quote $quote)
     {
         /** @var \App\Models\User $user */
@@ -399,9 +341,6 @@ class QuoteController extends Controller
         return back()->with('error', 'Erreur lors du refus du devis.');
     }
 
-    /**
-     * Convertir le devis en facture (CDC)
-     */
     public function convertToInvoice(Quote $quote)
     {
         /** @var \App\Models\User $user */
@@ -425,9 +364,6 @@ class QuoteController extends Controller
         return back()->with('error', 'Erreur lors de la conversion en facture.');
     }
 
-    /**
-     * Supprimer un devis
-     */
     public function destroy(Quote $quote)
     {
         /** @var \App\Models\User $user */
@@ -447,43 +383,6 @@ class QuoteController extends Controller
             ->with('success', 'Devis supprimé avec succès.');
     }
 
-    // ===== Méthodes de permissions =====
-
-    /**
-     * Vérifier si l'utilisateur peut voir le devis
-     */
-    private function canUserViewQuote($user, $quote): bool
-    {
-        if ($user->isAdministrateur()) {
-            return true;
-        }
-
-        if ($user->isManager()) {
-            return $quote->user_id === $user->id || $quote->user->manager_id === $user->id;
-        }
-
-        return $quote->user_id === $user->id;
-    }
-
-    /**
-     * Vérifier si l'utilisateur peut modifier le devis
-     */
-    private function canUserEditQuote($user, $quote): bool
-    {
-        if ($user->isAdministrateur()) {
-            return true;
-        }
-
-        if ($user->isManager()) {
-            return $quote->user_id === $user->id || $quote->user->manager_id === $user->id;
-        }
-
-        return $quote->user_id === $user->id;
-    }
-
-    /**
-     * Télécharger le PDF du devis
-     */
     public function downloadPdf(Quote $quote)
     {
         /** @var \App\Models\User $user */
@@ -494,30 +393,21 @@ class QuoteController extends Controller
         }
 
         try {
-            // Charger les relations nécessaires
             $quote->load(['client', 'user', 'items']);
+            $userInfo = $this->getUserProfessionalInfo($quote->user);
 
-            // Générer le PDF
-            $pdf = Pdf::loadView('quotes.pdf', compact('quote'))
+            $pdf = Pdf::loadView('quotes.pdf', compact('quote', 'userInfo'))
                 ->setPaper('a4', 'portrait');
 
-            // Nom du fichier
             $filename = 'devis-' . $quote->quote_number . '-' . $quote->client->display_name . '.pdf';
-
-            // Nettoyer le nom de fichier (supprimer caractères spéciaux)
             $filename = $this->sanitizeFilename($filename);
 
-            // Télécharger le PDF
             return $pdf->download($filename);
         } catch (\Exception $e) {
-
             return back()->with('error', 'Erreur lors de la génération du PDF : ' . $e->getMessage());
         }
     }
 
-    /**
-     * Visualiser le PDF dans le navigateur
-     */
     public function viewPdf(Quote $quote)
     {
         /** @var \App\Models\User $user */
@@ -528,41 +418,18 @@ class QuoteController extends Controller
         }
 
         try {
-            // Charger les relations nécessaires
             $quote->load(['client', 'user', 'items']);
+            $userInfo = $this->getUserProfessionalInfo($quote->user);
 
-            // Générer le PDF
-            $pdf = Pdf::loadView('quotes.pdf', compact('quote'))
+            $pdf = Pdf::loadView('quotes.pdf', compact('quote', 'userInfo'))
                 ->setPaper('a4', 'portrait');
 
-            // Afficher dans le navigateur
             return $pdf->stream('devis-' . $quote->quote_number . '.pdf');
         } catch (\Exception $e) {
-
             return back()->with('error', 'Erreur lors de la visualisation du PDF : ' . $e->getMessage());
         }
     }
 
-    /**
-     * Nettoyer le nom de fichier
-     */
-    private function sanitizeFilename(string $filename): string
-    {
-        // Remplacer les caractères accentués
-        $filename = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $filename);
-
-        // Supprimer les caractères non alphanumériques sauf . - _
-        $filename = preg_replace('/[^A-Za-z0-9._-]/', '-', $filename);
-
-        // Supprimer les tirets multiples
-        $filename = preg_replace('/-+/', '-', $filename);
-
-        return $filename;
-    }
-
-    /**
-     * API pour récupérer les prestations prédéfinies selon la catégorie
-     */
     public function getPredefinedServices(Request $request)
     {
         $category = $request->get('category');
@@ -576,5 +443,58 @@ class QuoteController extends Controller
         $services = $query->get();
 
         return response()->json($services);
+    }
+
+    // ===== Méthodes privées =====
+
+    private function getUserProfessionalInfo(User $user): array
+    {
+        return [
+            'full_name' => $user->full_name,
+            'email' => $user->effective_email,
+            'phone' => $user->effective_phone,
+            'rsac_number' => $user->rsac_number,
+            'professional_address' => $user->professional_address,
+            'professional_city' => $user->professional_city,
+            'professional_postal_code' => $user->professional_postal_code,
+            'legal_mentions' => $user->legal_mentions,
+            'footer_text' => $user->footer_text,
+            'signature_url' => $user->signature_url,
+            'has_signature' => !empty($user->signature_image),
+        ];
+    }
+
+    private function canUserViewQuote($user, $quote): bool
+    {
+        if ($user->isAdministrateur()) {
+            return true;
+        }
+
+        if ($user->isManager()) {
+            return $quote->user_id === $user->id || $quote->user->manager_id === $user->id;
+        }
+
+        return $quote->user_id === $user->id;
+    }
+
+    private function canUserEditQuote($user, $quote): bool
+    {
+        if ($user->isAdministrateur()) {
+            return true;
+        }
+
+        if ($user->isManager()) {
+            return $quote->user_id === $user->id || $quote->user->manager_id === $user->id;
+        }
+
+        return $quote->user_id === $user->id;
+    }
+
+    private function sanitizeFilename(string $filename): string
+    {
+        $filename = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $filename);
+        $filename = preg_replace('/[^A-Za-z0-9._-]/', '-', $filename);
+        $filename = preg_replace('/-+/', '-', $filename);
+        return $filename;
     }
 }

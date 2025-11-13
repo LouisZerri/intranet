@@ -247,9 +247,9 @@
             </div>
             <div class="grid grid-cols-12 gap-3">
                 <div class="col-span-12">
-                    <input type="text" name="items[INDEX][description]"
-                        placeholder="Description de la prestation" required
-                        class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    <textarea name="items[INDEX][description]"
+                        placeholder="Description de la prestation" required rows="2"
+                        class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                 </div>
                 <div class="col-span-3">
                     <input type="number" name="items[INDEX][quantity]"
@@ -317,7 +317,7 @@
 
             // Remplir les valeurs si fournies
             const line = container.lastElementChild;
-            if (description) line.querySelector('input[name*="[description]"]').value = description;
+            if (description) line.querySelector('textarea[name*="[description]"]').value = description;
             if (quantity) line.querySelector('input[name*="[quantity]"]').value = quantity;
             if (unit_price) line.querySelector('input[name*="[unit_price]"]').value = unit_price;
             if (tva_rate) line.querySelector('input[name*="[tva_rate]"]').value = tva_rate;

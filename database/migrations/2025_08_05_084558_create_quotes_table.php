@@ -21,19 +21,6 @@ return new class extends Migration
             $table->foreignId('client_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Mandataire émetteur
             
-            // Type de prestation (sélection paramétrée)
-            $table->enum('service', [
-                'location',
-                'etat_lieux_entree',
-                'etat_lieux_sortie',
-                'gestion',
-                'syndic',
-                'transaction',
-                'expertise',
-                'consultation',
-                'autres'
-            ])->nullable();
-            
             // Statuts : Brouillon → Envoyé → Accepté → Refusé → Converti
             $table->enum('status', ['brouillon', 'envoye', 'accepte', 'refuse', 'converti'])->default('brouillon');
             

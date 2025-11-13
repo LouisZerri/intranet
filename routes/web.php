@@ -112,7 +112,7 @@ Route::middleware('auth')->group(function () {
         // MODULE COMMERCIAL - Routes managers/admin
         Route::get('/clients/top', [ClientController::class, 'topClients'])->name('clients.top');
         Route::get('/clients/overdue', [ClientController::class, 'withOverdueInvoices'])->name('clients.overdue');
-        
+
         // URSSAF - Vue consolidée tous mandataires
         Route::get('/urssaf/all-mandataires', [URSSAFController::class, 'allMandataires'])->name('urssaf.all-mandataires');
         Route::post('/urssaf/all-mandataires/export-pdf', [URSSAFController::class, 'exportAllMandatairesPdf'])->name('urssaf.all-mandataires.export-pdf');
@@ -194,8 +194,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/quotes/{quote}/convert', [QuoteController::class, 'convertToInvoice'])->name('quotes.convert');
         Route::get('/quotes/{quote}/pdf', [QuoteController::class, 'viewPdf'])->name('quotes.pdf');
         Route::get('/quotes/{quote}/pdf/download', [QuoteController::class, 'downloadPdf'])->name('quotes.pdf.download');
-        
-        
+
+
         // FACTURES (Workflow complet CDC - Section B)
         Route::resource('invoices', InvoiceController::class);
 
@@ -228,7 +228,13 @@ Route::middleware('auth')->group(function () {
     // Routes profil utilisateur - ACCESSIBLES À TOUS LES UTILISATEURS AUTHENTIFIÉS
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    Route::put('/profile/professional', [ProfileController::class, 'updateProfessional'])->name('profile.update-professional');
+
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.update-avatar');
     Route::delete('/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('profile.remove-avatar');
+    // Gestion signature
+    Route::post('/profile/update-signature', [ProfileController::class, 'updateSignature'])->name('profile.update-signature');
+    Route::delete('/profile/remove-signature', [ProfileController::class, 'removeSignature'])->name('profile.remove-signature');
     Route::put('/password', [ProfileController::class, 'updatePassword'])->name('password.update');
 });

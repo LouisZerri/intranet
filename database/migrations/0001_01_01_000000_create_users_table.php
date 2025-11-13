@@ -45,6 +45,16 @@ return new class extends Migration
             // Suivi connexion
             $table->timestamp('last_login_at')->nullable();
 
+            $table->string('rsac_number')->nullable()->comment('Numéro RSAC du conseiller');
+            $table->text('professional_address')->nullable()->comment('Adresse professionnelle complète');
+            $table->string('professional_city')->nullable()->comment('Ville professionnelle');
+            $table->string('professional_postal_code')->nullable()->comment('Code postal professionnel');
+            $table->string('professional_email')->nullable()->comment('Email professionnel (si différent)');
+            $table->string('professional_phone')->nullable()->comment('Téléphone professionnel (si différent)');
+            $table->text('legal_mentions')->nullable()->comment('Mentions légales personnalisées');
+            $table->text('footer_text')->nullable()->comment('Texte de pied de page personnalisé');
+            $table->string('signature_image')->nullable()->comment('Image de signature/cachet');
+
             // Laravel standards
             $table->rememberToken();
             $table->timestamps();

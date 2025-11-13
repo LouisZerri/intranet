@@ -8,6 +8,7 @@ use App\Models\InvoicePayment;
 use App\Models\Client;
 use App\Models\PredefinedService;
 use App\Models\Quote;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -85,14 +86,14 @@ class InvoiceController extends Controller
     {
         $clients = Client::active()->orderBy('name')->get();
         $quote = null;
-        $predefinedServices = PredefinedService::active()->ordered()->get(); // AJOUTEZ CETTE LIGNE
+        $predefinedServices = PredefinedService::active()->ordered()->get();
 
         // Si création depuis un devis
         if ($request->filled('quote_id')) {
             $quote = Quote::with('items')->findOrFail($request->quote_id);
         }
 
-        return view('invoices.create', compact('clients', 'quote', 'predefinedServices')); // Modifiez ici
+        return view('invoices.create', compact('clients', 'quote', 'predefinedServices'));
     }
 
     /**
@@ -279,15 +280,17 @@ class InvoiceController extends Controller
                 // NOUVEAU : Envoi automatique email avec PDF (CDC Section B)
                 if ($invoice->client->email) {
                     try {
-                        // Générer le PDF
+                        // Générer le PDF avec infos professionnelles
                         $invoice->load(['client', 'user', 'items', 'payments']);
-                        $pdf = Pdf::loadView('invoices.pdf', compact('invoice'))
+                        $userInfo = $this->getUserProfessionalInfo($invoice->user); // ⬅️ AJOUT ICI
+
+                        $pdf = Pdf::loadView('invoices.pdf', compact('invoice', 'userInfo')) // ⬅️ AJOUT userInfo
                             ->setPaper('a4', 'portrait');
                         $pdfContent = $pdf->output();
 
                         // Envoyer l'email avec PDF en pièce jointe
                         Mail::to($invoice->client->email)
-                            ->cc($invoice->user->email) // Copie au commercial
+                            ->cc($invoice->user->email)
                             ->send(new \App\Mail\InvoiceSentMail($invoice, $pdfContent));
 
                         DB::commit();
@@ -440,8 +443,9 @@ class InvoiceController extends Controller
 
         try {
             $invoice->load(['client', 'user', 'items', 'payments']);
+            $userInfo = $this->getUserProfessionalInfo($invoice->user); // ⬅️ AJOUT ICI
 
-            $pdf = Pdf::loadView('invoices.pdf', compact('invoice'))
+            $pdf = Pdf::loadView('invoices.pdf', compact('invoice', 'userInfo')) // ⬅️ AJOUT userInfo
                 ->setPaper('a4', 'portrait');
 
             $filename = 'facture-' . $invoice->invoice_number . '-' . $invoice->client->display_name . '.pdf';
@@ -467,8 +471,9 @@ class InvoiceController extends Controller
 
         try {
             $invoice->load(['client', 'user', 'items', 'payments']);
+            $userInfo = $this->getUserProfessionalInfo($invoice->user); // ⬅️ AJOUT ICI
 
-            $pdf = Pdf::loadView('invoices.pdf', compact('invoice'))
+            $pdf = Pdf::loadView('invoices.pdf', compact('invoice', 'userInfo')) // ⬅️ AJOUT userInfo
                 ->setPaper('a4', 'portrait');
 
             return $pdf->stream('facture-' . $invoice->invoice_number . '.pdf');
@@ -499,7 +504,32 @@ class InvoiceController extends Controller
             ->with('success', 'Facture supprimée avec succès.');
     }
 
-    // ===== Méthodes privées =====
+    /**
+     * Récupérer les informations professionnelles de l'utilisateur
+     */
+    private function getUserProfessionalInfo(User $user): array
+    {
+        return [
+            // Informations de base
+            'full_name' => $user->full_name,
+            'email' => $user->effective_email,
+            'phone' => $user->effective_phone,
+
+            // Informations professionnelles
+            'rsac_number' => $user->rsac_number,
+            'professional_address' => $user->professional_address,
+            'professional_city' => $user->professional_city,
+            'professional_postal_code' => $user->professional_postal_code,
+
+            // Mentions et textes
+            'legal_mentions' => $user->legal_mentions,
+            'footer_text' => $user->footer_text,
+
+            // Signature
+            'signature_url' => $user->signature_url,
+            'has_signature' => !empty($user->signature_image),
+        ];
+    }
 
     private function canUserViewInvoice($user, $invoice): bool
     {

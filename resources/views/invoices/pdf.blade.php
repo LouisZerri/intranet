@@ -132,17 +132,17 @@
             color: #92400E;
         }
 
-        .status-sent {
+        .status-emise {
             background-color: #DBEAFE;
             color: #1E40AF;
         }
 
-        .status-accepted {
+        .status-payee {
             background-color: #D1FAE5;
             color: #065F46;
         }
 
-        .status-refused {
+        .status-en_retard {
             background-color: #FEE2E2;
             color: #991B1B;
         }
@@ -232,26 +232,6 @@
         }
 
         /* Notes et conditions */
-        .notes-section {
-            margin-top: 30px;
-            padding: 15px;
-            background-color: #FFFBEB;
-            border-left: 4px solid #F59E0B;
-        }
-
-        .notes-title {
-            font-weight: bold;
-            font-size: 10pt;
-            margin-bottom: 8px;
-            color: #92400E;
-        }
-
-        .notes-content {
-            font-size: 9pt;
-            color: #78350F;
-            white-space: pre-line;
-        }
-
         .conditions-section {
             margin-top: 15px;
             padding: 15px;
@@ -270,6 +250,18 @@
             color: #4B5563;
         }
 
+        /* Signature */
+        .signature-section {
+            margin-top: 40px;
+            text-align: right;
+        }
+
+        .signature-image {
+            max-width: 200px;
+            max-height: 80px;
+            margin-bottom: 10px;
+        }
+
         /* Pied de page */
         .footer {
             margin-top: 40px;
@@ -286,36 +278,6 @@
             color: #4F46E5;
         }
 
-        /* Signature */
-        .signature-section {
-            margin-top: 40px;
-            display: table;
-            width: 100%;
-        }
-
-        .signature-box {
-            display: table-cell;
-            width: 50%;
-            padding: 15px;
-            border: 1px solid #D1D5DB;
-            text-align: center;
-        }
-
-        .signature-label {
-            font-weight: bold;
-            font-size: 10pt;
-            margin-bottom: 40px;
-            color: #1F2937;
-        }
-
-        .signature-line {
-            border-top: 1px solid #9CA3AF;
-            margin-top: 60px;
-            padding-top: 5px;
-            font-size: 8pt;
-            color: #6B7280;
-        }
-
         /* Validité */
         .validity-box {
             background-color: #FEF3C7;
@@ -328,21 +290,19 @@
             color: #92400E;
         }
 
-        /* Utilitaires */
-        .text-bold {
+        .paid-box {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #D1FAE5;
+            border: 2px solid #059669;
+            text-align: center;
             font-weight: bold;
+            color: #065F46;
         }
 
-        .text-muted {
-            color: #6B7280;
-        }
-
+        /* Utilitaires */
         .mb-10 {
             margin-bottom: 10px;
-        }
-
-        .mt-20 {
-            margin-top: 20px;
         }
     </style>
 </head>
@@ -353,14 +313,23 @@
         <div class="header">
             <div class="header-content">
                 <div class="header-left">
-                    <div class="company-name">GEST'IMMO</div>
+                    <div class="company-name">{{ $userInfo['full_name'] }}</div>
                     <div class="company-info">
-                        35 Rue Aliénor d'Aquitaine<br>
-                        19360 Malemort<br>
-                        Tél : 06 13 25 05 96<br>
-                        Email : contact@gestimmo-presta.fr<br>
-                        SIRET :  99087741700016<br>
-                        TVA : FR42990877417
+                        @if ($userInfo['professional_address'])
+                            {{ $userInfo['professional_address'] }}<br>
+                        @endif
+                        @if ($userInfo['professional_postal_code'] || $userInfo['professional_city'])
+                            {{ $userInfo['professional_postal_code'] }} {{ $userInfo['professional_city'] }}<br>
+                        @endif
+                        @if ($userInfo['phone'])
+                            Tél : {{ $userInfo['phone'] }}<br>
+                        @endif
+                        @if ($userInfo['email'])
+                            Email : {{ $userInfo['email'] }}<br>
+                        @endif
+                        @if ($userInfo['rsac_number'])
+                            RSAC : {{ $userInfo['rsac_number'] }}<br>
+                        @endif
                     </div>
                 </div>
                 <div class="header-right">
@@ -380,8 +349,7 @@
                         {{ strtoupper($invoice->status_label) }}
                     </span>
                     @if ($invoice->status === 'payee')
-                        <div
-                            style="margin-top: 10px; padding: 10px; background-color: #D1FAE5; border: 2px solid #059669; text-align: center; font-weight: bold; color: #065F46;">
+                        <div class="paid-box">
                             ✅ FACTURE PAYÉE
                         </div>
                     @endif
@@ -394,10 +362,12 @@
             <div class="party party-left">
                 <div class="party-title">Émetteur</div>
                 <div class="party-content">
-                    <strong>{{ $invoice->user->full_name }}</strong>
-                    {{ $invoice->user->email }}<br>
-                    @if ($invoice->user->phone)
-                        Tél : {{ $invoice->user->phone }}
+                    <strong>{{ $userInfo['full_name'] }}</strong>
+                    @if ($userInfo['email'])
+                        {{ $userInfo['email'] }}<br>
+                    @endif
+                    @if ($userInfo['phone'])
+                        Tél : {{ $userInfo['phone'] }}
                     @endif
                 </div>
             </div>
@@ -452,7 +422,13 @@
             <tbody>
                 @foreach ($invoice->items as $item)
                     <tr>
-                        <td>{{ $item->description }}</td>
+                        <td>
+                            @if (strpos($item->description, "\n") !== false)
+                                {!! nl2br(e($item->description)) !!}
+                            @else
+                                {{ $item->description }}
+                            @endif
+                        </td>
                         <td class="text-center">{{ $item->quantity }}</td>
                         <td class="text-right">{{ number_format($item->unit_price, 2, ',', ' ') }} €</td>
                         <td class="text-center">{{ $item->tva_rate }}%</td>
@@ -512,8 +488,6 @@
             </div>
         @endif
 
-        {{-- Notes internes (ne pas afficher) --}}
-
         {{-- Conditions de paiement --}}
         @if ($invoice->payment_terms)
             <div class="conditions-section">
@@ -522,33 +496,41 @@
             </div>
         @endif
 
-        {{-- Signatures uniquement pour factures émises non payées --}}
-        @if ($invoice->status === 'emise' || $invoice->status === 'en_retard')
+        {{-- Signature --}}
+        @if ($userInfo['has_signature'] && $userInfo['signature_url'])
             <div class="signature-section">
-                <div class="signature-box">
-                    <div class="signature-label">Le prestataire</div>
-                    <div class="signature-line">Signature et cachet</div>
-                </div>
-                <div class="signature-box">
-                    <div class="signature-label">Le client<br>(Pour réception et règlement)</div>
-                    <div class="signature-line">Signature</div>
-                </div>
+                <img src="{{ $userInfo['signature_url'] }}" class="signature-image" alt="Signature">
+                <div style="font-size: 9pt; color: #666;">{{ $userInfo['full_name'] }}</div>
+            </div>
+        @endif
+
+        {{-- Texte de pied de page personnalisé --}}
+        @if ($userInfo['footer_text'])
+            <div
+                style="margin-top: 30px; padding: 15px; background-color: #EEF2FF; text-align: center; font-style: italic; font-size: 9pt; color: #4F46E5;">
+                {{ $userInfo['footer_text'] }}
             </div>
         @endif
 
         {{-- Pied de page avec mentions légales --}}
         <div class="footer">
-            <p>
-                <span class="footer-highlight">VOTRE ENTREPRISE</span> - SARL au capital de 10 000 € - RCS Paris 123 456
-                789<br>
-                Siège social : 123 Rue de l'Exemple, 75001 PARIS<br>
-                TVA intracommunautaire : FR12345678900 - APE : 6202A<br>
-                N° de déclaration d'activité : 11 75 12345 75 (ne vaut pas agrément de l'État)<br>
-            </p>
+            @if ($userInfo['legal_mentions'])
+                <p style="white-space: pre-line;">{{ $userInfo['legal_mentions'] }}</p>
+            @else
+                <p>
+                    <span class="footer-highlight">{{ $userInfo['full_name'] }}</span><br>
+                    @if ($userInfo['professional_address'])
+                        {{ $userInfo['professional_address'] }},
+                        {{ $userInfo['professional_postal_code'] }} {{ $userInfo['professional_city'] }}<br>
+                    @endif
+                    @if ($userInfo['rsac_number'])
+                        RSAC : {{ $userInfo['rsac_number'] }}<br>
+                    @endif
+                </p>
+            @endif
             <p style="margin-top: 10px; font-size: 7pt;">
                 Conformément à la loi "Informatique et Libertés", vous disposez d'un droit d'accès et de rectification
-                des données vous concernant.<br>
-                Encas de litige, seuls les tribunaux de Paris seront compétents.
+                des données vous concernant.
             </p>
         </div>
     </div>

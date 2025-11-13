@@ -28,7 +28,16 @@ class User extends Authenticatable
         'manager_id',
         'revenue_target',
         'is_active',
-        'last_login_at'
+        'last_login_at',
+         'rsac_number',
+        'professional_address',
+        'professional_city',
+        'professional_postal_code',
+        'professional_email',
+        'professional_phone',
+        'legal_mentions',
+        'footer_text',
+        'signature_image',
     ];
 
     protected $hidden = [
@@ -448,5 +457,68 @@ class User extends Authenticatable
         $data['charges_detail'] = $fixedCharges;
 
         return $data;
+    }
+
+    /**
+     * Obtenir l'adresse professionnelle complète formatée
+     */
+    public function getFormattedProfessionalAddressAttribute(): ?string
+    {
+        if (!$this->professional_address) {
+            return null;
+        }
+
+        $address = $this->professional_address;
+
+        if ($this->professional_postal_code || $this->professional_city) {
+            $address .= "\n";
+            if ($this->professional_postal_code) {
+                $address .= $this->professional_postal_code . ' ';
+            }
+            if ($this->professional_city) {
+                $address .= $this->professional_city;
+            }
+        }
+
+        return $address;
+    }
+
+    /**
+     * Obtenir l'email à utiliser (professionnel ou personnel)
+     */
+    public function getEffectiveEmailAttribute(): string
+    {
+        return $this->professional_email ?? $this->email;
+    }
+
+    /**
+     * Obtenir le téléphone à utiliser (professionnel ou personnel)
+     */
+    public function getEffectivePhoneAttribute(): ?string
+    {
+        return $this->professional_phone ?? $this->phone;
+    }
+
+    /**
+     * Vérifier si l'utilisateur a configuré ses infos professionnelles
+     */
+    public function hasProfessionalInfoComplete(): bool
+    {
+        return !empty($this->rsac_number)
+            && !empty($this->professional_address)
+            && !empty($this->professional_city)
+            && !empty($this->professional_postal_code);
+    }
+
+    /**
+     * Obtenir l'URL de la signature
+     */
+    public function getSignatureUrlAttribute(): ?string
+    {
+        if (empty($this->signature_image)) {
+            return null;
+        }
+
+        return asset('storage/signatures/' . $this->signature_image);
     }
 }

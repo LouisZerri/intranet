@@ -50,26 +50,6 @@
                                 @enderror
                             </div>
 
-                            {{-- Service --}}
-                            <div>
-                                <label for="service" class="block text-sm font-medium text-gray-700 mb-2">
-                                    Type de prestation <span class="text-red-500">*</span>
-                                </label>
-                                <select name="service" id="service" required
-                                    onchange="filterPredefinedServices()"
-                                    class="block w-full px-3 py-2 border @error('service') border-red-300 @else border-gray-300 @enderror rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
-                                    <option value="">Sélectionnez un service</option>
-                                    @foreach($services as $key => $label)
-                                        <option value="{{ $key }}" {{ old('service') === $key ? 'selected' : '' }}>
-                                            {{ $label }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('service')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
-
                             {{-- Date de validité --}}
                             <div>
                                 <label for="validity_date" class="block text-sm font-medium text-gray-700 mb-2">
@@ -106,7 +86,6 @@
                             @if(isset($predefinedServices) && $predefinedServices->count() > 0)
                                 @foreach($predefinedServices as $service)
                                     <div class="prestation-item bg-white border border-indigo-200 rounded-lg p-3 hover:bg-indigo-50 transition cursor-pointer"
-                                         data-category="{{ $service->category }}"
                                          onclick="addPredefinedService(
                                              {{ Js::from($service->name) }}, 
                                              {{ $service->default_quantity }}, 
@@ -259,7 +238,7 @@
                         <h3 class="text-sm font-semibold text-blue-900 mb-3">💡 Aide</h3>
                         <ul class="space-y-2 text-sm text-blue-800">
                             <li>• Cliquez sur une prestation prédéfinie pour l'ajouter rapidement</li>
-                            <li>• Le client et le service sont obligatoires</li>
+                            <li>• Le client est obligatoire</li>
                             <li>• Ajoutez au moins une ligne au devis</li>
                             <li>• Les totaux se calculent automatiquement</li>
                             <li>• TVA par défaut : 20%</li>
@@ -285,9 +264,9 @@
             </div>
             <div class="grid grid-cols-12 gap-3">
                 <div class="col-span-12">
-                    <input type="text" name="items[INDEX][description]" 
-                        placeholder="Description de la prestation" required
-                        class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    <textarea name="items[INDEX][description]"
+                        placeholder="Description de la prestation" required rows="2"
+                        class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                 </div>
                 <div class="col-span-3">
                     <input type="number" name="items[INDEX][quantity]" 
@@ -319,7 +298,6 @@
     <script>
         let lineIndex = 0;
 
-        // Toggle affichage des prestations prédéfinies
         function togglePredefinedServices() {
             const list = document.getElementById('predefined-services-list');
             const toggleText = document.getElementById('toggle-text');
@@ -328,29 +306,10 @@
             toggleText.textContent = list.classList.contains('hidden') ? 'Afficher' : 'Masquer';
         }
 
-        // Filtrer les prestations prédéfinies selon la catégorie de service
-        function filterPredefinedServices() {
-            const serviceSelect = document.getElementById('service');
-            const selectedCategory = serviceSelect.value;
-            const prestationItems = document.querySelectorAll('.prestation-item');
-            
-            prestationItems.forEach(item => {
-                const itemCategory = item.getAttribute('data-category');
-                if (!selectedCategory || itemCategory === selectedCategory) {
-                    item.style.display = '';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        }
-
-        // Ajouter une prestation prédéfinie
         function addPredefinedService(description, quantity, unit_price, tva_rate, fullDescription = '') {
-            // Si on a une description complète, on la combine avec le nom
             const finalDescription = fullDescription ? `${description}\n${fullDescription}` : description;
             addLine(finalDescription, quantity, unit_price, tva_rate);
             
-            // Notification visuelle
             const btn = event.target.closest('.prestation-item');
             if (btn) {
                 btn.classList.add('bg-green-100', 'border-green-400');
@@ -360,20 +319,16 @@
             }
         }
 
-        // Ajouter une ligne
         function addLine(description = '', quantity = 1, unit_price = '', tva_rate = 20) {
             const template = document.getElementById('line-template');
             const container = document.getElementById('items-container');
             
             const clone = template.content.cloneNode(true);
-            
-            // Remplacer INDEX par le numéro de ligne
             const html = clone.firstElementChild.outerHTML.replaceAll('INDEX', lineIndex);
             container.insertAdjacentHTML('beforeend', html);
             
-            // Remplir les valeurs si fournies
             const line = container.lastElementChild;
-            if (description) line.querySelector('input[name*="[description]"]').value = description;
+            if (description) line.querySelector('textarea[name*="[description]"]').value = description;
             if (quantity) line.querySelector('input[name*="[quantity]"]').value = quantity;
             if (unit_price) line.querySelector('input[name*="[unit_price]"]').value = unit_price;
             if (tva_rate) line.querySelector('input[name*="[tva_rate]"]').value = tva_rate;
@@ -383,7 +338,6 @@
             calculateTotals();
         }
 
-        // Supprimer une ligne
         function removeLine(button) {
             if (document.querySelectorAll('.line-item').length <= 1) {
                 alert('Vous devez garder au moins une ligne');
@@ -394,14 +348,12 @@
             calculateTotals();
         }
 
-        // Mettre à jour les numéros de ligne
         function updateLineNumbers() {
             document.querySelectorAll('.line-item').forEach((line, index) => {
                 line.querySelector('.line-number').textContent = `Ligne ${index + 1}`;
             });
         }
 
-        // Calculer le total d'une ligne
         function calculateLine(input) {
             const line = input.closest('.line-item');
             const quantity = parseFloat(line.querySelector('input[name*="[quantity]"]').value) || 0;
@@ -416,7 +368,6 @@
             calculateTotals();
         }
 
-        // Calculer les totaux généraux
         function calculateTotals() {
             let totalHT = 0;
             let totalTVA = 0;
@@ -440,7 +391,6 @@
             document.getElementById('display-total-ttc').textContent = formatCurrency(totalTTC);
         }
 
-        // Formater en devise
         function formatCurrency(amount) {
             return new Intl.NumberFormat('fr-FR', {
                 style: 'currency',
@@ -448,7 +398,6 @@
             }).format(amount);
         }
 
-        // Validation du formulaire
         document.getElementById('quoteForm').addEventListener('submit', function(e) {
             const itemsCount = document.querySelectorAll('.line-item').length;
             if (itemsCount === 0) {
@@ -458,13 +407,8 @@
             }
         });
 
-        // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
-            // Ajouter une première ligne vide
             addLine();
-            
-            // Filtrer les prestations selon le service sélectionné
-            filterPredefinedServices();
         });
     </script>
 @endsection

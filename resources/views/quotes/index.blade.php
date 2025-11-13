@@ -122,7 +122,7 @@
         <div class="bg-white shadow rounded-lg">
             <div class="p-6">
                 <form method="GET" action="{{ route('quotes.index') }}" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {{-- Recherche --}}
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher un client</label>
@@ -154,21 +154,6 @@
                                 <option value="converti" {{ request('status') === 'converti' ? 'selected' : '' }}>Convertis</option>
                             </select>
                         </div>
-
-                        {{-- Service --}}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Type de prestation</label>
-                            <select name="service" 
-                                    class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-                                    onchange="this.form.submit()">
-                                <option value="">Tous les services</option>
-                                @foreach($services as $key => $label)
-                                    <option value="{{ $key }}" {{ request('service') === $key ? 'selected' : '' }}>
-                                        {{ $label }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
                     </div>
 
                     <div class="flex justify-between items-center">
@@ -176,7 +161,7 @@
                             class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">
                             Filtrer
                         </button>
-                        @if (request()->hasAny(['search', 'status', 'service']))
+                        @if (request()->hasAny(['search', 'status']))
                             <a href="{{ route('quotes.index') }}" class="text-sm text-gray-600 hover:text-gray-900">
                                 Réinitialiser les filtres
                             </a>
@@ -204,7 +189,6 @@
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">N° Devis</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date création</th>
                                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Montant TTC</th>
                                 <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Statut</th>
@@ -226,9 +210,6 @@
                                         @if($quote->client->type === 'professionnel' && $quote->client->company_name)
                                             <div class="text-sm text-gray-500">{{ $quote->client->company_name }}</div>
                                         @endif
-                                    </td>
-                                    <td class="px-6 py-4 text-sm text-gray-900">
-                                        {{ $quote->service_label }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {{ $quote->created_at->format('d/m/Y') }}
