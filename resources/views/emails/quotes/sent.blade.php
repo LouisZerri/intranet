@@ -30,10 +30,6 @@ Nous vous adressons ci-joint notre devis **{{ $quote->quote_number }}** pour la 
 @endcomponent
 @endif
 
-@component('mail::button', ['url' => route('quotes.show', $quote), 'color' => 'primary'])
-📄 Voir le devis en ligne
-@endcomponent
-
 Le PDF du devis est joint à cet email pour votre commodité.
 
 @if($quote->client_notes)
@@ -56,13 +52,7 @@ Le PDF du devis est joint à cet email pour votre commodité.
 
 Pour toute question ou précision concernant ce devis, n'hésitez pas à nous contacter.
 
-Cordialement,
-
-**{{ $quote->user->full_name }}**  
-{{ $quote->user->email }}  
-@if($quote->user->phone)
-{{ $quote->user->phone }}
-@endif
+Merci pour votre confiance, l’équipe GEST’IMMO.
 
 ---
 
@@ -70,6 +60,4 @@ Cordialement,
 *Cet email a été envoyé automatiquement par notre système de gestion. Pour toute réponse, merci de contacter directement {{ $quote->user->full_name }}.*
 </small>
 
-Merci,<br>
-{{ config('app.name') }}
 @endcomponent

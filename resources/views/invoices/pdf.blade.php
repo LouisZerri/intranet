@@ -313,6 +313,17 @@
         <div class="header">
             <div class="header-content">
                 <div class="header-left">
+                    {{-- Logo GEST'IMMO --}}
+                    @php
+                        $logoPath = public_path('images/logo3d.png');
+                        $logoExists = file_exists($logoPath);
+                    @endphp
+
+                    @if ($logoExists)
+                        <div style="margin-bottom: 15px;">
+                            <img src="{{ $logoPath }}" alt="GEST'IMMO" style="max-width: 150px; max-height: 60px;">
+                        </div>
+                    @endif
                     <div class="company-name">{{ $userInfo['full_name'] }}</div>
                     <div class="company-info">
                         @if ($userInfo['professional_address'])

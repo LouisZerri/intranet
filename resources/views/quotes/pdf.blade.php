@@ -358,21 +358,32 @@
         <div class="header">
             <div class="header-content">
                 <div class="header-left">
+                    {{-- Logo GEST'IMMO --}}
+                    @php
+                        $logoPath = public_path('images/logo3d.png');
+                        $logoExists = file_exists($logoPath);
+                    @endphp
+
+                    @if ($logoExists)
+                        <div style="margin-bottom: 15px;">
+                            <img src="{{ $logoPath }}" alt="GEST'IMMO" style="max-width: 150px; max-height: 60px;">
+                        </div>
+                    @endif
                     <div class="company-name">{{ $userInfo['full_name'] }}</div>
                     <div class="company-info">
-                        @if($userInfo['professional_address'])
+                        @if ($userInfo['professional_address'])
                             {{ $userInfo['professional_address'] }}<br>
                         @endif
-                        @if($userInfo['professional_postal_code'] || $userInfo['professional_city'])
+                        @if ($userInfo['professional_postal_code'] || $userInfo['professional_city'])
                             {{ $userInfo['professional_postal_code'] }} {{ $userInfo['professional_city'] }}<br>
                         @endif
-                        @if($userInfo['phone'])
+                        @if ($userInfo['phone'])
                             Tél : {{ $userInfo['phone'] }}<br>
                         @endif
-                        @if($userInfo['email'])
+                        @if ($userInfo['email'])
                             Email : {{ $userInfo['email'] }}<br>
                         @endif
-                        @if($userInfo['rsac_number'])
+                        @if ($userInfo['rsac_number'])
                             RSAC : {{ $userInfo['rsac_number'] }}<br>
                         @endif
                     </div>
@@ -399,10 +410,10 @@
                 <div class="party-title">Émetteur</div>
                 <div class="party-content">
                     <strong>{{ $userInfo['full_name'] }}</strong>
-                    @if($userInfo['email'])
+                    @if ($userInfo['email'])
                         {{ $userInfo['email'] }}<br>
                     @endif
-                    @if($userInfo['phone'])
+                    @if ($userInfo['phone'])
                         Tél : {{ $userInfo['phone'] }}
                     @endif
                 </div>
@@ -452,7 +463,7 @@
                 @foreach ($quote->items as $item)
                     <tr>
                         <td>
-                            @if(strpos($item->description, "\n") !== false)
+                            @if (strpos($item->description, "\n") !== false)
                                 {!! nl2br(e($item->description)) !!}
                             @else
                                 {{ $item->description }}
@@ -508,7 +519,7 @@
         @endif
 
         {{-- Signature --}}
-        @if($userInfo['has_signature'] && $userInfo['signature_url'])
+        @if ($userInfo['has_signature'] && $userInfo['signature_url'])
             <div class="signature-section">
                 <img src="{{ $userInfo['signature_url'] }}" class="signature-image" alt="Signature">
                 <div style="font-size: 9pt; color: #666;">{{ $userInfo['full_name'] }}</div>
@@ -516,24 +527,25 @@
         @endif
 
         {{-- Texte de pied de page personnalisé --}}
-        @if($userInfo['footer_text'])
-            <div style="margin-top: 30px; padding: 15px; background-color: #EEF2FF; text-align: center; font-style: italic; font-size: 9pt; color: #4F46E5;">
+        @if ($userInfo['footer_text'])
+            <div
+                style="margin-top: 30px; padding: 15px; background-color: #EEF2FF; text-align: center; font-style: italic; font-size: 9pt; color: #4F46E5;">
                 {{ $userInfo['footer_text'] }}
             </div>
         @endif
 
         {{-- Pied de page avec mentions légales --}}
         <div class="footer">
-            @if($userInfo['legal_mentions'])
+            @if ($userInfo['legal_mentions'])
                 <p style="white-space: pre-line;">{{ $userInfo['legal_mentions'] }}</p>
             @else
                 <p>
                     <span class="footer-highlight">{{ $userInfo['full_name'] }}</span><br>
-                    @if($userInfo['professional_address'])
+                    @if ($userInfo['professional_address'])
                         {{ $userInfo['professional_address'] }},
                         {{ $userInfo['professional_postal_code'] }} {{ $userInfo['professional_city'] }}<br>
                     @endif
-                    @if($userInfo['rsac_number'])
+                    @if ($userInfo['rsac_number'])
                         RSAC : {{ $userInfo['rsac_number'] }}<br>
                     @endif
                 </p>

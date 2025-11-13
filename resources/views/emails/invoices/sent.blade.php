@@ -32,10 +32,6 @@ Nous vous adressons ci-joint notre facture **{{ $invoice->invoice_number }}** po
 @endcomponent
 @endif
 
-@component('mail::button', ['url' => route('invoices.show', $invoice), 'color' => 'success'])
-💰 Voir la facture en ligne
-@endcomponent
-
 Le PDF de la facture est joint à cet email pour votre commodité.
 
 @if($invoice->payment_terms)
@@ -44,23 +40,9 @@ Le PDF de la facture est joint à cet email pour votre commodité.
 
 ---
 
-### Coordonnées bancaires pour le règlement
-
-**IBAN :** FR76 XXXX XXXX XXXX XXXX XXXX XXX  
-**BIC :** XXXXXXXXX  
-**Référence à indiquer :** {{ $invoice->invoice_number }}
-
----
-
 Pour toute question concernant cette facture, n'hésitez pas à nous contacter.
 
-Cordialement,
-
-**{{ $invoice->user->full_name }}**  
-{{ $invoice->user->email }}  
-@if($invoice->user->phone)
-{{ $invoice->user->phone }}
-@endif
+Merci pour votre confiance, l’équipe GEST’IMMO.
 
 ---
 
@@ -68,6 +50,4 @@ Cordialement,
 *Cet email a été envoyé automatiquement par notre système de gestion. Pour toute réponse, merci de contacter directement {{ $invoice->user->full_name }}.*
 </small>
 
-Merci,<br>
-{{ config('app.name') }}
 @endcomponent

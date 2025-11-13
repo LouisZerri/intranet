@@ -248,7 +248,7 @@ class QuoteController extends Controller
         }
 
         if (!$quote->client->email) {
-            return back()->with('error', 'Le client n\'a pas d\'adresse email renseignée. Veuillez mettre à jour sa fiche avant d\'envoyer le devis.');
+            return back()->with('error', 'Le client n\'a pas d\'adresse email renseignée.');
         }
 
         DB::beginTransaction();
@@ -256,10 +256,21 @@ class QuoteController extends Controller
             $quote->load(['client', 'user', 'items']);
             $userInfo = $this->getUserProfessionalInfo($quote->user);
 
+            // ⬇️ OPTIMISATION DU PDF
             $pdf = Pdf::loadView('quotes.pdf', compact('quote', 'userInfo'))
-                ->setPaper('a4', 'portrait');
+                ->setPaper('a4', 'portrait')
+                ->setOption('enable-local-file-access', true) // Important pour les images
+                ->setOption('image-dpi', 96) // Réduire la qualité des images
+                ->setOption('image-quality', 85); // Compression des images
 
             $pdfContent = $pdf->output();
+
+            // ⬇️ VÉRIFIER LA TAILLE DU PDF
+            $pdfSizeMB = strlen($pdfContent) / 1024 / 1024;
+
+            if ($pdfSizeMB > 10) {
+                return back()->with('error', 'Le PDF est trop volumineux (' . round($pdfSizeMB, 2) . ' MB). Veuillez réduire le nombre d\'éléments.');
+            }
 
             $quote->status = 'envoye';
             $quote->sent_at = now();
@@ -273,16 +284,14 @@ class QuoteController extends Controller
 
             return back()->with(
                 'success',
-                'Devis envoyé avec succès ! Un email a été envoyé à ' . $quote->client->email .
-                    ' avec le PDF en pièce jointe. Une copie a été envoyée à ' . $quote->user->email
+                'Devis envoyé avec succès ! Email envoyé à ' . $quote->client->email
             );
         } catch (\Exception $e) {
             DB::rollBack();
 
             return back()->with(
                 'error',
-                'Erreur lors de l\'envoi du devis : ' . $e->getMessage() .
-                    '. Veuillez vérifier votre configuration email.'
+                'Erreur lors de l\'envoi : ' . $e->getMessage()
             );
         }
     }
