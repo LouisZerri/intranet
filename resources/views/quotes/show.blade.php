@@ -209,7 +209,7 @@
                             <tbody class="bg-white divide-y divide-gray-200">
                                 @foreach($quote->items as $item)
                                     <tr>
-                                        <td class="px-4 py-3 text-sm text-gray-900">{{ $item->description }}</td>
+                                        <td class="px-4 py-3 text-sm text-gray-900 whitespace-pre-line">{{ $item->description }}</td>
                                         <td class="px-4 py-3 text-sm text-center">{{ $item->quantity }}</td>
                                         <td class="px-4 py-3 text-sm text-right">{{ number_format($item->unit_price, 2, ',', ' ') }} €</td>
                                         <td class="px-4 py-3 text-sm text-center">{{ $item->tva_rate }}%</td>
