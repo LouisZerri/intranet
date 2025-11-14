@@ -314,6 +314,8 @@
 
     <!-- Alpine.js pour les interactions -->
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    {{-- Script calculateur état des lieux --}}
+    <script src="{{ asset('js/etat-des-lieux-calculator.js') }}"></script>
 </body>
 
 </html>
