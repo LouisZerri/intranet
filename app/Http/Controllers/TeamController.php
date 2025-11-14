@@ -174,6 +174,15 @@ class TeamController extends Controller
             'position' => 'nullable|string|max:255',
             'manager_id' => 'nullable|exists:users,id',
             'revenue_target' => 'nullable|numeric|min:0',
+            // Informations professionnelles
+            'rsac_number' => 'nullable|string|max:255',
+            'professional_address' => 'nullable|string|max:500',
+            'professional_city' => 'nullable|string|max:255',
+            'professional_postal_code' => 'nullable|string|max:10',
+            'professional_email' => 'nullable|email|max:255',
+            'professional_phone' => 'nullable|string|max:255',
+            'legal_mentions' => 'nullable|string|max:2000',
+            'footer_text' => 'nullable|string|max:1000',
         ]);
 
         $userData = array_merge($validated, [
@@ -203,14 +212,14 @@ class TeamController extends Controller
 
         $teamMember->load(['manager', 'subordinates']);
 
-        // Statistiques utilisateur - CORRIGÉ
+        // Statistiques utilisateur
         $userStats = [
             'missions_en_cours' => $teamMember->assignedMissions()->inProgress()->count(),
             'missions_terminees_mois' => $teamMember->getCompletedMissionsThisMonth(),
             'ca_mois' => $teamMember->getCurrentMonthRevenue(),
             'missions_en_retard' => $teamMember->getOverdueMissions(),
             'heures_formation_annee' => $teamMember->getFormationHoursThisYear(),
-            'commandes_en_attente' => $teamMember->getPendingOrdersCount(), // CORRECTION: remplace getPendingInternalRequests()
+            'commandes_en_attente' => $teamMember->getPendingOrdersCount(),
         ];
 
         // Missions récentes
@@ -270,6 +279,15 @@ class TeamController extends Controller
             'manager_id' => 'nullable|exists:users,id',
             'revenue_target' => 'nullable|numeric|min:0',
             'is_active' => 'required|boolean',
+            // Informations professionnelles
+            'rsac_number' => 'nullable|string|max:255',
+            'professional_address' => 'nullable|string|max:500',
+            'professional_city' => 'nullable|string|max:255',
+            'professional_postal_code' => 'nullable|string|max:10',
+            'professional_email' => 'nullable|email|max:255',
+            'professional_phone' => 'nullable|string|max:255',
+            'legal_mentions' => 'nullable|string|max:2000',
+            'footer_text' => 'nullable|string|max:1000',
         ]);
 
         // Mettre à jour le champ name
@@ -374,7 +392,6 @@ class TeamController extends Controller
 
     /**
      * Vérifier si l'utilisateur peut voir ce membre d'équipe
-     * LOGIQUE MISE À JOUR : Accès exclusif des managers à leur équipe
      */
     private function canUserView($user, $teamMember): bool
     {
@@ -388,7 +405,7 @@ class TeamController extends Controller
             return $teamMember->manager_id === $user->id;
         }
 
-        // Les collaborateurs ne peuvent pas voir les profils (sauf via autres fonctionnalités)
+        // Les collaborateurs ne peuvent pas voir les profils
         return false;
     }
 
