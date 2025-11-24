@@ -117,36 +117,6 @@
             margin-bottom: 3px;
         }
 
-        /* Badge statut */
-        .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 8pt;
-            font-weight: bold;
-            margin-top: 5px;
-        }
-
-        .status-brouillon {
-            background-color: #FEF3C7;
-            color: #92400E;
-        }
-
-        .status-envoye {
-            background-color: #DBEAFE;
-            color: #1E40AF;
-        }
-
-        .status-accepte {
-            background-color: #D1FAE5;
-            color: #065F46;
-        }
-
-        .status-refuse {
-            background-color: #FEE2E2;
-            color: #991B1B;
-        }
-
         /* Tableau des lignes */
         .items-table {
             width: 100%;
@@ -397,9 +367,6 @@
                             <br>Valable jusqu'au : {{ $quote->validity_date->format('d/m/Y') }}
                         @endif
                     </div>
-                    <span class="status-badge status-{{ $quote->status }}">
-                        {{ strtoupper($quote->status_label) }}
-                    </span>
                 </div>
             </div>
         </div>

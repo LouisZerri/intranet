@@ -117,36 +117,6 @@
             margin-bottom: 3px;
         }
 
-        /* Badge statut */
-        .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 8pt;
-            font-weight: bold;
-            margin-top: 5px;
-        }
-
-        .status-draft {
-            background-color: #FEF3C7;
-            color: #92400E;
-        }
-
-        .status-emise {
-            background-color: #DBEAFE;
-            color: #1E40AF;
-        }
-
-        .status-payee {
-            background-color: #D1FAE5;
-            color: #065F46;
-        }
-
-        .status-en_retard {
-            background-color: #FEE2E2;
-            color: #991B1B;
-        }
-
         /* Tableau des lignes */
         .items-table {
             width: 100%;
@@ -356,14 +326,6 @@
                             <br>Échéance : {{ $invoice->due_date->format('d/m/Y') }}
                         @endif
                     </div>
-                    <span class="status-badge status-{{ $invoice->status }}">
-                        {{ strtoupper($invoice->status_label) }}
-                    </span>
-                    @if ($invoice->status === 'payee')
-                        <div class="paid-box">
-                            ✅ FACTURE PAYÉE
-                        </div>
-                    @endif
                 </div>
             </div>
         </div>
