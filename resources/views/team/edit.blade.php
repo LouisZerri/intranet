@@ -31,7 +31,7 @@
             <p class="text-sm text-gray-600 mt-1">Modifiez les informations nécessaires. Les champs marqués d'un astérisque * sont obligatoires</p>
         </div>
         <div class="p-6">
-            <form method="POST" action="{{ route('team.update', $teamMember) }}">
+            <form method="POST" action="{{ route('team.update', $teamMember) }}" id="userForm">
                 @csrf
                 @method('PUT')
                 
@@ -200,6 +200,7 @@
                             <div class="relative">
                                 <select name="role" 
                                         id="role" 
+                                        onchange="toggleManagedDepartments()"
                                         class="block w-full pl-10 pr-8 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors appearance-none bg-white @error('role') border-red-300 ring-red-500 @enderror">
                                     <option value="">Choisir un rôle</option>
                                     <option value="collaborateur" {{ old('role', $teamMember->role) === 'collaborateur' ? 'selected' : '' }}>Collaborateur</option>
@@ -452,6 +453,48 @@
                             @enderror
                         </div>
                     </div>
+
+                    <!-- Départements gérés (pour Managers et Administrateurs uniquement) -->
+                    <div id="managedDepartmentsSection" class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg" style="display: none;">
+                        <div class="flex items-center justify-between mb-3">
+                            <label class="block text-sm font-medium text-blue-900">
+                                <span class="flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    </svg>
+                                    Départements gérés par ce manager/admin
+                                </span>
+                            </label>
+                            <button type="button" onclick="toggleAllDepartments()" class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+                                Tout sélectionner / Désélectionner
+                            </button>
+                        </div>
+                        <p class="text-sm text-blue-700 mb-3">Sélectionnez les départements que cet utilisateur pourra gérer (en plus de son équipe directe)</p>
+                        
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-60 overflow-y-auto p-3 bg-white rounded border border-blue-200">
+                            @php
+                                $currentManagedDepts = old('managed_departments', $teamMember->managed_departments ?? []);
+                            @endphp
+                            @foreach($departementsFrancais as $dept)
+                                <label class="flex items-center space-x-2 p-2 hover:bg-blue-50 rounded cursor-pointer">
+                                    <input type="checkbox" 
+                                           name="managed_departments[]" 
+                                           value="{{ $dept }}"
+                                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                           {{ is_array($currentManagedDepts) && in_array($dept, $currentManagedDepts) ? 'checked' : '' }}>
+                                    <span class="text-sm text-gray-700">{{ $dept }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @error('managed_departments')
+                            <p class="mt-2 text-sm text-red-600 flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                                {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
                 </div>
 
                 <!-- Section Informations professionnelles -->
@@ -695,6 +738,83 @@
                     </div>
                 </div>
 
+                <!-- Section Sécurité -->
+                <div class="mb-8 pt-6 border-t border-gray-200">
+                    <h3 class="text-md font-medium text-gray-900 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                        Sécurité
+                    </h3>
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                        <div class="flex">
+                            <svg class="h-5 w-5 text-yellow-400 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                            <p class="text-sm text-yellow-700">
+                                <strong>Information :</strong> Laissez ces champs vides si vous ne souhaitez pas modifier le mot de passe actuel.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Nouveau mot de passe -->
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                                <span class="flex items-center">
+                                    <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                    </svg>
+                                    Nouveau mot de passe
+                                </span>
+                            </label>
+                            <div class="relative">
+                                <input type="password" 
+                                       name="password" 
+                                       id="password" 
+                                       placeholder="Laisser vide pour ne pas modifier"
+                                       class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors @error('password') border-red-300 ring-red-500 @enderror">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            @error('password')
+                                <p class="mt-2 text-sm text-red-600 flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                    </svg>
+                                    {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+
+                        <!-- Confirmation du mot de passe -->
+                        <div>
+                            <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-2">
+                                <span class="flex items-center">
+                                    <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                    </svg>
+                                    Confirmer le mot de passe
+                                </span>
+                            </label>
+                            <div class="relative">
+                                <input type="password" 
+                                       name="password_confirmation" 
+                                       id="password_confirmation" 
+                                       placeholder="Confirmer le nouveau mot de passe"
+                                       class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Actions -->
                 <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200">
                     <a href="{{ route('team.show', $teamMember) }}" 
@@ -779,10 +899,43 @@
                         <li>L'historique des modifications est conservé pour audit</li>
                         <li>La localisation correspond au département français où travaille l'utilisateur</li>
                         <li>Les informations professionnelles seront utilisées dans les documents officiels</li>
+                        <li>Les managers et administrateurs peuvent gérer plusieurs départements en plus de leur équipe directe</li>
                     </ul>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    // Fonction pour afficher/masquer la section des départements gérés
+    function toggleManagedDepartments() {
+        const roleSelect = document.getElementById('role');
+        const managedDeptsSection = document.getElementById('managedDepartmentsSection');
+        const checkboxes = managedDeptsSection.querySelectorAll('input[type="checkbox"]');
+        
+        if (roleSelect.value === 'manager' || roleSelect.value === 'administrateur') {
+            managedDeptsSection.style.display = 'block';
+        } else {
+            managedDeptsSection.style.display = 'none';
+            // Décocher toutes les cases si on passe en collaborateur
+            checkboxes.forEach(checkbox => checkbox.checked = false);
+        }
+    }
+
+    // Fonction pour tout sélectionner / désélectionner
+    function toggleAllDepartments() {
+        const checkboxes = document.querySelectorAll('#managedDepartmentsSection input[type="checkbox"]');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = !allChecked;
+        });
+    }
+
+    // Initialiser au chargement de la page
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleManagedDepartments();
+    });
+</script>
 @endsection

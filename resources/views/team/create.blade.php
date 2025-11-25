@@ -23,7 +23,7 @@
             <p class="text-sm text-gray-600 mt-1">Remplissez tous les champs obligatoires marqués d'un astérisque *</p>
         </div>
         <div class="p-6">
-            <form method="POST" action="{{ route('team.store') }}">
+            <form method="POST" action="{{ route('team.store') }}" id="userForm">
                 @csrf
                 
                 <!-- Section Informations personnelles -->
@@ -191,6 +191,7 @@
                             <div class="relative">
                                 <select name="role" 
                                         id="role" 
+                                        onchange="toggleManagedDepartments()"
                                         class="block w-full pl-10 pr-8 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors appearance-none bg-white @error('role') border-red-300 ring-red-500 @enderror">
                                     <option value="">Choisir un rôle</option>
                                     <option value="collaborateur" {{ old('role') === 'collaborateur' ? 'selected' : '' }}>Collaborateur</option>
@@ -218,7 +219,7 @@
                             @enderror
                         </div>
 
-                        <!-- Département -->
+                        <!-- Département (de l'utilisateur) -->
                         <div>
                             <label for="department" class="block text-sm font-medium text-gray-700 mb-2">
                                 <span class="flex items-center">
@@ -404,6 +405,45 @@
                                 </p>
                             @enderror
                         </div>
+                    </div>
+
+                    <!-- Départements gérés (pour Managers et Administrateurs uniquement) -->
+                    <div id="managedDepartmentsSection" class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg" style="display: none;">
+                        <div class="flex items-center justify-between mb-3">
+                            <label class="block text-sm font-medium text-blue-900">
+                                <span class="flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    </svg>
+                                    Départements gérés par ce manager/admin
+                                </span>
+                            </label>
+                            <button type="button" onclick="toggleAllDepartments()" class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+                                Tout sélectionner / Désélectionner
+                            </button>
+                        </div>
+                        <p class="text-sm text-blue-700 mb-3">Sélectionnez les départements que cet utilisateur pourra gérer (en plus de son équipe directe)</p>
+                        
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-60 overflow-y-auto p-3 bg-white rounded border border-blue-200">
+                            @foreach($departementsFrancais as $dept)
+                                <label class="flex items-center space-x-2 p-2 hover:bg-blue-50 rounded cursor-pointer">
+                                    <input type="checkbox" 
+                                           name="managed_departments[]" 
+                                           value="{{ $dept }}"
+                                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                           {{ is_array(old('managed_departments')) && in_array($dept, old('managed_departments')) ? 'checked' : '' }}>
+                                    <span class="text-sm text-gray-700">{{ $dept }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @error('managed_departments')
+                            <p class="mt-2 text-sm text-red-600 flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                                {{ $message }}
+                            </p>
+                        @enderror
                     </div>
                 </div>
 
@@ -757,10 +797,43 @@
                         <li>L'objectif CA est optionnel mais recommandé pour les commerciaux</li>
                         <li>La localisation correspond au département français où travaille l'utilisateur</li>
                         <li>Les informations professionnelles seront utilisées dans les documents officiels</li>
+                        <li><strong>Pour les managers/admins :</strong> Sélectionnez les départements qu'ils pourront gérer (en plus de leur équipe directe)</li>
                     </ul>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+// Afficher/masquer la section départements gérés selon le rôle
+function toggleManagedDepartments() {
+    const role = document.getElementById('role').value;
+    const section = document.getElementById('managedDepartmentsSection');
+    
+    if (role === 'manager' || role === 'administrateur') {
+        section.style.display = 'block';
+    } else {
+        section.style.display = 'none';
+        // Décocher toutes les cases
+        const checkboxes = document.querySelectorAll('input[name="managed_departments[]"]');
+        checkboxes.forEach(cb => cb.checked = false);
+    }
+}
+
+// Tout sélectionner / Tout désélectionner
+function toggleAllDepartments() {
+    const checkboxes = document.querySelectorAll('input[name="managed_departments[]"]');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    
+    checkboxes.forEach(cb => {
+        cb.checked = !allChecked;
+    });
+}
+
+// Initialiser au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    toggleManagedDepartments();
+});
+</script>
 @endsection

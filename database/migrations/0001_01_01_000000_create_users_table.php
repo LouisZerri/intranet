@@ -31,6 +31,7 @@ return new class extends Migration
             $table->json('urssaf_fixed_charges')->nullable();
             $table->string('department')->nullable();
             $table->string('localisation')->nullable();
+            $table->json('managed_departments')->nullable()->comment('Départements gérés par le manager/admin. NULL = aucun, ["*"] = tous, ["Dep1","Dep2"] = spécifiques');
             $table->string('position')->nullable();
 
             // Avatar

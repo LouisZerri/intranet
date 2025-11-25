@@ -23,6 +23,7 @@ class User extends Authenticatable
         'urssaf_fixed_charges',
         'department',
         'localisation',
+        'managed_departments',
         'position',
         'avatar',
         'manager_id',
@@ -50,96 +51,64 @@ class User extends Authenticatable
         'last_login_at' => 'datetime',
         'revenue_target' => 'decimal:2',
         'is_active' => 'boolean',
-        'urssaf_fixed_charges' => 'array'
+        'urssaf_fixed_charges' => 'array',
+        'managed_departments' => 'array',
     ];
 
     // =====================================
     // RELATIONS
     // =====================================
 
-    /**
-     * Relation avec le manager (utilisateur parent)
-     */
     public function manager(): BelongsTo
     {
         return $this->belongsTo(User::class, 'manager_id');
     }
 
-    /**
-     * Clients de l'utilisateur
-     */
     public function clients(): HasMany
     {
         return $this->hasMany(Client::class);
     }
 
-    /**
-     * Relation avec les collaborateurs (utilisateurs enfants)
-     */
     public function subordinates(): HasMany
     {
         return $this->hasMany(User::class, 'manager_id');
     }
 
-    /**
-     * Missions assignées à l'utilisateur
-     */
     public function assignedMissions(): HasMany
     {
         return $this->hasMany(Mission::class, 'assigned_to');
     }
 
-    /**
-     * Missions créées par l'utilisateur
-     */
     public function createdMissions(): HasMany
     {
         return $this->hasMany(Mission::class, 'created_by');
     }
 
-    /**
-     * Missions gérées par l'utilisateur (en tant que manager)
-     */
     public function managedMissions(): HasMany
     {
         return $this->hasMany(Mission::class, 'manager_id');
     }
 
-    /**
-     * Actualités créées par l'utilisateur
-     */
     public function createdNews(): HasMany
     {
         return $this->hasMany(News::class, 'author_id');
     }
 
-    /**
-     * Demandes de formation de l'utilisateur
-     */
     public function formationRequests(): HasMany
     {
         return $this->hasMany(FormationRequest::class);
     }
 
-    /**
-     * Demandes de formation approuvées par l'utilisateur
-     */
     public function approvedFormations(): HasMany
     {
         return $this->hasMany(FormationRequest::class, 'approved_by');
     }
 
-    /**
-     * Formations créées par l'utilisateur
-     */
     public function createdFormations(): HasMany
     {
         return $this->hasMany(Formation::class, 'created_by');
     }
 
-    /**
-     * Commandes de communication passées par l'utilisateur
-     */
     public function communicationOrders(): HasMany
     {
         return $this->hasMany(CommunicationOrder::class, 'user_id');
@@ -149,17 +118,11 @@ class User extends Authenticatable
     // ACCESSEURS (GETTERS)
     // =====================================
 
-    /**
-     * Obtenir le nom complet de l'utilisateur
-     */
     public function getFullNameAttribute(): string
     {
         return $this->first_name . ' ' . $this->last_name;
     }
 
-    /**
-     * Obtenir l'URL de l'avatar
-     */
     public function getAvatarUrlAttribute(): string
     {
         if ($this->avatar && file_exists(storage_path('app/public/avatars/' . $this->avatar))) {
@@ -169,9 +132,6 @@ class User extends Authenticatable
         return $this->getDefaultAvatarUrl();
     }
 
-    /**
-     * Générer une URL d'avatar par défaut avec les initiales
-     */
     public function getDefaultAvatarUrl(): string
     {
         $initials = substr($this->first_name, 0, 1) . substr($this->last_name, 0, 1);
@@ -182,33 +142,21 @@ class User extends Authenticatable
     // MÉTHODES DE RÔLE
     // =====================================
 
-    /**
-     * Vérifier si l'utilisateur est collaborateur
-     */
     public function isCollaborateur(): bool
     {
         return $this->role === 'collaborateur';
     }
 
-    /**
-     * Vérifier si l'utilisateur est manager
-     */
     public function isManager(): bool
     {
         return $this->role === 'manager';
     }
 
-    /**
-     * Vérifier si l'utilisateur est administrateur
-     */
     public function isAdministrateur(): bool
     {
         return $this->role === 'administrateur';
     }
 
-    /**
-     * Vérifier si l'utilisateur a une permission
-     */
     public function hasPermission(string $permission): bool
     {
         $permissions = [
@@ -225,12 +173,65 @@ class User extends Authenticatable
     }
 
     // =====================================
-    // KPI - MISSIONS
+    // GESTION DES DÉPARTEMENTS
     // =====================================
 
     /**
-     * Obtenir le chiffre d'affaires du mois en cours
+     * Vérifier si le manager/admin gère tous les départements
      */
+    public function managesAllDepartments(): bool
+    {
+        if (!$this->isManager() && !$this->isAdministrateur()) {
+            return false;
+        }
+
+        return $this->managed_departments && in_array('*', $this->managed_departments);
+    }
+
+    /**
+     * Obtenir la liste des départements gérés
+     */
+    public function getManagedDepartments(): array
+    {
+        if (!$this->isManager() && !$this->isAdministrateur()) {
+            return [];
+        }
+
+        if ($this->managesAllDepartments()) {
+            return ['*'];
+        }
+
+        return $this->managed_departments ?? [];
+    }
+
+    /**
+     * Vérifier si le manager/admin peut voir un utilisateur d'un département donné
+     */
+    public function canManageDepartment(?string $department): bool
+    {
+        if (!$this->isManager() && !$this->isAdministrateur()) {
+            return false;
+        }
+
+        // Si pas de département spécifié
+        if (empty($department)) {
+            return false;
+        }
+
+        // Si gère tous les départements
+        if ($this->managesAllDepartments()) {
+            return true;
+        }
+
+        // Sinon vérifier si le département est dans la liste
+        $managedDepts = $this->getManagedDepartments();
+        return in_array($department, $managedDepts);
+    }
+
+    // =====================================
+    // KPI - MISSIONS
+    // =====================================
+
     public function getCurrentMonthRevenue(): float
     {
         return $this->assignedMissions()
@@ -240,9 +241,6 @@ class User extends Authenticatable
             ->sum('revenue') ?? 0;
     }
 
-    /**
-     * Obtenir le nombre de missions terminées ce mois
-     */
     public function getCompletedMissionsThisMonth(): int
     {
         return $this->assignedMissions()
@@ -252,9 +250,6 @@ class User extends Authenticatable
             ->count();
     }
 
-    /**
-     * Obtenir le nombre de missions en retard
-     */
     public function getOverdueMissions(): int
     {
         return $this->assignedMissions()
@@ -263,9 +258,6 @@ class User extends Authenticatable
             ->count();
     }
 
-    /**
-     * Obtenir le taux de réalisation de l'objectif de CA
-     */
     public function getRevenueAchievementRate(): float
     {
         if (!$this->revenue_target || $this->revenue_target == 0) {
@@ -280,9 +272,6 @@ class User extends Authenticatable
     // KPI - FORMATIONS
     // =====================================
 
-    /**
-     * Obtenir le nombre d'heures de formation cette année
-     */
     public function getFormationHoursThisYear(): int
     {
         return $this->formationRequests()
@@ -291,33 +280,21 @@ class User extends Authenticatable
             ->sum('hours_completed') ?? 0;
     }
 
-    /**
-     * Obtenir le nombre de formations terminées
-     */
     public function getCompletedFormationsCount(): int
     {
         return $this->formationRequests()->completed()->count();
     }
 
-    /**
-     * Obtenir le nombre de demandes de formation en attente
-     */
     public function getPendingFormationRequests(): int
     {
         return $this->formationRequests()->pending()->count();
     }
 
-    /**
-     * Obtenir le nombre de demandes de formation approuvées
-     */
     public function getApprovedFormationRequests(): int
     {
         return $this->formationRequests()->approved()->count();
     }
 
-    /**
-     * Vérifier si l'utilisateur a été formé cette année
-     */
     public function isTrainedThisYear(): bool
     {
         return $this->formationRequests()
@@ -330,25 +307,16 @@ class User extends Authenticatable
     // KPI - COMMUNICATION
     // =====================================
 
-    /**
-     * Obtenir le nombre total de commandes
-     */
     public function getTotalOrdersCount(): int
     {
         return $this->communicationOrders()->count();
     }
 
-    /**
-     * Obtenir le montant total des commandes
-     */
     public function getTotalOrdersAmount(): float
     {
         return $this->communicationOrders()->sum('total_amount') ?? 0;
     }
 
-    /**
-     * Obtenir le nombre de commandes en attente
-     */
     public function getPendingOrdersCount(): int
     {
         return $this->communicationOrders()
@@ -356,9 +324,6 @@ class User extends Authenticatable
             ->count();
     }
 
-    /**
-     * Obtenir le nombre de commandes ce mois
-     */
     public function getOrdersThisMonth(): int
     {
         return $this->communicationOrders()
@@ -367,9 +332,6 @@ class User extends Authenticatable
             ->count();
     }
 
-    /**
-     * Obtenir le montant des commandes ce mois
-     */
     public function getOrdersAmountThisMonth(): float
     {
         return $this->communicationOrders()
@@ -382,9 +344,6 @@ class User extends Authenticatable
     // KPI - ÉQUIPE (POUR MANAGERS)
     // =====================================
 
-    /**
-     * Obtenir le CA total de l'équipe ce mois
-     */
     public function getTeamRevenueThisMonth(): float
     {
         if (!$this->isManager() && !$this->isAdministrateur()) {
@@ -396,9 +355,6 @@ class User extends Authenticatable
             ->sum(fn($user) => $user->getCurrentMonthRevenue());
     }
 
-    /**
-     * Obtenir le nombre de collaborateurs formés cette année
-     */
     public function getTrainedTeamMembersCount(): int
     {
         if (!$this->isManager() && !$this->isAdministrateur()) {
@@ -411,9 +367,6 @@ class User extends Authenticatable
             ->count();
     }
 
-    /**
-     * Obtenir le taux de formation de l'équipe
-     */
     public function getTeamTrainingRate(): float
     {
         if (!$this->isManager() && !$this->isAdministrateur()) {
@@ -448,7 +401,6 @@ class User extends Authenticatable
 
     /**
      * Obtenir le CA net URSSAF (avec déduction des charges forfaitaires)
-     * CDC Section D - Option bonus
      */
     public function getNetURSSAFRevenue(\Carbon\Carbon $startDate, \Carbon\Carbon $endDate): array
     {

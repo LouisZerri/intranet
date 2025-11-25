@@ -11,24 +11,32 @@ class MissionSeeder extends Seeder
 {
     public function run(): void
     {
-        // Récupération des utilisateurs
-        $admin = User::where('role', 'administrateur')->first();
+        // Récupération des utilisateurs avec les BONS emails
+        $admin = User::where('email', 'admin@gestimmo.fr')->first();
         $managers = User::where('role', 'manager')->get();
         $collaborateurs = User::where('role', 'collaborateur')->get();
 
-        // Manager Commercial et son équipe
-        $managerCommercial = User::where('email', 'marie.dupont@intranet.com')->first();
-        $equipeCommercial = User::where('manager_id', $managerCommercial->id)->get();
+        // Manager IDF et son équipe
+        $managerIDF = User::where('email', 'marie.dupont@intranet.fr')->first();
+        $equipeIDF = User::where('manager_id', $managerIDF->id)->get();
 
-        // Manager Marketing et son équipe  
-        $managerMarketing = User::where('email', 'pierre.martin@intranet.com')->first();
-        $equipeMarketing = User::where('manager_id', $managerMarketing->id)->get();
+        // Manager PACA et son équipe  
+        $managerPACA = User::where('email', 'pierre.bernard@gestimmo.fr')->first();
+        $equipePACA = User::where('manager_id', $managerPACA->id)->get();
 
-        // Manager RH et son équipe
-        $managerRH = User::where('email', 'sophie.leroy@intranet.com')->first();
-        $equipeRH = User::where('manager_id', $managerRH->id)->get();
+        // Manager ARA et son équipe
+        $managerARA = User::where('email', 'sophie.dubois@gestimmo.fr')->first();
+        $equipeARA = User::where('manager_id', $managerARA->id)->get();
 
-        // === MISSIONS COMMERCIALES ===
+        // Manager Occitanie et son équipe
+        $managerOccitanie = User::where('email', 'luc.moreau@gestimmo.fr')->first();
+        $equipeOccitanie = User::where('manager_id', $managerOccitanie->id)->get();
+
+        // Manager Local et son équipe
+        $managerLocal = User::where('email', 'claire.petit@gestimmo.fr')->first();
+        $equipeLocal = User::where('manager_id', $managerLocal->id)->get();
+
+        // === MISSIONS COMMERCIALES IDF ===
         
         // Mission terminée avec CA
         Mission::create([
@@ -38,9 +46,9 @@ class MissionSeeder extends Seeder
             'priority' => 'haute',
             'category' => 'autres',
             'subcategory' => 'prospection_commerciale',
-            'assigned_to' => $equipeCommercial->first()->id,
-            'created_by' => $managerCommercial->id,
-            'manager_id' => $managerCommercial->id,
+            'assigned_to' => $equipeIDF->first()->id,
+            'created_by' => $managerIDF->id,
+            'manager_id' => $managerIDF->id,
             'revenue' => 45000.00,
             'start_date' => now()->subDays(20),
             'due_date' => now()->subDays(5),
@@ -56,14 +64,16 @@ class MissionSeeder extends Seeder
             'priority' => 'urgente',
             'category' => 'autres',
             'subcategory' => 'prospection_commerciale',
-            'assigned_to' => $equipeCommercial->skip(1)->first()->id,
-            'created_by' => $managerCommercial->id,
-            'manager_id' => $managerCommercial->id,
+            'assigned_to' => $equipeIDF->skip(1)->first()->id,
+            'created_by' => $managerIDF->id,
+            'manager_id' => $managerIDF->id,
             'revenue' => 25000.00,
             'start_date' => now()->subDays(5),
             'due_date' => now()->addDays(3),
             'notes' => '8/15 prospects déjà recontactés. 3 rendez-vous programmés cette semaine.',
         ]);
+
+        // === MISSIONS PACA ===
 
         // Mission en retard
         Mission::create([
@@ -73,16 +83,16 @@ class MissionSeeder extends Seeder
             'priority' => 'haute',
             'category' => 'autres',
             'subcategory' => 'relation_client',
-            'assigned_to' => $equipeCommercial->last()->id,
-            'created_by' => $managerCommercial->id,
-            'manager_id' => $managerCommercial->id,
+            'assigned_to' => $equipePACA->first()->id,
+            'created_by' => $managerPACA->id,
+            'manager_id' => $managerPACA->id,
             'revenue' => 60000.00,
             'start_date' => now()->subDays(10),
             'due_date' => now()->subDays(2),
             'notes' => 'Retard dû à la disponibilité du client. Nouvelle date prévue semaine prochaine.',
         ]);
 
-        // === MISSIONS MARKETING ===
+        // === MISSIONS ARA ===
 
         // Mission en attente
         Mission::create([
@@ -92,9 +102,9 @@ class MissionSeeder extends Seeder
             'priority' => 'normale',
             'category' => 'autres',
             'subcategory' => 'prospection_commerciale',
-            'assigned_to' => $equipeMarketing->first()->id,
-            'created_by' => $managerMarketing->id,
-            'manager_id' => $managerMarketing->id,
+            'assigned_to' => $equipeARA->first()->id,
+            'created_by' => $managerARA->id,
+            'manager_id' => $managerARA->id,
             'start_date' => now()->addDays(2),
             'due_date' => now()->addDays(15),
             'notes' => 'En attente de validation du budget par la direction.',
@@ -108,16 +118,16 @@ class MissionSeeder extends Seeder
             'priority' => 'normale',
             'category' => 'autres',
             'subcategory' => 'administration',
-            'assigned_to' => $equipeMarketing->last()->id,
-            'created_by' => $managerMarketing->id,
-            'manager_id' => $managerMarketing->id,
+            'assigned_to' => $equipeARA->last()->id,
+            'created_by' => $managerARA->id,
+            'manager_id' => $managerARA->id,
             'start_date' => now()->subDays(15),
             'due_date' => now()->subDays(1),
             'completed_at' => now(),
             'notes' => 'Site mis à jour avec succès. Amélioration significative du taux de conversion.',
         ]);
 
-        // === MISSIONS RH ===
+        // === MISSIONS OCCITANIE ===
 
         // Mission en cours
         Mission::create([
@@ -127,9 +137,9 @@ class MissionSeeder extends Seeder
             'priority' => 'haute',
             'category' => 'autres',
             'subcategory' => 'administration',
-            'assigned_to' => $equipeRH->first()->id,
-            'created_by' => $managerRH->id,
-            'manager_id' => $managerRH->id,
+            'assigned_to' => $equipeOccitanie->first()->id,
+            'created_by' => $managerOccitanie->id,
+            'manager_id' => $managerOccitanie->id,
             'start_date' => now()->subDays(7),
             'due_date' => now()->addDays(10),
             'notes' => '12 candidatures reçues. 3 entretiens programmés cette semaine.',
@@ -143,13 +153,31 @@ class MissionSeeder extends Seeder
             'priority' => 'normale',
             'category' => 'autres',
             'subcategory' => 'formation_interne',
-            'assigned_to' => $equipeRH->last()->id,
-            'created_by' => $managerRH->id,
-            'manager_id' => $managerRH->id,
+            'assigned_to' => $equipeOccitanie->last()->id,
+            'created_by' => $managerOccitanie->id,
+            'manager_id' => $managerOccitanie->id,
             'start_date' => now()->subDays(12),
             'due_date' => now()->subDays(2),
             'completed_at' => now()->subDays(1),
             'notes' => '100% des collaborateurs formés. Certificats délivrés.',
+        ]);
+
+        // === MISSIONS ÉQUIPE LOCALE ===
+
+        // Mission en cours
+        Mission::create([
+            'title' => 'Audit satisfaction clients Lyon',
+            'description' => 'Réaliser un audit de satisfaction auprès de nos 50 principaux clients sur Lyon.',
+            'status' => 'en_cours',
+            'priority' => 'normale',
+            'category' => 'autres',
+            'subcategory' => 'relation_client',
+            'assigned_to' => $equipeLocal->first()->id,
+            'created_by' => $managerLocal->id,
+            'manager_id' => $managerLocal->id,
+            'start_date' => now()->subDays(5),
+            'due_date' => now()->addDays(10),
+            'notes' => '20 clients contactés. Taux de réponse de 80%.',
         ]);
 
         // === MISSIONS IMMOBILIÈRES ===
@@ -244,39 +272,6 @@ class MissionSeeder extends Seeder
 
         // === MISSIONS DIVERSES ===
 
-        // Mission IT sans manager spécifique
-        $devIT = User::where('email', 'laura.simon@intranet.com')->first();
-        Mission::create([
-            'title' => 'Migration serveur de fichiers',
-            'description' => 'Migrer tous les fichiers partagés vers le nouveau serveur sécurisé.',
-            'status' => 'en_cours',
-            'priority' => 'haute',
-            'category' => 'autres',
-            'subcategory' => 'administration',
-            'assigned_to' => $devIT->id,
-            'created_by' => $admin->id,
-            'start_date' => now()->subDays(3),
-            'due_date' => now()->addDays(7),
-            'notes' => '60% des fichiers migrés. Aucun incident signalé.',
-        ]);
-
-        // Mission comptabilité
-        $comptable = User::where('email', 'antoine.michel@intranet.com')->first();
-        Mission::create([
-            'title' => 'Clôture comptable mensuelle',
-            'description' => 'Effectuer la clôture comptable du mois de juillet et préparer les rapports financiers.',
-            'status' => 'termine',
-            'priority' => 'normale',
-            'category' => 'autres',
-            'subcategory' => 'administration',
-            'assigned_to' => $comptable->id,
-            'created_by' => $admin->id,
-            'start_date' => now()->subDays(8),
-            'due_date' => now()->subDays(3),
-            'completed_at' => now()->subDays(2),
-            'notes' => 'Clôture effectuée dans les délais. Rapports transmis à la direction.',
-        ]);
-
         // Missions supplémentaires pour avoir plus de données de test
         $categories = ['location', 'syndic', 'autres'];
         $subcategoriesByCategory = [
@@ -285,7 +280,7 @@ class MissionSeeder extends Seeder
             'autres' => ['prospection_commerciale', 'formation_interne', 'administration', 'relation_client', 'reporting_direction']
         ];
 
-        foreach ($collaborateurs->take(8) as $index => $collaborateur) {
+        foreach ($collaborateurs->take(10) as $index => $collaborateur) {
             $category = $categories[array_rand($categories)];
             $subcategory = $subcategoriesByCategory[$category][array_rand($subcategoriesByCategory[$category])];
 
@@ -306,13 +301,12 @@ class MissionSeeder extends Seeder
             ]);
         }
 
-        $this->command->info('Missions créées avec succès !');
-        $this->command->info('- Missions commerciales avec CA');
-        $this->command->info('- Missions marketing et RH');
-        $this->command->info('- Missions IT et comptabilité');
-        $this->command->info('- NOUVEAU: Missions Location (visites, états des lieux, recouvrement)');
-        $this->command->info('- NOUVEAU: Missions Syndic (AG, travaux, sinistres)');
-        $this->command->info('- Différents statuts : en_attente, en_cours, terminé, en_retard');
-        $this->command->info('- Différentes priorités et catégories pour les tests KPI');
+        $this->command->info('✅ Missions créées avec succès !');
+        $this->command->info('📊 Missions commerciales IDF avec CA');
+        $this->command->info('📊 Missions PACA, ARA, Occitanie');
+        $this->command->info('🏢 Missions Location (visites, états des lieux, recouvrement)');
+        $this->command->info('🏢 Missions Syndic (AG, travaux, sinistres)');
+        $this->command->info('📈 Différents statuts : en_attente, en_cours, terminé, en_retard');
+        $this->command->info('🎯 Différentes priorités et catégories pour les tests KPI');
     }
 }

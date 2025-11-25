@@ -1,385 +1,367 @@
 @extends('layouts.app')
 
-@section('title', 'Gestion d\'équipe - Intranet')
+@section('title', 'Équipe - Intranet')
 
 @section('content')
-<div class="space-y-6">
-    <!-- En-tête -->
-    <div class="bg-white shadow rounded-lg p-6">
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">
-                    👥 Gestion d'équipe
-                </h1>
-                <p class="text-gray-600 mt-1">
-                    @if(auth()->user()->isManager())
-                        Visualisez et gérez votre équipe directe
-                    @else
-                        Vue d'ensemble des équipes et utilisateurs
-                    @endif
-                </p>
-            </div>
-            @if(auth()->user()->isAdministrateur())
+    <div class="space-y-6">
+        <!-- En-tête avec statistiques -->
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
                 <div>
-                    <a href="{{ route('team.create') }}" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
-                        ➕ Ajouter utilisateur
+                    <h1 class="text-3xl font-bold mb-2">Gestion de l'équipe</h1>
+                    <p class="text-indigo-100">{{ $stats['total'] }} membres au total</p>
+                </div>
+                @if (auth()->user()->role === 'administrateur')
+                    <a href="{{ route('team.create') }}"
+                        class="bg-white text-indigo-600 px-6 py-3 rounded-lg font-semibold hover:bg-indigo-50 transition-colors shadow-md flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Nouveau membre
                     </a>
-                </div>
-            @endif
-        </div>
-    </div>
-
-    <!-- Statistiques équipe -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <span class="text-2xl">👤</span>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Total utilisateurs</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ $stats['total_users'] }}</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-green-50 overflow-hidden shadow rounded-lg border border-green-200">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <span class="text-2xl">✅</span>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-green-600 truncate">Utilisateurs actifs</dt>
-                            <dd class="text-lg font-medium text-green-900">{{ $stats['active_users'] }}</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        @if(auth()->user()->isAdministrateur())
-        <div class="bg-blue-50 overflow-hidden shadow rounded-lg border border-blue-200">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <span class="text-2xl">👔</span>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-blue-600 truncate">Managers</dt>
-                            <dd class="text-lg font-medium text-blue-900">{{ $stats['managers'] }}</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-        </div>
-        @endif
-
-        <div class="bg-purple-50 overflow-hidden shadow rounded-lg border border-purple-200">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <span class="text-2xl">👨‍💼</span>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-purple-600 truncate">Collaborateurs</dt>
-                            <dd class="text-lg font-medium text-purple-900">{{ $stats['collaborateurs'] }}</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Filtres avec design moderne -->
-    <div class="bg-white shadow rounded-lg p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">🔍 Filtrer les utilisateurs</h3>
-        <form method="GET" action="{{ route('team.index') }}">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <!-- Recherche avec icône -->
-                <div>
-                    <label for="search" class="block text-sm font-medium text-gray-700 mb-2">
-                        <span class="flex items-center">
-                            <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
-                            Rechercher
-                        </span>
-                    </label>
-                    <div class="relative">
-                        <input type="text" 
-                               name="search" 
-                               id="search" 
-                               value="{{ $request->search }}" 
-                               placeholder="Nom, prénom, email..."
-                               class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Rôle avec icône -->
-                <div>
-                    <label for="role" class="block text-sm font-medium text-gray-700 mb-2">
-                        <span class="flex items-center">
-                            <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                            </svg>
-                            Rôle
-                        </span>
-                    </label>
-                    <div class="relative">
-                        <select name="role" 
-                                id="role" 
-                                class="block w-full pl-10 pr-8 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors appearance-none bg-white">
-                            <option value="">Tous les rôles</option>
-                            <option value="collaborateur" {{ $request->role === 'collaborateur' ? 'selected' : '' }}>👨‍💼 Collaborateur</option>
-                            @if(auth()->user()->isAdministrateur())
-                                <option value="manager" {{ $request->role === 'manager' ? 'selected' : '' }}>👔 Manager</option>
-                                <option value="administrateur" {{ $request->role === 'administrateur' ? 'selected' : '' }}>⚙️ Administrateur</option>
-                            @endif
-                        </select>
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                            </svg>
-                        </div>
-                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Localisation (département français) - NOUVEAU -->
-                <div>
-                    <label for="localisation" class="block text-sm font-medium text-gray-700 mb-2">
-                        <span class="flex items-center">
-                            <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            </svg>
-                            Localisation
-                        </span>
-                    </label>
-                    <div class="relative">
-                        <select name="localisation" 
-                                id="localisation" 
-                                class="block w-full pl-10 pr-8 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors appearance-none bg-white">
-                            <option value="">Toutes les localisations</option>
-                            @foreach($localisations as $localisation)
-                                <option value="{{ $localisation }}" {{ $request->localisation === $localisation ? 'selected' : '' }}>
-                                    🗺️ {{ $localisation }}
-                                </option>
-                            @endforeach
-                        </select>
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            </svg>
-                        </div>
-                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Statut avec icône -->
-                <div>
-                    <label for="status" class="block text-sm font-medium text-gray-700 mb-2">
-                        <span class="flex items-center">
-                            <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            Statut
-                        </span>
-                    </label>
-                    <div class="relative">
-                        <select name="status" 
-                                id="status" 
-                                class="block w-full pl-10 pr-8 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors appearance-none bg-white">
-                            <option value="">Tous les statuts</option>
-                            <option value="active" {{ $request->status === 'active' ? 'selected' : '' }}>✅ Actifs</option>
-                            <option value="inactive" {{ $request->status === 'inactive' ? 'selected' : '' }}>❌ Inactifs</option>
-                        </select>
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
-                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Boutons d'action -->
-            <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
-                <a href="{{ route('team.index') }}" 
-                   class="inline-flex items-center px-4 py-2.5 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                    </svg>
-                    Réinitialiser
-                </a>
-                <button type="submit" 
-                        class="inline-flex items-center px-6 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
-                    Rechercher
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Liste des membres d'équipe -->
-    <div class="bg-white shadow rounded-lg">
-        <div class="p-6 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-900">
-                @if(auth()->user()->isManager())
-                    Mon équipe directe ({{ $users->total() }} membre{{ $users->total() > 1 ? 's' : '' }})
-                @else
-                    Tous les utilisateurs ({{ $users->total() }} utilisateur{{ $users->total() > 1 ? 's' : '' }})
                 @endif
-            </h2>
-            @if(auth()->user()->isManager() && $users->total() == 0)
-                <p class="text-sm text-gray-500 mt-2">
-                    Aucun membre dans votre équipe directe.
-                </p>
-            @endif
+            </div>
+
+            <!-- Statistiques en cartes -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/80 text-sm font-medium">Actifs</p>
+                            <p class="text-3xl font-bold text-white mt-1">{{ $stats['active'] }}</p>
+                        </div>
+                        <div class="bg-green-500/20 p-3 rounded-full">
+                            <svg class="w-8 h-8 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/80 text-sm font-medium">Inactifs</p>
+                            <p class="text-3xl font-bold text-white mt-1">{{ $stats['inactive'] }}</p>
+                        </div>
+                        <div class="bg-red-500/20 p-3 rounded-full">
+                            <svg class="w-8 h-8 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/80 text-sm font-medium">Managers</p>
+                            <p class="text-3xl font-bold text-white mt-1">{{ $stats['managers'] }}</p>
+                        </div>
+                        <div class="bg-yellow-500/20 p-3 rounded-full">
+                            <svg class="w-8 h-8 text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/80 text-sm font-medium">Collaborateurs</p>
+                            <p class="text-3xl font-bold text-white mt-1">{{ $stats['collaborateurs'] }}</p>
+                        </div>
+                        <div class="bg-blue-500/20 p-3 rounded-full">
+                            <svg class="w-8 h-8 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="p-6">
-            @if($users->count() > 0)
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Utilisateur</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rôle</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Poste</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Localisation</th>
-                                @if(auth()->user()->isAdministrateur())
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manager</th>
-                                @endif
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            @foreach($users as $user)
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="flex items-center">
-                                            <div class="h-10 w-10 rounded-full {{ $user->is_active ? 'bg-indigo-500' : 'bg-gray-400' }} flex items-center justify-center text-white font-medium">
-                                                {{ substr($user->first_name, 0, 1) }}{{ substr($user->last_name, 0, 1) }}
-                                            </div>
-                                            <div class="ml-4">
-                                                <div class="text-sm font-medium text-gray-900">{{ $user->full_name }}</div>
-                                                <div class="text-sm text-gray-500">{{ $user->email }}</div>
+
+        <!-- Filtres et recherche -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <form method="GET" action="{{ route('team.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Recherche -->
+                <div class="md:col-span-2">
+                    <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
+                    <div class="relative">
+                        <input type="text" name="search" id="search" value="{{ request('search') }}"
+                            placeholder="Nom, prénom, email..."
+                            class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtre par rôle -->
+                <div>
+                    <label for="role" class="block text-sm font-medium text-gray-700 mb-2">Rôle</label>
+                    <select name="role" id="role"
+                        class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">Tous les rôles</option>
+                        <option value="collaborateur" {{ request('role') === 'collaborateur' ? 'selected' : '' }}>
+                            Collaborateur</option>
+                        <option value="manager" {{ request('role') === 'manager' ? 'selected' : '' }}>Manager</option>
+                        <option value="administrateur" {{ request('role') === 'administrateur' ? 'selected' : '' }}>
+                            Administrateur</option>
+                    </select>
+                </div>
+
+                <!-- Filtre par statut -->
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                    <select name="status" id="status"
+                        class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">Tous les statuts</option>
+                        <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Actif</option>
+                        <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactif</option>
+                    </select>
+                </div>
+
+                <!-- Boutons -->
+                <div class="md:col-span-4 flex justify-end space-x-3">
+                    <a href="{{ route('team.index') }}"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        Réinitialiser
+                    </a>
+                    <button type="submit"
+                        class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                        Filtrer
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Liste des membres -->
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Membre
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Rôle
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Département
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Localisation
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Départements gérés
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Statut
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @forelse($teamMembers as $member)
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <!-- Membre -->
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="h-10 w-10 flex-shrink-0">
+                                            <div
+                                                class="h-10 w-10 rounded-full {{ $member->is_active ? 'bg-indigo-500' : 'bg-gray-400' }} flex items-center justify-center text-white font-medium">
+                                                {{ substr($member->first_name, 0, 1) }}{{ substr($member->last_name, 0, 1) }}
                                             </div>
                                         </div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="px-2 py-1 text-xs font-semibold rounded-full 
-                                            @if($user->role === 'administrateur') bg-red-100 text-red-800
-                                            @elseif($user->role === 'manager') bg-blue-100 text-blue-800
-                                            @else bg-green-100 text-green-800
-                                            @endif">
-                                            {{ ucfirst($user->role) }}
-                                        </span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ $user->position ?? 'Non défini' }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        🗺️ {{ $user->localisation ?? 'Non défini' }}
-                                    </td>
-                                    @if(auth()->user()->isAdministrateur())
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {{ $user->manager?->full_name ?? 'Aucun' }}
-                                        </td>
-                                    @endif
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        @if($user->is_active)
-                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                                Actif
-                                            </span>
-                                        @else
-                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                                                Inactif
-                                            </span>
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                        <a href="{{ route('team.show', $user) }}" class="text-indigo-600 hover:text-indigo-900">Voir</a>
-                                        @if(auth()->user()->isAdministrateur())
-                                            <a href="{{ route('team.edit', $user) }}" class="text-blue-600 hover:text-blue-900">Modifier</a>
-                                            @if($user->is_active)
-                                                <form method="POST" action="{{ route('team.deactivate', $user) }}" class="inline">
-                                                    @csrf
-                                                    @method('PUT')
-                                                    <button type="submit" class="text-orange-600 hover:text-orange-900"
-                                                            onclick="return confirm('Êtes-vous sûr de vouloir désactiver cet utilisateur ?')">
-                                                        Désactiver
-                                                    </button>
-                                                </form>
-                                            @else
-                                                <form method="POST" action="{{ route('team.activate', $user) }}" class="inline">
-                                                    @csrf
-                                                    @method('PUT')
-                                                    <button type="submit" class="text-green-600 hover:text-green-900">Activer</button>
-                                                </form>
-                                            @endif
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                                        <div class="ml-4">
+                                            <div class="text-sm font-medium text-gray-900">
+                                                {{ $member->full_name }}
+                                            </div>
+                                            <div class="text-sm text-gray-500">
+                                                {{ $member->email }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
 
-                <!-- Pagination -->
-                <div class="mt-6">
-                    {{ $users->links() }}
-                </div>
-            @else
-                <div class="text-center py-8">
-                    <span class="text-4xl">👥</span>
-                    <p class="text-gray-500 mt-2">
-                        @if(auth()->user()->isManager())
-                            Aucun membre dans votre équipe directe
-                        @else
-                            Aucun membre trouvé
-                        @endif
-                    </p>
-                    @if(auth()->user()->isAdministrateur())
-                        <div class="mt-4">
-                            <a href="{{ route('team.create') }}" class="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
-                                Ajouter le premier utilisateur →
-                            </a>
-                        </div>
-                    @endif
+                                <!-- Rôle -->
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    @if ($member->role === 'administrateur')
+                                        <span
+                                            class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
+                                            Administrateur
+                                        </span>
+                                    @elseif($member->role === 'manager')
+                                        <span
+                                            class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                            Manager
+                                        </span>
+                                    @else
+                                        <span
+                                            class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                            Collaborateur
+                                        </span>
+                                    @endif
+                                </td>
+
+                                <!-- Département -->
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ $member->department ?? '-' }}
+                                </td>
+
+                                <!-- Localisation -->
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ $member->localisation ?? '-' }}
+                                </td>
+
+                                <!-- Départements gérés -->
+                                <td class="px-6 py-4 text-sm text-gray-500">
+                                    @if (in_array($member->role, ['manager', 'administrateur']))
+                                        @if ($member->managesAllDepartments())
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd"
+                                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                                        clip-rule="evenodd" />
+                                                </svg>
+                                                Tous les départements
+                                            </span>
+                                        @elseif($member->managed_departments && count($member->managed_departments) > 0)
+                                            <div class="flex flex-wrap gap-1">
+                                                @php
+                                                    $displayCount = 2;
+                                                    $remaining = count($member->managed_departments) - $displayCount;
+                                                @endphp
+                                                @foreach (array_slice($member->managed_departments, 0, $displayCount) as $dept)
+                                                    <span
+                                                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                        {{ $dept }}
+                                                    </span>
+                                                @endforeach
+                                                @if ($remaining > 0)
+                                                    <span
+                                                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600"
+                                                        title="{{ implode(', ', array_slice($member->managed_departments, $displayCount)) }}">
+                                                        +{{ $remaining }} autre{{ $remaining > 1 ? 's' : '' }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <span class="text-gray-400 italic">Aucun</span>
+                                        @endif
+                                    @else
+                                        <span class="text-gray-400">-</span>
+                                    @endif
+                                </td>
+
+                                <!-- Statut -->
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    @if ($member->is_active)
+                                        <span
+                                            class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                            Actif
+                                        </span>
+                                    @else
+                                        <span
+                                            class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                            Inactif
+                                        </span>
+                                    @endif
+                                </td>
+
+                                <!-- Actions -->
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <div class="flex justify-end space-x-2">
+                                        <a href="{{ route('team.show', $member) }}"
+                                            class="text-indigo-600 hover:text-indigo-900 transition-colors"
+                                            title="Voir le profil">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                        </a>
+
+                                        @if (auth()->user()->role === 'administrateur' ||
+                                                (auth()->user()->role === 'manager' && $member->manager_id === auth()->id()))
+                                            <a href="{{ route('team.edit', $member) }}"
+                                                class="text-blue-600 hover:text-blue-900 transition-colors"
+                                                title="Modifier">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                            </a>
+                                        @endif
+
+                                        @if (auth()->user()->role === 'administrateur' && $member->id !== auth()->id())
+                                            <form method="POST" action="{{ route('team.destroy', $member) }}"
+                                                onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce membre ?');"
+                                                class="inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit"
+                                                    class="text-red-600 hover:text-red-900 transition-colors"
+                                                    title="Supprimer">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                    <p class="mt-4 text-lg font-medium">Aucun membre trouvé</p>
+                                    <p class="mt-2">Essayez de modifier vos critères de recherche</p>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            @if ($teamMembers->hasPages())
+                <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+                    {{ $teamMembers->links() }}
                 </div>
             @endif
         </div>
     </div>
-</div>
 @endsection

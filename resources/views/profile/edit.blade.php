@@ -383,6 +383,94 @@
                 </div>
             </div>
 
+            <!-- NOUVELLE SECTION : Départements gérés (lecture seule) -->
+            @if(in_array(auth()->user()->role, ['manager', 'administrateur']))
+            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 shadow rounded-lg">
+                <div class="p-6 border-b border-blue-200">
+                    <h2 class="text-lg font-semibold text-blue-900">🗺️ Départements gérés</h2>
+                    <p class="text-sm text-blue-700 mt-1">
+                        Départements dont vous avez la responsabilité (en plus de votre équipe directe)
+                        @if(!auth()->user()->isAdministrateur())
+                            <span class="text-blue-600 font-medium ml-2">✓ Lecture seule - Contactez un administrateur pour modifier</span>
+                        @endif
+                    </p>
+                </div>
+                <div class="p-6">
+                    @if(auth()->user()->managesAllDepartments())
+                        <div class="flex items-start p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <svg class="w-6 h-6 text-green-600 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                            <div>
+                                <h3 class="text-sm font-medium text-green-800">✅ Tous les départements</h3>
+                                <p class="mt-1 text-sm text-green-700">
+                                    Vous avez accès à la gestion de tous les départements français (101 départements).
+                                </p>
+                            </div>
+                        </div>
+                    @elseif(auth()->user()->managed_departments && count(auth()->user()->managed_departments) > 0)
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between mb-4">
+                                <p class="text-sm text-gray-700">
+                                    Vous gérez <span class="font-semibold text-indigo-900 text-lg">{{ count(auth()->user()->managed_departments) }}</span> département(s)
+                                </p>
+                                @if(!auth()->user()->isAdministrateur())
+                                    <a href="{{ route('team.index') }}" 
+                                       class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        Contacter un admin
+                                    </a>
+                                @endif
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                                @foreach(auth()->user()->managed_departments as $dept)
+                                    <div class="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                        <svg class="w-4 h-4 mr-2 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        </svg>
+                                        {{ $dept }}
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @else
+                        <div class="flex items-start p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                            <svg class="w-6 h-6 text-gray-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <div class="flex-1">
+                                <h3 class="text-sm font-medium text-gray-800">Aucun département géré</h3>
+                                <p class="mt-1 text-sm text-gray-600">
+                                    Vous gérez uniquement votre équipe directe (les collaborateurs dont vous êtes le manager).
+                                </p>
+                                @if(!auth()->user()->isAdministrateur())
+                                    <p class="mt-2 text-xs text-gray-500">
+                                        💡 Si vous souhaitez gérer d'autres départements, contactez un administrateur.
+                                    </p>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+
+                    @if(!auth()->user()->isAdministrateur())
+                        <div class="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                            <div class="flex">
+                                <svg class="w-5 h-5 text-blue-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                </svg>
+                                <p class="text-xs text-blue-700">
+                                    <strong>Information :</strong> Seuls les administrateurs peuvent modifier les départements gérés via la page de gestion d'équipe. Cette section est en lecture seule pour vous.
+                                </p>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+            @endif
+
             <!-- NOUVEAU : Informations professionnelles (pour les devis/factures) -->
             <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 shadow rounded-lg">
                 <div class="p-6 border-b border-green-200">
