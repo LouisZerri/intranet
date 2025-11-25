@@ -109,6 +109,25 @@ Route::middleware('auth')->group(function () {
         // Gestion équipe
         Route::get('/equipe', [TeamController::class, 'index'])->name('team.index');
 
+        // ============================================
+        // RECRUTEMENT - Managers et Administrateurs uniquement
+        // ============================================
+        Route::prefix('equipe/recrutement')->name('recruitment.')->group(function () {
+            Route::get('/', [App\Http\Controllers\CandidateController::class, 'index'])->name('index');
+            Route::get('/create', [App\Http\Controllers\CandidateController::class, 'create'])->name('create');
+            Route::post('/', [App\Http\Controllers\CandidateController::class, 'store'])->name('store');
+            Route::get('/{candidate}', [App\Http\Controllers\CandidateController::class, 'show'])->name('show');
+            Route::get('/{candidate}/edit', [App\Http\Controllers\CandidateController::class, 'edit'])->name('edit');
+            Route::put('/{candidate}', [App\Http\Controllers\CandidateController::class, 'update'])->name('update');
+            Route::delete('/{candidate}', [App\Http\Controllers\CandidateController::class, 'destroy'])->name('destroy');
+            Route::patch('/{candidate}/status', [App\Http\Controllers\CandidateController::class, 'updateStatus'])->name('update-status');
+            Route::patch('/{candidate}/ratings', [App\Http\Controllers\CandidateController::class, 'updateRatings'])->name('update-ratings');
+        });
+        // ============================================
+        // FIN RECRUTEMENT
+        // ============================================
+
+
         // MODULE COMMERCIAL - Routes managers/admin
         Route::get('/clients/top', [ClientController::class, 'topClients'])->name('clients.top');
         Route::get('/clients/overdue', [ClientController::class, 'withOverdueInvoices'])->name('clients.overdue');

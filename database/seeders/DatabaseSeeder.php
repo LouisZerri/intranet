@@ -19,7 +19,8 @@ class DatabaseSeeder extends Seeder
             ResourceSeeder::class,
             FormationFileSeeder::class,
             CommercialModuleSeeder::class,
-            PredefinedServiceSeeder::class
+            PredefinedServiceSeeder::class,
+            CandidateSeeder::class
         ]);
     }
 }
