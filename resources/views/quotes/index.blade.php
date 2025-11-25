@@ -122,7 +122,7 @@
         <div class="bg-white shadow rounded-lg">
             <div class="p-6">
                 <form method="GET" action="{{ route('quotes.index') }}" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         {{-- Recherche --}}
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher un client</label>
@@ -136,7 +136,7 @@
                                        name="search" 
                                        value="{{ request('search') }}"
                                        class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-                                       placeholder="Nom du client, entreprise...">
+                                       placeholder="Nom du client, entreprise, n° devis...">
                             </div>
                         </div>
 
@@ -144,14 +144,26 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
                             <select name="status" 
-                                    class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-                                    onchange="this.form.submit()">
+                                    class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
                                 <option value="">Tous les statuts</option>
-                                <option value="brouillon" {{ request('status') === 'brouillon' ? 'selected' : '' }}>Brouillons</option>
-                                <option value="envoye" {{ request('status') === 'envoye' ? 'selected' : '' }}>Envoyés</option>
-                                <option value="accepte" {{ request('status') === 'accepte' ? 'selected' : '' }}>Acceptés</option>
-                                <option value="refuse" {{ request('status') === 'refuse' ? 'selected' : '' }}>Refusés</option>
-                                <option value="converti" {{ request('status') === 'converti' ? 'selected' : '' }}>Convertis</option>
+                                <option value="brouillon" {{ request('status') === 'brouillon' ? 'selected' : '' }}>📝 Brouillons</option>
+                                <option value="envoye" {{ request('status') === 'envoye' ? 'selected' : '' }}>📤 Envoyés</option>
+                                <option value="accepte" {{ request('status') === 'accepte' ? 'selected' : '' }}>✅ Acceptés</option>
+                                <option value="refuse" {{ request('status') === 'refuse' ? 'selected' : '' }}>❌ Refusés</option>
+                                <option value="converti" {{ request('status') === 'converti' ? 'selected' : '' }}>💰 Convertis</option>
+                            </select>
+                        </div>
+
+                        {{-- Type d'activité --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Type d'activité</label>
+                            <select name="revenue_type" 
+                                    class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">Tous les types</option>
+                                <option value="transaction" {{ request('revenue_type') === 'transaction' ? 'selected' : '' }}>🏠 Transaction</option>
+                                <option value="location" {{ request('revenue_type') === 'location' ? 'selected' : '' }}>🔑 Location</option>
+                                <option value="syndic" {{ request('revenue_type') === 'syndic' ? 'selected' : '' }}>🏢 Syndic</option>
+                                <option value="autres" {{ request('revenue_type') === 'autres' ? 'selected' : '' }}>📋 Autres</option>
                             </select>
                         </div>
                     </div>
@@ -159,11 +171,14 @@
                     <div class="flex justify-between items-center">
                         <button type="submit"
                             class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                            </svg>
                             Filtrer
                         </button>
-                        @if (request()->hasAny(['search', 'status']))
+                        @if (request()->hasAny(['search', 'status', 'revenue_type']))
                             <a href="{{ route('quotes.index') }}" class="text-sm text-gray-600 hover:text-gray-900">
-                                Réinitialiser les filtres
+                                ✕ Réinitialiser les filtres
                             </a>
                         @endif
                     </div>
@@ -189,6 +204,7 @@
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">N° Devis</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date création</th>
                                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Montant TTC</th>
                                 <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Statut</th>
@@ -198,7 +214,7 @@
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             @foreach ($quotes as $quote)
-                                <tr class="hover:bg-gray-50">
+                                <tr class="hover:bg-gray-50 transition">
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <a href="{{ route('quotes.show', $quote) }}" 
                                            class="text-indigo-600 hover:text-indigo-900 font-medium">
@@ -211,8 +227,30 @@
                                             <div class="text-sm text-gray-500">{{ $quote->client->company_name }}</div>
                                         @endif
                                     </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                            @switch($quote->revenue_type)
+                                                @case('transaction') bg-blue-100 text-blue-800 @break
+                                                @case('location') bg-green-100 text-green-800 @break
+                                                @case('syndic') bg-purple-100 text-purple-800 @break
+                                                @default bg-gray-100 text-gray-800
+                                            @endswitch
+                                        ">
+                                            @switch($quote->revenue_type)
+                                                @case('transaction') 🏠 Transaction @break
+                                                @case('location') 🔑 Location @break
+                                                @case('syndic') 🏢 Syndic @break
+                                                @default 📋 Autres
+                                            @endswitch
+                                        </span>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {{ $quote->created_at->format('d/m/Y') }}
+                                        @if($quote->validity_date)
+                                            <div class="text-xs {{ $quote->validity_date->isPast() ? 'text-red-500' : 'text-gray-400' }}">
+                                                Valide jusqu'au {{ $quote->validity_date->format('d/m/Y') }}
+                                            </div>
+                                        @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-right font-medium">
                                         {{ $quote->formatted_total_ttc }}
@@ -244,6 +282,7 @@
                                                     </svg>
                                                 </a>
                                             @endif
+
                                         </div>
                                     </td>
                                 </tr>
@@ -254,16 +293,28 @@
 
                 {{-- Pagination --}}
                 <div class="px-6 py-4 border-t border-gray-200">
-                    {{ $quotes->links() }}
+                    {{ $quotes->withQueryString()->links() }}
                 </div>
             @else
                 <div class="text-center py-12">
                     <span class="text-6xl">📄</span>
-                    <p class="mt-4 text-gray-500">Aucun devis trouvé.</p>
-                    <a href="{{ route('quotes.create') }}"
-                        class="mt-4 inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">
-                        Créer le premier devis
-                    </a>
+                    <h3 class="mt-4 text-lg font-medium text-gray-900">Aucun devis trouvé</h3>
+                    <p class="mt-2 text-gray-500">
+                        @if(request()->hasAny(['search', 'status', 'revenue_type']))
+                            Aucun devis ne correspond à vos critères de recherche.
+                        @else
+                            Commencez par créer votre premier devis.
+                        @endif
+                    </p>
+                    <div class="mt-6">
+                        <a href="{{ route('quotes.create') }}"
+                            class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            Créer un devis
+                        </a>
+                    </div>
                 </div>
             @endif
         </div>

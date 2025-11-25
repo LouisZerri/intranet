@@ -1,4 +1,5 @@
 <?php
+// app/Models/Invoice.php
 
 namespace App\Models;
 
@@ -13,12 +14,36 @@ class Invoice extends Model
 {
     use HasFactory;
 
+    // =====================================
+    // CONSTANTES - Types de revenus
+    // =====================================
+
+    public const REVENUE_TYPE_TRANSACTION = 'transaction';
+    public const REVENUE_TYPE_LOCATION = 'location';
+    public const REVENUE_TYPE_SYNDIC = 'syndic';
+    public const REVENUE_TYPE_AUTRES = 'autres';
+
+    public const REVENUE_TYPES = [
+        self::REVENUE_TYPE_TRANSACTION => 'Transaction',
+        self::REVENUE_TYPE_LOCATION => 'Location',
+        self::REVENUE_TYPE_SYNDIC => 'Syndic',
+        self::REVENUE_TYPE_AUTRES => 'Autres',
+    ];
+
+    public const REVENUE_TYPE_COLORS = [
+        self::REVENUE_TYPE_TRANSACTION => 'blue',
+        self::REVENUE_TYPE_LOCATION => 'green',
+        self::REVENUE_TYPE_SYNDIC => 'purple',
+        self::REVENUE_TYPE_AUTRES => 'gray',
+    ];
+
     protected $fillable = [
         'invoice_number',
         'quote_id',
         'client_id',
-        'user_id', // Mandataire/Collaborateur émetteur
+        'user_id',
         'status',
+        'revenue_type', // NOUVEAU
         'total_ht',
         'total_tva',
         'total_ttc',
@@ -32,8 +57,8 @@ class Invoice extends Model
         'internal_notes',
         'payment_method',
         'payment_reference',
-        'reminder_sent_at', // Date du dernier rappel envoyé
-        'reminder_count', // Nombre de rappels envoyés
+        'reminder_sent_at',
+        'reminder_count',
     ];
 
     protected $casts = [
@@ -54,41 +79,26 @@ class Invoice extends Model
     // RELATIONS
     // =====================================
 
-    /**
-     * Client associé à la facture
-     */
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
     }
 
-    /**
-     * Utilisateur (mandataire) créateur de la facture
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Devis d'origine (si converti)
-     */
     public function quote(): BelongsTo
     {
         return $this->belongsTo(Quote::class);
     }
 
-    /**
-     * Lignes de la facture
-     */
     public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class);
     }
 
-    /**
-     * Paiements associés à la facture
-     */
     public function payments(): HasMany
     {
         return $this->hasMany(InvoicePayment::class);
@@ -102,15 +112,6 @@ class Invoice extends Model
     {
         if ($user->isAdministrateur()) {
             return $query;
-        }
-
-        if ($user->isManager()) {
-            return $query->where(function ($q) use ($user) {
-                $q->where('user_id', $user->id)
-                    ->orWhereHas('user', function ($subQ) use ($user) {
-                        $subQ->where('manager_id', $user->id);
-                    });
-            });
         }
 
         return $query->where('user_id', $user->id);
@@ -163,6 +164,22 @@ class Invoice extends Model
             ->whereYear('paid_at', now()->year);
     }
 
+    // Scopes par type de revenu
+    public function scopeTransaction(Builder $query): Builder
+    {
+        return $query->where('revenue_type', self::REVENUE_TYPE_TRANSACTION);
+    }
+
+    public function scopeLocation(Builder $query): Builder
+    {
+        return $query->where('revenue_type', self::REVENUE_TYPE_LOCATION);
+    }
+
+    public function scopeSyndic(Builder $query): Builder
+    {
+        return $query->where('revenue_type', self::REVENUE_TYPE_SYNDIC);
+    }
+
     // =====================================
     // ACCESSEURS
     // =====================================
@@ -191,6 +208,16 @@ class Invoice extends Model
         };
     }
 
+    public function getRevenueTypeLabelAttribute(): string
+    {
+        return self::REVENUE_TYPES[$this->revenue_type] ?? 'Inconnu';
+    }
+
+    public function getRevenueTypeColorAttribute(): string
+    {
+        return self::REVENUE_TYPE_COLORS[$this->revenue_type] ?? 'gray';
+    }
+
     public function getFormattedTotalHtAttribute(): string
     {
         return number_format($this->total_ht, 2, ',', ' ') . ' €';
@@ -199,6 +226,11 @@ class Invoice extends Model
     public function getFormattedTotalTtcAttribute(): string
     {
         return number_format($this->total_ttc, 2, ',', ' ') . ' €';
+    }
+
+    public function getFormattedTotalTvaAttribute(): string
+    {
+        return number_format($this->total_tva, 2, ',', ' ') . ' €';
     }
 
     public function getRemainingAmountAttribute(): float
@@ -221,13 +253,15 @@ class Invoice extends Model
         return now()->startOfDay()->diffInDays($this->due_date->startOfDay());
     }
 
+    public function getFormattedPaidAmountAttribute(): string
+    {
+        return number_format($this->payments->sum('amount'), 2, ',', ' ') . ' €';
+    }
+
     // =====================================
     // MÉTHODES UTILITAIRES
     // =====================================
 
-    /**
-     * Vérifier si la facture est en retard
-     */
     public function isOverdue(): bool
     {
         return $this->status === 'emise'
@@ -235,45 +269,33 @@ class Invoice extends Model
             && $this->due_date->isPast();
     }
 
-    /**
-     * Vérifier si la facture est totalement payée
-     */
     public function isFullyPaid(): bool
     {
         return $this->remaining_amount <= 0;
     }
 
-    /**
-     * Vérifier si la facture peut être modifiée
-     */
     public function canBeEdited(): bool
     {
         return in_array($this->status, ['brouillon', 'emise']);
     }
 
-    /**
-     * Calculer les totaux de la facture
-     */
     public function calculateTotals(): void
     {
         $subtotal = $this->items->sum(function ($item) {
             return $item->quantity * $item->unit_price;
         });
 
-        // Application de la remise
         if ($this->discount_percentage > 0) {
             $this->discount_amount = $subtotal * ($this->discount_percentage / 100);
         }
 
         $this->total_ht = $subtotal - ($this->discount_amount ?? 0);
 
-        // Calcul TVA
         $this->total_tva = $this->items->sum(function ($item) {
             $itemTotal = $item->quantity * $item->unit_price;
             return $itemTotal * ($item->tva_rate / 100);
         });
 
-        // Application de la remise proportionnelle sur la TVA
         if ($this->discount_amount > 0 && $subtotal > 0) {
             $discountRatio = 1 - ($this->discount_amount / $subtotal);
             $this->total_tva *= $discountRatio;
@@ -282,14 +304,10 @@ class Invoice extends Model
         $this->total_ttc = $this->total_ht + $this->total_tva;
     }
 
-    /**
-     * Générer le numéro de facture automatique
-     */
     public static function generateInvoiceNumber(): string
     {
         $year = now()->year;
 
-        // Récupérer le dernier numéro de l'année en cours
         $lastInvoice = static::whereYear('created_at', $year)
             ->orderByRaw('CAST(SUBSTRING(invoice_number, 10) AS UNSIGNED) DESC')
             ->first();
@@ -302,7 +320,6 @@ class Invoice extends Model
 
         $invoiceNumber = 'FAC-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
 
-        // Vérification de sécurité : si le numéro existe déjà, incrémenter
         while (static::where('invoice_number', $invoiceNumber)->exists()) {
             $nextNumber++;
             $invoiceNumber = 'FAC-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
@@ -311,9 +328,6 @@ class Invoice extends Model
         return $invoiceNumber;
     }
 
-    /**
-     * Émettre la facture
-     */
     public function issue(): bool
     {
         if ($this->status !== 'brouillon') {
@@ -330,9 +344,6 @@ class Invoice extends Model
         return $this->save();
     }
 
-    /**
-     * Enregistrer un paiement
-     */
     public function recordPayment(float $amount, string $method = 'virement', ?string $reference = null): InvoicePayment
     {
         $payment = InvoicePayment::create([
@@ -343,7 +354,8 @@ class Invoice extends Model
             'payment_date' => now(),
         ]);
 
-        // Vérifier si la facture est totalement payée
+        $this->refresh();
+        
         if ($this->isFullyPaid()) {
             $this->status = 'payee';
             $this->paid_at = now();
@@ -353,13 +365,10 @@ class Invoice extends Model
         return $payment;
     }
 
-    /**
-     * Annuler la facture
-     */
     public function cancel(): bool
     {
         if ($this->status === 'payee') {
-            return false; // Ne peut pas annuler une facture déjà payée
+            return false;
         }
 
         $this->status = 'annulee';
@@ -367,17 +376,11 @@ class Invoice extends Model
         return $this->save();
     }
 
-    /**
-     * Envoyer un rappel de paiement
-     */
     public function sendPaymentReminder(): bool
     {
         if ($this->status !== 'emise' && $this->status !== 'en_retard') {
             return false;
         }
-
-        // Logique d'envoi d'email à implémenter
-        // Notification::send($this->client, new InvoicePaymentReminderNotification($this));
 
         $this->reminder_sent_at = now();
         $this->reminder_count = ($this->reminder_count ?? 0) + 1;
@@ -386,21 +389,16 @@ class Invoice extends Model
         return true;
     }
 
-    /**
-     * Vérifier si un rappel doit être envoyé (logique automatique)
-     */
     public function shouldSendReminder(): bool
     {
         if (!$this->isOverdue()) {
             return false;
         }
 
-        // Pas de rappel si déjà envoyé dans les 7 derniers jours
         if ($this->reminder_sent_at && $this->reminder_sent_at->gt(now()->subDays(7))) {
             return false;
         }
 
-        // Maximum 3 rappels
         if ($this->reminder_count >= 3) {
             return false;
         }
@@ -408,9 +406,6 @@ class Invoice extends Model
         return true;
     }
 
-    /**
-     * Envoyer les rappels automatiques pour toutes les factures en retard
-     */
     public static function sendAutomaticReminders(): int
     {
         $count = 0;
@@ -425,9 +420,6 @@ class Invoice extends Model
         return $count;
     }
 
-    /**
-     * Obtenir le CA d'un utilisateur pour une période
-     */
     public static function getUserRevenue(User $user, ?Carbon $startDate = null, ?Carbon $endDate = null): float
     {
         $query = static::where('user_id', $user->id)
@@ -444,36 +436,101 @@ class Invoice extends Model
         return $query->sum('total_ht') ?? 0;
     }
 
-    public function getFormattedTotalTvaAttribute(): string
-    {
-        return number_format($this->total_tva, 2, ',', ' ') . ' €';
-    }
-
     /**
-     * Obtenir le CA collecté pour l'URSSAF (pour un mandataire)
+     * Obtenir le CA ventilé pour l'URSSAF (avec distinction Transaction/Location/Syndic)
      */
     public static function getURSSAFRevenue(User $user, Carbon $startDate, Carbon $endDate): array
     {
         $invoices = static::where('user_id', $user->id)
             ->where('status', 'payee')
             ->whereBetween('paid_at', [$startDate, $endDate])
-            ->with('items')
+            ->with(['items', 'client'])
+            ->orderBy('paid_at')
             ->get();
+
+        // Ventilation par type de revenu
+        $byType = [
+            self::REVENUE_TYPE_TRANSACTION => [
+                'label' => 'Transaction',
+                'color' => 'blue',
+                'total_ht' => 0,
+                'total_tva' => 0,
+                'total_ttc' => 0,
+                'invoice_count' => 0,
+            ],
+            self::REVENUE_TYPE_LOCATION => [
+                'label' => 'Location',
+                'color' => 'green',
+                'total_ht' => 0,
+                'total_tva' => 0,
+                'total_ttc' => 0,
+                'invoice_count' => 0,
+            ],
+            self::REVENUE_TYPE_SYNDIC => [
+                'label' => 'Syndic',
+                'color' => 'purple',
+                'total_ht' => 0,
+                'total_tva' => 0,
+                'total_ttc' => 0,
+                'invoice_count' => 0,
+            ],
+            self::REVENUE_TYPE_AUTRES => [
+                'label' => 'Autres',
+                'color' => 'gray',
+                'total_ht' => 0,
+                'total_tva' => 0,
+                'total_ttc' => 0,
+                'invoice_count' => 0,
+            ],
+        ];
+
+        // Calcul des totaux par type
+        foreach ($invoices as $invoice) {
+            $type = $invoice->revenue_type ?? self::REVENUE_TYPE_TRANSACTION;
+            
+            $byType[$type]['total_ht'] += $invoice->total_ht;
+            $byType[$type]['total_tva'] += $invoice->total_tva;
+            $byType[$type]['total_ttc'] += $invoice->total_ttc;
+            $byType[$type]['invoice_count']++;
+        }
+
+        // Filtrer les types vides (optionnel, on peut garder tous les types)
+        $byTypeFiltered = array_filter($byType, fn($data) => $data['invoice_count'] > 0);
 
         return [
             'period_start' => $startDate->format('d/m/Y'),
             'period_end' => $endDate->format('d/m/Y'),
             'user_name' => $user->full_name,
+            'user_email' => $user->email,
+            'user_phone' => $user->phone ?? 'Non renseigné',
+            'user_siret' => $user->siret ?? 'Non renseigné',
+            
+            // Totaux globaux
             'total_ht' => $invoices->sum('total_ht'),
             'total_tva' => $invoices->sum('total_tva'),
             'total_ttc' => $invoices->sum('total_ttc'),
             'invoice_count' => $invoices->count(),
+            
+            // Ventilation par type de CA
+            'by_type' => $byType,
+            'by_type_filtered' => $byTypeFiltered,
+            
+            // Totaux par type (raccourcis)
+            'transaction' => $byType[self::REVENUE_TYPE_TRANSACTION],
+            'location' => $byType[self::REVENUE_TYPE_LOCATION],
+            'syndic' => $byType[self::REVENUE_TYPE_SYNDIC],
+            'autres' => $byType[self::REVENUE_TYPE_AUTRES],
+            
+            // Détail des factures avec type
             'invoices' => $invoices->map(function ($invoice) {
                 return [
-                    'number' => $invoice->invoice_number,
-                    'date' => $invoice->paid_at->format('d/m/Y'),
-                    'client' => $invoice->client->name,
+                    'invoice_number' => $invoice->invoice_number,
+                    'client_name' => $invoice->client->name ?? 'N/A',
+                    'paid_at' => $invoice->paid_at->format('d/m/Y'),
+                    'revenue_type' => $invoice->revenue_type ?? 'transaction',
+                    'revenue_type_label' => $invoice->revenue_type_label,
                     'total_ht' => $invoice->total_ht,
+                    'total_tva' => $invoice->total_tva,
                     'total_ttc' => $invoice->total_ttc,
                 ];
             }),
@@ -491,6 +548,10 @@ class Invoice extends Model
                 $invoice->invoice_number = static::generateInvoiceNumber();
             }
 
+            if (!$invoice->revenue_type) {
+                $invoice->revenue_type = self::REVENUE_TYPE_TRANSACTION;
+            }
+
             if (!$invoice->issued_at && $invoice->status !== 'brouillon') {
                 $invoice->issued_at = now();
             }
@@ -501,7 +562,6 @@ class Invoice extends Model
         });
 
         static::updating(function ($invoice) {
-            // Marquer automatiquement comme en retard si nécessaire
             if ($invoice->status === 'emise' && $invoice->due_date && $invoice->due_date->isPast()) {
                 $invoice->status = 'en_retard';
             }

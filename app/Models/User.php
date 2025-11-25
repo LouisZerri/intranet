@@ -29,7 +29,7 @@ class User extends Authenticatable
         'revenue_target',
         'is_active',
         'last_login_at',
-         'rsac_number',
+        'rsac_number',
         'professional_address',
         'professional_city',
         'professional_postal_code',
@@ -63,6 +63,14 @@ class User extends Authenticatable
     public function manager(): BelongsTo
     {
         return $this->belongsTo(User::class, 'manager_id');
+    }
+
+    /**
+     * Clients de l'utilisateur
+     */
+    public function clients(): HasMany
+    {
+        return $this->hasMany(Client::class);
     }
 
     /**

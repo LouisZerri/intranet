@@ -215,9 +215,9 @@ Route::middleware('auth')->group(function () {
         // URSSAF - Récapitulatif Mandataire (CDC - Section D)
         Route::prefix('urssaf')->name('urssaf.')->group(function () {
             Route::get('/', [URSSAFController::class, 'index'])->name('index');
-            Route::post('/generate', [URSSAFController::class, 'generate'])->name('generate');
-            Route::post('/export-pdf', [URSSAFController::class, 'exportPdf'])->name('export-pdf');
-            Route::post('/export-excel', [URSSAFController::class, 'exportExcel'])->name('export-excel');
+            Route::get('/report', [URSSAFController::class, 'report'])->name('report'); // NOUVEAU
+            Route::get('/pdf', [URSSAFController::class, 'exportPdf'])->name('pdf'); // Changé en GET
+            Route::get('/excel', [URSSAFController::class, 'exportExcel'])->name('excel'); // Changé en GET
         });
 
         // ============================================

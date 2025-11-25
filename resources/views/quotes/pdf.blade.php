@@ -77,6 +77,37 @@
             margin-top: 5px;
         }
 
+        /* Badge type d'activité */
+        .revenue-type-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 9pt;
+            font-weight: bold;
+            margin-top: 8px;
+            text-align: right;
+        }
+
+        .revenue-type-transaction {
+            background-color: #DBEAFE;
+            color: #1E40AF;
+        }
+
+        .revenue-type-location {
+            background-color: #D1FAE5;
+            color: #065F46;
+        }
+
+        .revenue-type-syndic {
+            background-color: #E9D5FF;
+            color: #6B21A8;
+        }
+
+        .revenue-type-autres {
+            background-color: #F3F4F6;
+            color: #374151;
+        }
+
         /* Informations client */
         .parties {
             display: table;
@@ -115,6 +146,36 @@
             display: block;
             font-size: 10pt;
             margin-bottom: 3px;
+        }
+
+        /* Informations du devis */
+        .quote-info {
+            background-color: #F9FAFB;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .quote-info-row {
+            display: table;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .quote-info-label {
+            display: table-cell;
+            width: 40%;
+            font-size: 9pt;
+            color: #6B7280;
+        }
+
+        .quote-info-value {
+            display: table-cell;
+            width: 60%;
+            font-size: 9pt;
+            font-weight: bold;
+            color: #1F2937;
         }
 
         /* Tableau des lignes */
@@ -275,6 +336,18 @@
             color: #6B7280;
         }
 
+        /* Validité */
+        .validity-box {
+            background-color: #FEF3C7;
+            border: 2px solid #F59E0B;
+            padding: 10px;
+            margin-top: 20px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 10pt;
+            color: #92400E;
+        }
+
         /* Pied de page */
         .footer {
             margin-top: 40px;
@@ -289,18 +362,6 @@
         .footer-highlight {
             font-weight: bold;
             color: #4F46E5;
-        }
-
-        /* Validité */
-        .validity-box {
-            background-color: #FEF3C7;
-            border: 2px solid #F59E0B;
-            padding: 10px;
-            margin-top: 20px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 10pt;
-            color: #92400E;
         }
 
         /* Utilitaires */
@@ -318,6 +379,16 @@
 
         .mt-20 {
             margin-top: 20px;
+        }
+
+        .float-right {
+            float: right;
+        }
+
+        .clearfix::after {
+            content: "";
+            display: table;
+            clear: both;
         }
     </style>
 </head>
@@ -367,6 +438,24 @@
                             <br>Valable jusqu'au : {{ $quote->validity_date->format('d/m/Y') }}
                         @endif
                     </div>
+                    {{-- Badge type d'activité --}}
+                    <div style="text-align: right; margin-top: 10px;">
+                        <span class="revenue-type-badge revenue-type-{{ $quote->revenue_type }}">
+                            @switch($quote->revenue_type)
+                                @case('transaction')
+                                    🏠 Transaction
+                                    @break
+                                @case('location')
+                                    🔑 Location
+                                    @break
+                                @case('syndic')
+                                    🏢 Syndic
+                                    @break
+                                @default
+                                    📋 Autres
+                            @endswitch
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -408,6 +497,42 @@
             </div>
         </div>
 
+        {{-- Informations du devis --}}
+        <div class="quote-info">
+            <div class="quote-info-row">
+                <div class="quote-info-label">Numéro du devis :</div>
+                <div class="quote-info-value">{{ $quote->quote_number }}</div>
+            </div>
+            <div class="quote-info-row">
+                <div class="quote-info-label">Date d'émission :</div>
+                <div class="quote-info-value">{{ $quote->created_at->format('d/m/Y') }}</div>
+            </div>
+            @if ($quote->validity_date)
+                <div class="quote-info-row">
+                    <div class="quote-info-label">Valide jusqu'au :</div>
+                    <div class="quote-info-value">{{ $quote->validity_date->format('d/m/Y') }}</div>
+                </div>
+            @endif
+            <div class="quote-info-row">
+                <div class="quote-info-label">Type d'activité :</div>
+                <div class="quote-info-value">
+                    @switch($quote->revenue_type)
+                        @case('transaction')
+                            🏠 Transaction (Vente)
+                            @break
+                        @case('location')
+                            🔑 Location (Gestion locative)
+                            @break
+                        @case('syndic')
+                            🏢 Syndic (Copropriété)
+                            @break
+                        @default
+                            📋 Autres
+                    @endswitch
+                </div>
+            </div>
+        </div>
+
         {{-- Validité --}}
         @if ($quote->validity_date && $quote->status === 'envoye')
             <div class="validity-box">
@@ -436,7 +561,7 @@
                                 {{ $item->description }}
                             @endif
                         </td>
-                        <td class="text-center">{{ $item->quantity }}</td>
+                        <td class="text-center">{{ number_format($item->quantity, 2, ',', ' ') }}</td>
                         <td class="text-right">{{ number_format($item->unit_price, 2, ',', ' ') }} €</td>
                         <td class="text-center">{{ $item->tva_rate }}%</td>
                         <td class="text-right">{{ $item->formatted_total_ttc }}</td>
@@ -492,6 +617,27 @@
                 <div style="font-size: 9pt; color: #666;">{{ $userInfo['full_name'] }}</div>
             </div>
         @endif
+
+        {{-- Zone de signature client --}}
+        <div style="margin-top: 40px; display: table; width: 100%;">
+            <div style="display: table-cell; width: 50%; padding: 15px; border: 1px solid #D1D5DB; text-align: center; vertical-align: top;">
+                <div style="font-weight: bold; font-size: 10pt; color: #1F2937; margin-bottom: 60px;">
+                    Bon pour accord
+                </div>
+                <div style="border-top: 1px solid #9CA3AF; padding-top: 5px; font-size: 8pt; color: #6B7280;">
+                    Signature du client précédée de la mention "Lu et approuvé"
+                </div>
+            </div>
+            <div style="display: table-cell; width: 10%;"></div>
+            <div style="display: table-cell; width: 40%; padding: 15px; border: 1px solid #D1D5DB; text-align: center; vertical-align: top;">
+                <div style="font-weight: bold; font-size: 10pt; color: #1F2937; margin-bottom: 60px;">
+                    Date
+                </div>
+                <div style="border-top: 1px solid #9CA3AF; padding-top: 5px; font-size: 8pt; color: #6B7280;">
+                    _ _ / _ _ / _ _ _ _
+                </div>
+            </div>
+        </div>
 
         {{-- Texte de pied de page personnalisé --}}
         @if ($userInfo['footer_text'])

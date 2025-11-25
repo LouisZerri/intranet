@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('clients', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
             
             // Type de client
             $table->enum('type', ['particulier', 'professionnel'])->default('particulier');
@@ -47,6 +48,8 @@ return new class extends Migration
             $table->index('is_active');
             $table->index('email');
             $table->index('siret');
+            $table->index('user_id');
+
         });
     }
 

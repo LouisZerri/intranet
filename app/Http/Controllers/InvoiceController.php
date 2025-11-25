@@ -32,6 +32,11 @@ class InvoiceController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Filtre par type d'activité (NOUVEAU)
+        if ($request->filled('revenue_type')) {
+            $query->where('revenue_type', $request->revenue_type);
+        }
+
         // Filtre par période
         if ($request->filled('period')) {
             $period = $request->period;
@@ -84,13 +89,22 @@ class InvoiceController extends Controller
      */
     public function create(Request $request)
     {
-        $clients = Client::active()->orderBy('name')->get();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        // CORRIGÉ : Filtrer les clients par utilisateur
+        $clients = Client::forUser($user)->active()->orderBy('name')->get();
         $quote = null;
         $predefinedServices = PredefinedService::active()->ordered()->get();
 
         // Si création depuis un devis
         if ($request->filled('quote_id')) {
             $quote = Quote::with('items')->findOrFail($request->quote_id);
+            
+            // SÉCURITÉ : Vérifier que le devis appartient à l'utilisateur
+            if (!$this->canUserViewQuote($user, $quote)) {
+                abort(403, 'Vous n\'avez pas accès à ce devis.');
+            }
         }
 
         return view('invoices.create', compact('clients', 'quote', 'predefinedServices'));
@@ -101,8 +115,12 @@ class InvoiceController extends Controller
      */
     public function store(Request $request)
     {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
+            'revenue_type' => 'required|in:transaction,location,syndic,autres', // NOUVEAU
             'due_date' => 'nullable|date|after:today',
             'payment_terms' => 'nullable|string',
             'discount_percentage' => 'nullable|numeric|min:0|max:100',
@@ -117,7 +135,15 @@ class InvoiceController extends Controller
             'items.*.tva_rate' => 'required|numeric|min:0|max:100',
         ], [
             'items.required' => 'Vous devez ajouter au moins une ligne à la facture.',
+            'revenue_type.required' => 'Le type d\'activité est obligatoire.',
+            'revenue_type.in' => 'Le type d\'activité sélectionné est invalide.',
         ]);
+
+        // SÉCURITÉ : Vérifier que le client appartient à l'utilisateur
+        $client = Client::forUser($user)->find($validated['client_id']);
+        if (!$client) {
+            return back()->withInput()->with('error', 'Client non autorisé.');
+        }
 
         DB::beginTransaction();
         try {
@@ -126,11 +152,13 @@ class InvoiceController extends Controller
                 'client_id' => $validated['client_id'],
                 'user_id' => Auth::id(),
                 'status' => 'brouillon',
+                'revenue_type' => $validated['revenue_type'], // NOUVEAU
                 'due_date' => $validated['due_date'] ?? now()->addDays(30),
                 'payment_terms' => $validated['payment_terms'] ?? 'Paiement à 30 jours fin de mois',
                 'discount_percentage' => $validated['discount_percentage'] ?? null,
                 'discount_amount' => $validated['discount_amount'] ?? null,
                 'internal_notes' => $validated['internal_notes'] ?? null,
+                'quote_id' => $request->quote_id ?? null,
             ]);
 
             // Ajouter les lignes
@@ -192,7 +220,9 @@ class InvoiceController extends Controller
         }
 
         $invoice->load('items');
-        $clients = Client::active()->orderBy('name')->get();
+        
+        // CORRIGÉ : Filtrer les clients par utilisateur
+        $clients = Client::forUser($user)->active()->orderBy('name')->get();
         $predefinedServices = PredefinedService::active()->ordered()->get();
 
         return view('invoices.edit', compact('invoice', 'clients', 'predefinedServices'));
@@ -216,6 +246,7 @@ class InvoiceController extends Controller
 
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
+            'revenue_type' => 'required|in:transaction,location,syndic,autres', // NOUVEAU
             'due_date' => 'nullable|date',
             'payment_terms' => 'nullable|string',
             'internal_notes' => 'nullable|string',
@@ -224,12 +255,22 @@ class InvoiceController extends Controller
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.tva_rate' => 'required|numeric|min:0|max:100',
+        ], [
+            'revenue_type.required' => 'Le type d\'activité est obligatoire.',
+            'revenue_type.in' => 'Le type d\'activité sélectionné est invalide.',
         ]);
+
+        // SÉCURITÉ : Vérifier que le client appartient à l'utilisateur
+        $client = Client::forUser($user)->find($validated['client_id']);
+        if (!$client) {
+            return back()->withInput()->with('error', 'Client non autorisé.');
+        }
 
         DB::beginTransaction();
         try {
             $invoice->update([
                 'client_id' => $validated['client_id'],
+                'revenue_type' => $validated['revenue_type'], // NOUVEAU
                 'due_date' => $validated['due_date'],
                 'payment_terms' => $validated['payment_terms'],
                 'internal_notes' => $validated['internal_notes'],
@@ -277,18 +318,16 @@ class InvoiceController extends Controller
         DB::beginTransaction();
         try {
             if ($invoice->issue()) {
-                // NOUVEAU : Envoi automatique email avec PDF (CDC Section B)
+                // Envoi automatique email avec PDF
                 if ($invoice->client->email) {
                     try {
-                        // Générer le PDF avec infos professionnelles
                         $invoice->load(['client', 'user', 'items', 'payments']);
-                        $userInfo = $this->getUserProfessionalInfo($invoice->user); // ⬅️ AJOUT ICI
+                        $userInfo = $this->getUserProfessionalInfo($invoice->user);
 
-                        $pdf = Pdf::loadView('invoices.pdf', compact('invoice', 'userInfo')) // ⬅️ AJOUT userInfo
+                        $pdf = Pdf::loadView('invoices.pdf', compact('invoice', 'userInfo'))
                             ->setPaper('a4', 'portrait');
                         $pdfContent = $pdf->output();
 
-                        // Envoyer l'email avec PDF en pièce jointe
                         Mail::to($invoice->client->email)
                             ->cc($invoice->user->email)
                             ->send(new \App\Mail\InvoiceSentMail($invoice, $pdfContent));
@@ -443,9 +482,9 @@ class InvoiceController extends Controller
 
         try {
             $invoice->load(['client', 'user', 'items', 'payments']);
-            $userInfo = $this->getUserProfessionalInfo($invoice->user); // ⬅️ AJOUT ICI
+            $userInfo = $this->getUserProfessionalInfo($invoice->user);
 
-            $pdf = Pdf::loadView('invoices.pdf', compact('invoice', 'userInfo')) // ⬅️ AJOUT userInfo
+            $pdf = Pdf::loadView('invoices.pdf', compact('invoice', 'userInfo'))
                 ->setPaper('a4', 'portrait');
 
             $filename = 'facture-' . $invoice->invoice_number . '-' . $invoice->client->display_name . '.pdf';
@@ -471,9 +510,9 @@ class InvoiceController extends Controller
 
         try {
             $invoice->load(['client', 'user', 'items', 'payments']);
-            $userInfo = $this->getUserProfessionalInfo($invoice->user); // ⬅️ AJOUT ICI
+            $userInfo = $this->getUserProfessionalInfo($invoice->user);
 
-            $pdf = Pdf::loadView('invoices.pdf', compact('invoice', 'userInfo')) // ⬅️ AJOUT userInfo
+            $pdf = Pdf::loadView('invoices.pdf', compact('invoice', 'userInfo'))
                 ->setPaper('a4', 'portrait');
 
             return $pdf->stream('facture-' . $invoice->invoice_number . '.pdf');
@@ -510,22 +549,15 @@ class InvoiceController extends Controller
     private function getUserProfessionalInfo(User $user): array
     {
         return [
-            // Informations de base
             'full_name' => $user->full_name,
             'email' => $user->effective_email,
             'phone' => $user->effective_phone,
-
-            // Informations professionnelles
             'rsac_number' => $user->rsac_number,
             'professional_address' => $user->professional_address,
             'professional_city' => $user->professional_city,
             'professional_postal_code' => $user->professional_postal_code,
-
-            // Mentions et textes
             'legal_mentions' => $user->legal_mentions,
             'footer_text' => $user->footer_text,
-
-            // Signature
             'signature_url' => $user->signature_url,
             'has_signature' => !empty($user->signature_image),
         ];
@@ -555,6 +587,19 @@ class InvoiceController extends Controller
         }
 
         return $invoice->user_id === $user->id;
+    }
+
+    private function canUserViewQuote($user, $quote): bool
+    {
+        if ($user->isAdministrateur()) {
+            return true;
+        }
+
+        if ($user->isManager()) {
+            return $quote->user_id === $user->id || $quote->user->manager_id === $user->id;
+        }
+
+        return $quote->user_id === $user->id;
     }
 
     private function sanitizeFilename(string $filename): string

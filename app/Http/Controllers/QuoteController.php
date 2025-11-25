@@ -27,6 +27,10 @@ class QuoteController extends Controller
             $query->where('status', $request->status);
         }
 
+        if ($request->filled('revenue_type')) {
+            $query->where('revenue_type', $request->revenue_type);
+        }
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->whereHas('client', function ($q) use ($search) {
@@ -60,16 +64,24 @@ class QuoteController extends Controller
 
     public function create()
     {
-        $clients = Client::active()->orderBy('name')->get();
-        $predefinedServices = PredefinedService::active()->ordered()->get();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
 
-        return view('quotes.create', compact('clients', 'predefinedServices'));
+        $clients = Client::forUser($user)->active()->orderBy('name')->get();
+        $predefinedServices = PredefinedService::active()->ordered()->get();
+        $revenueTypes = Quote::REVENUE_TYPES;
+
+        return view('quotes.create', compact('clients', 'predefinedServices', 'revenueTypes'));
     }
 
     public function store(Request $request)
     {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
+            'revenue_type' => 'required|in:transaction,location,syndic,autres',
             'validity_date' => 'nullable|date|after:today',
             'discount_percentage' => 'nullable|numeric|min:0|max:100',
             'discount_amount' => 'nullable|numeric|min:0',
@@ -84,11 +96,19 @@ class QuoteController extends Controller
             'items.*.tva_rate' => 'required|numeric|min:0|max:100',
         ], [
             'client_id.required' => 'Vous devez sélectionner un client.',
+            'revenue_type.required' => 'Le type d\'activité est obligatoire.',
+            'revenue_type.in' => 'Le type d\'activité sélectionné n\'est pas valide.',
             'items.required' => 'Vous devez ajouter au moins une ligne au devis.',
             'items.*.description.required' => 'La description est obligatoire pour chaque ligne.',
             'items.*.quantity.required' => 'La quantité est obligatoire.',
             'items.*.unit_price.required' => 'Le prix unitaire est obligatoire.',
         ]);
+
+        // SÉCURITÉ : Vérifier que le client appartient à l'utilisateur
+        $client = Client::forUser($user)->find($validated['client_id']);
+        if (!$client) {
+            return back()->withInput()->with('error', 'Client non autorisé.');
+        }
 
         DB::beginTransaction();
         try {
@@ -97,6 +117,7 @@ class QuoteController extends Controller
                 'client_id' => $validated['client_id'],
                 'user_id' => Auth::id(),
                 'status' => 'brouillon',
+                'revenue_type' => $validated['revenue_type'],
                 'validity_date' => $validated['validity_date'] ?? null,
                 'discount_percentage' => $validated['discount_percentage'] ?? null,
                 'discount_amount' => $validated['discount_amount'] ?? null,
@@ -159,10 +180,12 @@ class QuoteController extends Controller
         }
 
         $quote->load('items');
-        $clients = Client::active()->orderBy('name')->get();
+        
+        $clients = Client::forUser($user)->active()->orderBy('name')->get();
         $predefinedServices = PredefinedService::active()->ordered()->get();
+        $revenueTypes = Quote::REVENUE_TYPES;
 
-        return view('quotes.edit', compact('quote', 'clients', 'predefinedServices'));
+        return view('quotes.edit', compact('quote', 'clients', 'predefinedServices', 'revenueTypes'));
     }
 
     public function update(Request $request, Quote $quote)
@@ -180,6 +203,7 @@ class QuoteController extends Controller
 
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
+            'revenue_type' => 'required|in:transaction,location,syndic,autres',
             'validity_date' => 'nullable|date|after:today',
             'discount_percentage' => 'nullable|numeric|min:0|max:100',
             'discount_amount' => 'nullable|numeric|min:0',
@@ -192,12 +216,22 @@ class QuoteController extends Controller
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.tva_rate' => 'required|numeric|min:0|max:100',
+        ], [
+            'revenue_type.required' => 'Le type d\'activité est obligatoire.',
+            'revenue_type.in' => 'Le type d\'activité sélectionné n\'est pas valide.',
         ]);
+
+        // SÉCURITÉ : Vérifier que le client appartient à l'utilisateur
+        $client = Client::forUser($user)->find($validated['client_id']);
+        if (!$client) {
+            return back()->withInput()->with('error', 'Client non autorisé.');
+        }
 
         DB::beginTransaction();
         try {
             $quote->update([
                 'client_id' => $validated['client_id'],
+                'revenue_type' => $validated['revenue_type'],
                 'validity_date' => $validated['validity_date'] ?? null,
                 'discount_percentage' => $validated['discount_percentage'] ?? null,
                 'discount_amount' => $validated['discount_amount'] ?? null,
@@ -256,16 +290,14 @@ class QuoteController extends Controller
             $quote->load(['client', 'user', 'items']);
             $userInfo = $this->getUserProfessionalInfo($quote->user);
 
-            // ⬇️ OPTIMISATION DU PDF
             $pdf = Pdf::loadView('quotes.pdf', compact('quote', 'userInfo'))
                 ->setPaper('a4', 'portrait')
-                ->setOption('enable-local-file-access', true) // Important pour les images
-                ->setOption('image-dpi', 96) // Réduire la qualité des images
-                ->setOption('image-quality', 85); // Compression des images
+                ->setOption('enable-local-file-access', true)
+                ->setOption('image-dpi', 96)
+                ->setOption('image-quality', 85);
 
             $pdfContent = $pdf->output();
 
-            // ⬇️ VÉRIFIER LA TAILLE DU PDF
             $pdfSizeMB = strlen($pdfContent) / 1024 / 1024;
 
             if ($pdfSizeMB > 10) {

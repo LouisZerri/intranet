@@ -12,6 +12,18 @@
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-{{ $invoice->status_color }}-100 text-{{ $invoice->status_color }}-800">
                         {{ $invoice->status_label }}
                     </span>
+                    @php
+                        $typeColors = [
+                            'transaction' => 'bg-blue-100 text-blue-800',
+                            'location' => 'bg-green-100 text-green-800',
+                            'syndic' => 'bg-purple-100 text-purple-800',
+                            'autres' => 'bg-gray-100 text-gray-800',
+                        ];
+                        $typeColor = $typeColors[$invoice->revenue_type] ?? 'bg-gray-100 text-gray-800';
+                    @endphp
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $typeColor }}">
+                        {{ $invoice->revenue_type_label }}
+                    </span>
                     @if($invoice->isOverdue())
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
                             ⏰ {{ $invoice->days_overdue }} jour(s) de retard
@@ -281,6 +293,23 @@
                             <dd class="mt-1">
                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-{{ $invoice->status_color }}-100 text-{{ $invoice->status_color }}-800">
                                     {{ $invoice->status_label }}
+                                </span>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-gray-500">Type d'activité</dt>
+                            <dd class="mt-1">
+                                @php
+                                    $typeColors = [
+                                        'transaction' => 'bg-blue-100 text-blue-800',
+                                        'location' => 'bg-green-100 text-green-800',
+                                        'syndic' => 'bg-purple-100 text-purple-800',
+                                        'autres' => 'bg-gray-100 text-gray-800',
+                                    ];
+                                    $typeColor = $typeColors[$invoice->revenue_type] ?? 'bg-gray-100 text-gray-800';
+                                @endphp
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ $typeColor }}">
+                                    {{ $invoice->revenue_type_label }}
                                 </span>
                             </dd>
                         </div>

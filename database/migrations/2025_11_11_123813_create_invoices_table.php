@@ -24,6 +24,10 @@ return new class extends Migration
             
             // Statuts : Brouillon / Émise / Payée / En retard / Annulée
             $table->enum('status', ['brouillon', 'emise', 'payee', 'en_retard', 'annulee'])->default('brouillon');
+            $table->enum('revenue_type', ['transaction', 'location', 'syndic', 'autres'])
+                  ->default('transaction')
+                  ->comment('Type de CA : transaction, location, syndic, autres');
+            
             
             // Montants
             $table->decimal('total_ht', 10, 2)->default(0);
@@ -61,6 +65,8 @@ return new class extends Migration
             $table->index('due_date');
             $table->index('issued_at');
             $table->index('paid_at');
+            $table->index('revenue_type');
+
         });
     }
 

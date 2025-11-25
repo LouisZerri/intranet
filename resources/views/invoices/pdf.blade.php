@@ -77,6 +77,36 @@
             margin-top: 5px;
         }
 
+        /* Type d'activité */
+        .revenue-type-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 9pt;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+
+        .revenue-type-transaction {
+            background-color: #DBEAFE;
+            color: #1E40AF;
+        }
+
+        .revenue-type-location {
+            background-color: #D1FAE5;
+            color: #065F46;
+        }
+
+        .revenue-type-syndic {
+            background-color: #EDE9FE;
+            color: #5B21B6;
+        }
+
+        .revenue-type-autres {
+            background-color: #F3F4F6;
+            color: #374151;
+        }
+
         /* Informations client */
         .parties {
             display: table;
@@ -325,6 +355,28 @@
                         @if ($invoice->due_date)
                             <br>Échéance : {{ $invoice->due_date->format('d/m/Y') }}
                         @endif
+                    </div>
+                    {{-- Badge Type d'activité --}}
+                    @php
+                        $typeClasses = [
+                            'transaction' => 'revenue-type-transaction',
+                            'location' => 'revenue-type-location',
+                            'syndic' => 'revenue-type-syndic',
+                            'autres' => 'revenue-type-autres',
+                        ];
+                        $typeIcons = [
+                            'transaction' => '🏠',
+                            'location' => '🔑',
+                            'syndic' => '🏢',
+                            'autres' => '📋',
+                        ];
+                        $typeClass = $typeClasses[$invoice->revenue_type] ?? 'revenue-type-autres';
+                        $typeIcon = $typeIcons[$invoice->revenue_type] ?? '📋';
+                    @endphp
+                    <div style="text-align: right;">
+                        <span class="revenue-type-badge {{ $typeClass }}">
+                            {{ $typeIcon }} {{ $invoice->revenue_type_label }}
+                        </span>
                     </div>
                 </div>
             </div>

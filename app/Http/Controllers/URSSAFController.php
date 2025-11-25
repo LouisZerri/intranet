@@ -23,7 +23,7 @@ class URSSAFController extends Controller
         $firstInvoiceYear = Invoice::where('user_id', $user->id)
             ->where('status', 'payee')
             ->min('paid_at');
-        
+
         $startYear = $firstInvoiceYear ? Carbon::parse($firstInvoiceYear)->year : now()->year;
         $years = range(now()->year, $startYear);
 
@@ -69,6 +69,14 @@ class URSSAFController extends Controller
     }
 
     /**
+     * Afficher le rapport URSSAF (GET) - Alias de generate pour route GET
+     */
+    public function report(Request $request)
+    {
+        return $this->generate($request);
+    }
+
+    /**
      * Export PDF du récapitulatif URSSAF (CDC Section D)
      */
     public function exportPdf(Request $request)
@@ -93,7 +101,7 @@ class URSSAFController extends Controller
         $data = Invoice::getURSSAFRevenue($user, $startDate, $endDate);
         $data['period_type'] = $validated['period_type'];
         $data['period_label'] = $this->getPeriodLabel($validated['period_type'], $validated);
-        
+
         // Ajouter les informations du mandataire
         $data['user_name'] = $user->full_name;
         $data['user_email'] = $user->email;
@@ -149,18 +157,18 @@ class URSSAFController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ];
 
-        $callback = function() use ($data) {
+        $callback = function () use ($data) {
             $file = fopen('php://output', 'w');
-            
+
             // BOM UTF-8 pour Excel
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
             // En-tête du fichier
             fputcsv($file, ['RÉCAPITULATIF URSSAF - ' . $data['period_label']], ';');
             fputcsv($file, ['Mandataire : ' . $data['user_name']], ';');
             fputcsv($file, ['Généré le : ' . now()->format('d/m/Y à H:i')], ';');
             fputcsv($file, [], ';'); // Ligne vide
-            
+
             // Résumé
             fputcsv($file, ['RÉSUMÉ'], ';');
             fputcsv($file, ['Nombre de factures', $data['invoice_count']], ';');
@@ -168,7 +176,7 @@ class URSSAFController extends Controller
             fputcsv($file, ['Total TVA', number_format($data['total_tva'], 2, ',', ' ') . ' €'], ';');
             fputcsv($file, ['Total TTC', number_format($data['total_ttc'], 2, ',', ' ') . ' €'], ';');
             fputcsv($file, [], ';'); // Ligne vide
-            
+
             // Détail des factures
             fputcsv($file, ['DÉTAIL DES FACTURES'], ';');
             fputcsv($file, [
@@ -179,7 +187,7 @@ class URSSAFController extends Controller
                 'TVA',
                 'Montant TTC'
             ], ';');
-            
+
             foreach ($data['invoices'] as $invoice) {
                 fputcsv($file, [
                     $invoice['invoice_number'],
@@ -190,7 +198,7 @@ class URSSAFController extends Controller
                     number_format($invoice['total_ttc'], 2, ',', ' '),
                 ], ';');
             }
-            
+
             fclose($file);
         };
 
@@ -248,7 +256,7 @@ class URSSAFController extends Controller
         }
 
         // Trier par CA décroissant
-        usort($mandatairesData, function($a, $b) {
+        usort($mandatairesData, function ($a, $b) {
             return $b['total_ht'] <=> $a['total_ht'];
         });
 
@@ -325,7 +333,7 @@ class URSSAFController extends Controller
         }
 
         // Trier par CA décroissant
-        usort($mandatairesData, function($a, $b) {
+        usort($mandatairesData, function ($a, $b) {
             return $b['total_ht'] <=> $a['total_ht'];
         });
 
@@ -409,18 +417,18 @@ class URSSAFController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ];
 
-        $callback = function() use ($mandataires, $startDate, $endDate, $periodLabel) {
+        $callback = function () use ($mandataires, $startDate, $endDate, $periodLabel) {
             $file = fopen('php://output', 'w');
-            
+
             // BOM UTF-8 pour Excel
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
             // En-tête du fichier
             fputcsv($file, ['RÉCAPITULATIF URSSAF - TOUS LES MANDATAIRES'], ';');
             fputcsv($file, ['Période : ' . $periodLabel], ';');
             fputcsv($file, ['Généré le : ' . now()->format('d/m/Y à H:i')], ';');
             fputcsv($file, [], ';');
-            
+
             // En-têtes des colonnes
             fputcsv($file, [
                 'Mandataire',
@@ -432,7 +440,7 @@ class URSSAFController extends Controller
                 'Total TVA',
                 'Total TTC'
             ], ';');
-            
+
             $totalGlobal = [
                 'invoice_count' => 0,
                 'total_ht' => 0,
@@ -442,7 +450,7 @@ class URSSAFController extends Controller
 
             foreach ($mandataires as $mandataire) {
                 $data = Invoice::getURSSAFRevenue($mandataire, $startDate, $endDate);
-                
+
                 if ($data['total_ht'] > 0) {
                     fputcsv($file, [
                         $data['user_name'],
@@ -454,14 +462,14 @@ class URSSAFController extends Controller
                         number_format($data['total_tva'], 2, ',', ' '),
                         number_format($data['total_ttc'], 2, ',', ' '),
                     ], ';');
-                    
+
                     $totalGlobal['invoice_count'] += $data['invoice_count'];
                     $totalGlobal['total_ht'] += $data['total_ht'];
                     $totalGlobal['total_tva'] += $data['total_tva'];
                     $totalGlobal['total_ttc'] += $data['total_ttc'];
                 }
             }
-            
+
             // Ligne de total
             fputcsv($file, [], ';');
             fputcsv($file, [
@@ -474,7 +482,7 @@ class URSSAFController extends Controller
                 number_format($totalGlobal['total_tva'], 2, ',', ' '),
                 number_format($totalGlobal['total_ttc'], 2, ',', ' '),
             ], ';');
-            
+
             fclose($file);
         };
 

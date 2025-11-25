@@ -19,7 +19,7 @@
             </a>
         </div>
 
-        {{-- KPI --}}
+        {{-- KPI - CORRIGÉ : utilise $stats du contrôleur --}}
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-white overflow-hidden shadow rounded-lg border border-gray-200">
                 <div class="p-5">
@@ -30,7 +30,7 @@
                         <div class="ml-5 w-0 flex-1">
                             <dl>
                                 <dt class="text-sm font-medium text-gray-500 truncate">Total clients</dt>
-                                <dd class="text-2xl font-bold text-gray-900">{{ $clients->total() }}</dd>
+                                <dd class="text-2xl font-bold text-gray-900">{{ $stats['total'] }}</dd>
                             </dl>
                         </div>
                     </div>
@@ -46,8 +46,7 @@
                         <div class="ml-5 w-0 flex-1">
                             <dl>
                                 <dt class="text-sm font-medium text-blue-600 truncate">Particuliers</dt>
-                                <dd class="text-2xl font-bold text-blue-900">
-                                    {{ App\Models\Client::where('type', 'particulier')->count() }}</dd>
+                                <dd class="text-2xl font-bold text-blue-900">{{ $stats['particuliers'] }}</dd>
                             </dl>
                         </div>
                     </div>
@@ -63,8 +62,7 @@
                         <div class="ml-5 w-0 flex-1">
                             <dl>
                                 <dt class="text-sm font-medium text-green-600 truncate">Professionnels</dt>
-                                <dd class="text-2xl font-bold text-green-900">
-                                    {{ App\Models\Client::where('type', 'professionnel')->count() }}</dd>
+                                <dd class="text-2xl font-bold text-green-900">{{ $stats['professionnels'] }}</dd>
                             </dl>
                         </div>
                     </div>

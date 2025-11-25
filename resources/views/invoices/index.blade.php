@@ -20,7 +20,7 @@
         </div>
 
         {{-- Statistiques --}}
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div class="bg-white overflow-hidden shadow rounded-lg border border-gray-200">
                 <div class="p-5">
                     <div class="flex items-center">
@@ -84,13 +84,33 @@
                     </div>
                 </div>
             </div>
+
+            <div class="bg-purple-50 overflow-hidden shadow rounded-lg border border-purple-200">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <span class="text-3xl">📈</span>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-purple-600 truncate">URSSAF</dt>
+                                <dd class="mt-1">
+                                    <a href="{{ route('urssaf.index') }}" class="text-sm font-medium text-purple-700 hover:text-purple-900 underline">
+                                        Voir récap →
+                                    </a>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         {{-- Filtres --}}
         <div class="bg-white shadow rounded-lg">
             <div class="p-6">
                 <form method="GET" action="{{ route('invoices.index') }}" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
                         {{-- Recherche --}}
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
@@ -111,6 +131,20 @@
                                 <option value="payee" {{ request('status') === 'payee' ? 'selected' : '' }}>Payée</option>
                                 <option value="en_retard" {{ request('status') === 'en_retard' ? 'selected' : '' }}>En retard</option>
                                 <option value="annulee" {{ request('status') === 'annulee' ? 'selected' : '' }}>Annulée</option>
+                            </select>
+                        </div>
+
+                        {{-- Type d'activité --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Type d'activité</label>
+                            <select name="revenue_type"
+                                class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                                onchange="this.form.submit()">
+                                <option value="">Tous les types</option>
+                                <option value="transaction" {{ request('revenue_type') === 'transaction' ? 'selected' : '' }}>🏠 Transaction</option>
+                                <option value="location" {{ request('revenue_type') === 'location' ? 'selected' : '' }}>🔑 Location</option>
+                                <option value="syndic" {{ request('revenue_type') === 'syndic' ? 'selected' : '' }}>🏢 Syndic</option>
+                                <option value="autres" {{ request('revenue_type') === 'autres' ? 'selected' : '' }}>📋 Autres</option>
                             </select>
                         </div>
 
@@ -146,7 +180,7 @@
                             class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">
                             Filtrer
                         </button>
-                        @if (request()->hasAny(['search', 'status', 'period', 'sort']))
+                        @if (request()->hasAny(['search', 'status', 'revenue_type', 'period', 'sort']))
                             <a href="{{ route('invoices.index') }}" class="text-sm text-gray-600 hover:text-gray-900">
                                 Réinitialiser les filtres
                             </a>
@@ -174,6 +208,7 @@
                             <tr>
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">N° Facture</th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Client</th>
+                                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Type</th>
                                 <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Date</th>
                                 <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Échéance</th>
                                 <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Montant TTC</th>
@@ -184,6 +219,15 @@
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             @foreach ($invoices as $invoice)
+                                @php
+                                    $typeConfig = [
+                                        'transaction' => ['color' => 'bg-blue-100 text-blue-800', 'icon' => '🏠', 'label' => 'Transaction'],
+                                        'location' => ['color' => 'bg-green-100 text-green-800', 'icon' => '🔑', 'label' => 'Location'],
+                                        'syndic' => ['color' => 'bg-purple-100 text-purple-800', 'icon' => '🏢', 'label' => 'Syndic'],
+                                        'autres' => ['color' => 'bg-gray-100 text-gray-800', 'icon' => '📋', 'label' => 'Autres'],
+                                    ];
+                                    $type = $typeConfig[$invoice->revenue_type] ?? $typeConfig['autres'];
+                                @endphp
                                 <tr class="hover:bg-gray-50 transition">
                                     <td class="px-4 py-3">
                                         <a href="{{ route('invoices.show', $invoice) }}" class="font-medium text-indigo-600 hover:text-indigo-900">
@@ -192,6 +236,11 @@
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-900">
                                         {{ $invoice->client->display_name }}
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium {{ $type['color'] }}">
+                                            {{ $type['icon'] }} {{ $type['label'] }}
+                                        </span>
                                     </td>
                                     <td class="px-4 py-3 text-center text-sm text-gray-600">
                                         {{ $invoice->issued_at ? $invoice->issued_at->format('d/m/Y') : '-' }}
@@ -244,7 +293,7 @@
 
                 {{-- Pagination --}}
                 <div class="px-6 py-4 border-t border-gray-200">
-                    {{ $invoices->links() }}
+                    {{ $invoices->withQueryString()->links() }}
                 </div>
             @else
                 <div class="text-center py-12">

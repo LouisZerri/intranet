@@ -56,6 +56,32 @@
                                 @enderror
                             </div>
 
+                            {{-- Type d'activité (URSSAF) --}}
+                            <div>
+                                <label for="revenue_type" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Type d'activité <span class="text-red-500">*</span>
+                                </label>
+                                <select name="revenue_type" id="revenue_type" required
+                                    class="block w-full px-3 py-2 border @error('revenue_type') border-red-300 @else border-gray-300 @enderror rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="transaction" {{ old('revenue_type', $invoice->revenue_type) === 'transaction' ? 'selected' : '' }}>
+                                        🏠 Transaction (Vente)
+                                    </option>
+                                    <option value="location" {{ old('revenue_type', $invoice->revenue_type) === 'location' ? 'selected' : '' }}>
+                                        🔑 Location (Gestion locative)
+                                    </option>
+                                    <option value="syndic" {{ old('revenue_type', $invoice->revenue_type) === 'syndic' ? 'selected' : '' }}>
+                                        🏢 Syndic (Copropriété)
+                                    </option>
+                                    <option value="autres" {{ old('revenue_type', $invoice->revenue_type) === 'autres' ? 'selected' : '' }}>
+                                        📋 Autres
+                                    </option>
+                                </select>
+                                @error('revenue_type')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                                <p class="mt-1 text-xs text-gray-500">Important pour la ventilation URSSAF</p>
+                            </div>
+
                             {{-- Date d'échéance --}}
                             <div>
                                 <label for="due_date" class="block text-sm font-medium text-gray-700 mb-2">
@@ -68,7 +94,7 @@
                             </div>
 
                             {{-- Conditions de paiement --}}
-                            <div>
+                            <div class="md:col-span-2">
                                 <label for="payment_terms" class="block text-sm font-medium text-gray-700 mb-2">
                                     Conditions de paiement
                                 </label>
@@ -239,11 +265,23 @@
                         <ul class="space-y-2 text-sm text-blue-800">
                             <li>• Utilisez le <strong>calculateur d'état des lieux</strong> pour un calcul automatique</li>
                             <li>• Cliquez sur une prestation prédéfinie pour l'ajouter rapidement</li>
+                            <li>• Le <strong>type d'activité</strong> est important pour la déclaration URSSAF</li>
                             <li>• Le client est obligatoire</li>
                             <li>• Ajoutez au moins une ligne à la facture</li>
                             <li>• Les totaux se calculent automatiquement</li>
                             <li>• TVA par défaut : 20%</li>
                             <li>• La facture doit être en brouillon ou émise</li>
+                        </ul>
+                    </div>
+
+                    {{-- Légende types d'activité --}}
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <h3 class="text-sm font-semibold text-amber-900 mb-3">📊 Types d'activité URSSAF</h3>
+                        <ul class="space-y-2 text-sm text-amber-800">
+                            <li><span class="font-medium">🏠 Transaction</span> : Ventes immobilières</li>
+                            <li><span class="font-medium">🔑 Location</span> : Gestion locative, honoraires</li>
+                            <li><span class="font-medium">🏢 Syndic</span> : Gestion de copropriété</li>
+                            <li><span class="font-medium">📋 Autres</span> : Autres prestations</li>
                         </ul>
                     </div>
                 </div>
@@ -299,7 +337,6 @@
     <script>
         let lineIndex = 0;
 
-        // Toggle affichage des prestations prédéfinies
         function togglePredefinedServices() {
             const list = document.getElementById('predefined-services-list');
             const toggleText = document.getElementById('toggle-text');
@@ -308,7 +345,6 @@
             toggleText.textContent = list.classList.contains('hidden') ? 'Afficher' : 'Masquer';
         }
 
-        // Ajouter une prestation prédéfinie
         function addPredefinedService(description, quantity, unit_price, tva_rate, fullDescription = '') {
             const finalDescription = fullDescription ? `${description}\n${fullDescription}` : description;
             addLine(finalDescription, quantity, unit_price, tva_rate);
@@ -322,7 +358,6 @@
             }
         }
 
-        // Ajouter une ligne
         function addLine(description = '', quantity = 1, unit_price = '', tva_rate = 20) {
             const template = document.getElementById('line-template');
             const container = document.getElementById('items-container');
@@ -426,7 +461,7 @@
         });
     </script>
 
-    {{-- Script calculateur état des lieux --}}
+    {{-- Script calculateur état des lieux (identique à create) --}}
     <script>
         function initEtatDesLieuxCalculator() {
             const modalHTML = `
@@ -663,12 +698,15 @@
                 }
             }
             
+            // Mettre automatiquement le type d'activité sur "Location"
+            document.getElementById('revenue_type').value = 'location';
+            
             addLine(description, 1, price, 20);
             closeEDLCalculator();
             
             const message = document.createElement('div');
             message.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-            message.textContent = '✅ État des lieux ajouté à la facture';
+            message.textContent = '✅ État des lieux ajouté à la facture (Type: Location)';
             document.body.appendChild(message);
             
             setTimeout(() => {

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Builder;
 
 class Client extends Model
@@ -12,7 +13,8 @@ class Client extends Model
     use HasFactory;
 
     protected $fillable = [
-        'type', // 'particulier' ou 'professionnel'
+        'user_id',
+        'type',
         'name',
         'company_name',
         'siret',
@@ -37,6 +39,14 @@ class Client extends Model
     // =====================================
 
     /**
+     * Utilisateur propriétaire du client
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
      * Devis du client
      */
     public function quotes(): HasMany
@@ -55,6 +65,22 @@ class Client extends Model
     // =====================================
     // SCOPES
     // =====================================
+
+    /**
+     * Scope pour filtrer les clients selon le rôle de l'utilisateur
+     * - Administrateur : voit tous les clients
+     * - Manager / Collaborateur : voit uniquement SES clients
+     */
+    public function scopeForUser(Builder $query, User $user): Builder
+    {
+        // Admin voit tout
+        if ($user->isAdministrateur()) {
+            return $query;
+        }
+
+        // Tout le monde (manager ou collaborateur) voit uniquement ses propres clients
+        return $query->where('user_id', $user->id);
+    }
 
     public function scopeActive(Builder $query): Builder
     {
@@ -107,7 +133,7 @@ class Client extends Model
     {
         $parts = array_filter([
             $this->address,
-            $this->postal_code . ' ' . $this->city,
+            trim($this->postal_code . ' ' . $this->city),
             $this->country !== 'France' ? $this->country : null,
         ]);
 
@@ -127,9 +153,6 @@ class Client extends Model
     // MÉTHODES UTILITAIRES
     // =====================================
 
-    /**
-     * Obtenir le chiffre d'affaires total du client
-     */
     public function getTotalRevenue(): float
     {
         return $this->invoices()
@@ -137,25 +160,16 @@ class Client extends Model
                    ->sum('total_ht') ?? 0;
     }
 
-    /**
-     * Obtenir le nombre de devis du client
-     */
     public function getQuotesCount(): int
     {
         return $this->quotes()->count();
     }
 
-    /**
-     * Obtenir le nombre de factures du client
-     */
     public function getInvoicesCount(): int
     {
         return $this->invoices()->count();
     }
 
-    /**
-     * Obtenir le nombre de factures impayées
-     */
     public function getUnpaidInvoicesCount(): int
     {
         return $this->invoices()
@@ -163,9 +177,6 @@ class Client extends Model
                    ->count();
     }
 
-    /**
-     * Obtenir le montant total des factures impayées
-     */
     public function getUnpaidAmount(): float
     {
         return $this->invoices()
@@ -173,9 +184,6 @@ class Client extends Model
                    ->sum('total_ttc') ?? 0;
     }
 
-    /**
-     * Vérifier si le client a des factures en retard
-     */
     public function hasOverdueInvoices(): bool
     {
         return $this->invoices()
@@ -183,9 +191,6 @@ class Client extends Model
                    ->exists();
     }
 
-    /**
-     * Obtenir le taux de conversion devis → factures
-     */
     public function getConversionRate(): float
     {
         $totalQuotes = $this->quotes()
@@ -199,9 +204,6 @@ class Client extends Model
         return $totalQuotes > 0 ? round(($convertedQuotes / $totalQuotes) * 100, 2) : 0;
     }
 
-    /**
-     * Obtenir la dernière facture du client
-     */
     public function getLastInvoice(): ?Invoice
     {
         return $this->invoices()
@@ -209,9 +211,6 @@ class Client extends Model
                    ->first();
     }
 
-    /**
-     * Obtenir le dernier devis du client
-     */
     public function getLastQuote(): ?Quote
     {
         return $this->quotes()
@@ -219,17 +218,11 @@ class Client extends Model
                    ->first();
     }
 
-    /**
-     * Vérifier si le client est un bon payeur (aucune facture en retard)
-     */
     public function isGoodPayer(): bool
     {
         return !$this->hasOverdueInvoices();
     }
 
-    /**
-     * Statistiques du client
-     */
     public function getStatistics(): array
     {
         return [
@@ -250,9 +243,6 @@ class Client extends Model
     // MÉTHODES STATIQUES
     // =====================================
 
-    /**
-     * Obtenir les meilleurs clients par CA
-     */
     public static function getTopClients(int $limit = 10)
     {
         return static::active()
@@ -266,9 +256,6 @@ class Client extends Model
                     ->get();
     }
 
-    /**
-     * Obtenir les clients avec des factures en retard
-     */
     public static function getClientsWithOverdueInvoices()
     {
         return static::active()

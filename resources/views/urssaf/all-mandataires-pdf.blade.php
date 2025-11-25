@@ -130,6 +130,76 @@
             display: block;
         }
 
+        /* Ventilation par type */
+        .ventilation-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #F9FAFB;
+            border: 1px solid #E5E7EB;
+        }
+
+        .ventilation-title {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #1F2937;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .ventilation-grid {
+            display: table;
+            width: 100%;
+        }
+
+        .ventilation-item {
+            display: table-cell;
+            width: 25%;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .ventilation-box {
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .ventilation-box-transaction {
+            background-color: #DBEAFE;
+            border-left: 4px solid #2563EB;
+        }
+
+        .ventilation-box-location {
+            background-color: #D1FAE5;
+            border-left: 4px solid #10B981;
+        }
+
+        .ventilation-box-syndic {
+            background-color: #EDE9FE;
+            border-left: 4px solid #8B5CF6;
+        }
+
+        .ventilation-box-autres {
+            background-color: #F3F4F6;
+            border-left: 4px solid #6B7280;
+        }
+
+        .ventilation-type-label {
+            font-size: 9pt;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .ventilation-type-value {
+            font-size: 11pt;
+            font-weight: bold;
+        }
+
+        .ventilation-type-count {
+            font-size: 7pt;
+            color: #6B7280;
+            margin-top: 3px;
+        }
+
         /* Tableau des mandataires */
         .mandataires-table {
             width: 100%;
@@ -303,6 +373,26 @@
             color: #92400E;
         }
 
+        .badge-transaction {
+            background-color: #DBEAFE;
+            color: #1E40AF;
+        }
+
+        .badge-location {
+            background-color: #D1FAE5;
+            color: #065F46;
+        }
+
+        .badge-syndic {
+            background-color: #EDE9FE;
+            color: #5B21B6;
+        }
+
+        .badge-autres {
+            background-color: #F3F4F6;
+            color: #374151;
+        }
+
         /* Utilitaires */
         .text-bold { font-weight: bold; }
         .text-muted { color: #6B7280; }
@@ -364,6 +454,60 @@
             </div>
         </div>
 
+        {{-- Ventilation par type d'activité (NOUVEAU) --}}
+        @php
+            // Calculer les totaux par type à partir des données des mandataires
+            $totalsByType = [
+                'transaction' => ['total_ht' => 0, 'invoice_count' => 0],
+                'location' => ['total_ht' => 0, 'invoice_count' => 0],
+                'syndic' => ['total_ht' => 0, 'invoice_count' => 0],
+                'autres' => ['total_ht' => 0, 'invoice_count' => 0],
+            ];
+            
+            foreach($mandatairesData as $data) {
+                if (isset($data['by_type'])) {
+                    foreach (['transaction', 'location', 'syndic', 'autres'] as $type) {
+                        $totalsByType[$type]['total_ht'] += $data['by_type'][$type]['total_ht'] ?? 0;
+                        $totalsByType[$type]['invoice_count'] += $data['by_type'][$type]['invoice_count'] ?? 0;
+                    }
+                }
+            }
+        @endphp
+
+        <div class="ventilation-section">
+            <div class="ventilation-title">📊 VENTILATION PAR TYPE D'ACTIVITÉ</div>
+            <div class="ventilation-grid">
+                <div class="ventilation-item">
+                    <div class="ventilation-box ventilation-box-transaction">
+                        <div class="ventilation-type-label" style="color: #1E40AF;">🏠 Transaction</div>
+                        <div class="ventilation-type-value" style="color: #1E40AF;">{{ number_format($totalsByType['transaction']['total_ht'], 0, ',', ' ') }} €</div>
+                        <div class="ventilation-type-count">{{ $totalsByType['transaction']['invoice_count'] }} facture(s)</div>
+                    </div>
+                </div>
+                <div class="ventilation-item">
+                    <div class="ventilation-box ventilation-box-location">
+                        <div class="ventilation-type-label" style="color: #065F46;">🔑 Location</div>
+                        <div class="ventilation-type-value" style="color: #065F46;">{{ number_format($totalsByType['location']['total_ht'], 0, ',', ' ') }} €</div>
+                        <div class="ventilation-type-count">{{ $totalsByType['location']['invoice_count'] }} facture(s)</div>
+                    </div>
+                </div>
+                <div class="ventilation-item">
+                    <div class="ventilation-box ventilation-box-syndic">
+                        <div class="ventilation-type-label" style="color: #5B21B6;">🏢 Syndic</div>
+                        <div class="ventilation-type-value" style="color: #5B21B6;">{{ number_format($totalsByType['syndic']['total_ht'], 0, ',', ' ') }} €</div>
+                        <div class="ventilation-type-count">{{ $totalsByType['syndic']['invoice_count'] }} facture(s)</div>
+                    </div>
+                </div>
+                <div class="ventilation-item">
+                    <div class="ventilation-box ventilation-box-autres">
+                        <div class="ventilation-type-label" style="color: #374151;">📋 Autres</div>
+                        <div class="ventilation-type-value" style="color: #374151;">{{ number_format($totalsByType['autres']['total_ht'], 0, ',', ' ') }} €</div>
+                        <div class="ventilation-type-count">{{ $totalsByType['autres']['invoice_count'] }} facture(s)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {{-- Statistiques complémentaires --}}
         <div class="stats-box">
             <div class="stats-title">📊 Statistiques</div>
@@ -400,40 +544,76 @@
             <thead>
                 <tr>
                     <th style="width: 3%;">#</th>
-                    <th style="width: 22%;">Mandataire</th>
-                    <th style="width: 18%;">Email</th>
-                    <th style="width: 12%;">Téléphone</th>
-                    <th style="width: 12%;">SIRET</th>
-                    <th style="width: 7%;" class="text-center">Nb fact.</th>
-                    <th style="width: 10%;" class="text-right">Total HT</th>
-                    <th style="width: 8%;" class="text-right">TVA</th>
-                    <th style="width: 10%;" class="text-right">Total TTC</th>
+                    <th style="width: 18%;">Mandataire</th>
+                    <th style="width: 6%;" class="text-center">Fact.</th>
+                    <th style="width: 12%;" class="text-right">Total HT</th>
+                    <th style="width: 10%;" class="text-right">TVA</th>
+                    <th style="width: 12%;" class="text-right">Total TTC</th>
+                    <th style="width: 10%;" class="text-right" title="Transaction">🏠 Trans.</th>
+                    <th style="width: 10%;" class="text-right" title="Location">🔑 Loc.</th>
+                    <th style="width: 10%;" class="text-right" title="Syndic">🏢 Synd.</th>
+                    <th style="width: 9%;" class="text-right" title="Autres">📋 Autres</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($mandatairesData as $index => $data)
+                    @php
+                        $transHT = $data['by_type']['transaction']['total_ht'] ?? 0;
+                        $locHT = $data['by_type']['location']['total_ht'] ?? 0;
+                        $syndHT = $data['by_type']['syndic']['total_ht'] ?? 0;
+                        $autresHT = $data['by_type']['autres']['total_ht'] ?? 0;
+                    @endphp
                     <tr>
                         <td class="text-center">{{ $index + 1 }}</td>
                         <td><strong>{{ $data['user_name'] }}</strong></td>
-                        <td style="font-size: 7pt;">{{ $data['user_email'] ?? 'N/A' }}</td>
-                        <td style="font-size: 7pt;">{{ $data['user_phone'] ?? 'N/A' }}</td>
-                        <td style="font-size: 7pt;">{{ $data['user_siret'] ?? 'N/A' }}</td>
                         <td class="text-center">
                             <span class="badge badge-success">{{ $data['invoice_count'] }}</span>
                         </td>
                         <td class="text-right"><strong>{{ number_format($data['total_ht'], 2, ',', ' ') }} €</strong></td>
                         <td class="text-right">{{ number_format($data['total_tva'], 2, ',', ' ') }} €</td>
                         <td class="text-right"><strong>{{ number_format($data['total_ttc'], 2, ',', ' ') }} €</strong></td>
+                        <td class="text-right" style="color: #1E40AF; font-size: 7pt;">
+                            @if($transHT > 0)
+                                {{ number_format($transHT, 0, ',', ' ') }} €
+                            @else
+                                <span style="color: #9CA3AF;">-</span>
+                            @endif
+                        </td>
+                        <td class="text-right" style="color: #065F46; font-size: 7pt;">
+                            @if($locHT > 0)
+                                {{ number_format($locHT, 0, ',', ' ') }} €
+                            @else
+                                <span style="color: #9CA3AF;">-</span>
+                            @endif
+                        </td>
+                        <td class="text-right" style="color: #5B21B6; font-size: 7pt;">
+                            @if($syndHT > 0)
+                                {{ number_format($syndHT, 0, ',', ' ') }} €
+                            @else
+                                <span style="color: #9CA3AF;">-</span>
+                            @endif
+                        </td>
+                        <td class="text-right" style="color: #374151; font-size: 7pt;">
+                            @if($autresHT > 0)
+                                {{ number_format($autresHT, 0, ',', ' ') }} €
+                            @else
+                                <span style="color: #9CA3AF;">-</span>
+                            @endif
+                        </td>
                     </tr>
                 @endforeach
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="5" style="text-align: right;"><strong>TOTAL GLOBAL :</strong></td>
+                    <td colspan="2" style="text-align: right;"><strong>TOTAL :</strong></td>
                     <td class="text-center"><strong>{{ $totalGlobal['invoice_count'] }}</strong></td>
                     <td class="text-right"><strong>{{ number_format($totalGlobal['total_ht'], 2, ',', ' ') }} €</strong></td>
                     <td class="text-right"><strong>{{ number_format($totalGlobal['total_tva'], 2, ',', ' ') }} €</strong></td>
                     <td class="text-right"><strong>{{ number_format($totalGlobal['total_ttc'], 2, ',', ' ') }} €</strong></td>
+                    <td class="text-right" style="color: #1E40AF;"><strong>{{ number_format($totalsByType['transaction']['total_ht'], 0, ',', ' ') }} €</strong></td>
+                    <td class="text-right" style="color: #065F46;"><strong>{{ number_format($totalsByType['location']['total_ht'], 0, ',', ' ') }} €</strong></td>
+                    <td class="text-right" style="color: #5B21B6;"><strong>{{ number_format($totalsByType['syndic']['total_ht'], 0, ',', ' ') }} €</strong></td>
+                    <td class="text-right" style="color: #374151;"><strong>{{ number_format($totalsByType['autres']['total_ht'], 0, ',', ' ') }} €</strong></td>
                 </tr>
             </tfoot>
         </table>
@@ -479,6 +659,7 @@
             <div class="notes-content">
                 • Ce document récapitule l'ensemble des revenus encaissés par tous les mandataires durant la période indiquée<br>
                 • Les montants correspondent aux factures effectivement payées<br>
+                • La ventilation par type (Transaction, Location, Syndic, Autres) permet une déclaration URSSAF précise<br>
                 • Ce récapitulatif est à conserver pour la comptabilité générale et les déclarations URSSAF<br>
                 • Document confidentiel - Usage interne uniquement<br>
                 • Les données sont triées par CA décroissant

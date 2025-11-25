@@ -23,6 +23,9 @@ return new class extends Migration
             
             // Statuts : Brouillon → Envoyé → Accepté → Refusé → Converti
             $table->enum('status', ['brouillon', 'envoye', 'accepte', 'refuse', 'converti'])->default('brouillon');
+            $table->enum('revenue_type', ['transaction', 'location', 'syndic', 'autres'])
+                  ->default('transaction');
+            
             
             // Montants
             $table->decimal('total_ht', 10, 2)->default(0);
@@ -57,6 +60,8 @@ return new class extends Migration
             $table->index('status');
             $table->index(['user_id', 'status']);
             $table->index('created_at');
+            $table->index('revenue_type');
+
         });
     }
 

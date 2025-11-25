@@ -19,6 +19,7 @@ class Quote extends Model
         'client_id',
         'user_id',
         'status',
+        'revenue_type',
         'total_ht',
         'total_tva',
         'total_ttc',
@@ -49,6 +50,36 @@ class Quote extends Model
         'converted_at' => 'datetime',
         'signed_electronically' => 'boolean',
         'signature_date' => 'datetime',
+    ];
+
+    // =====================================
+    // CONSTANTES TYPES D'ACTIVITÉ
+    // =====================================
+
+    const REVENUE_TYPE_TRANSACTION = 'transaction';
+    const REVENUE_TYPE_LOCATION = 'location';
+    const REVENUE_TYPE_SYNDIC = 'syndic';
+    const REVENUE_TYPE_AUTRES = 'autres';
+
+    const REVENUE_TYPES = [
+        self::REVENUE_TYPE_TRANSACTION => 'Transaction',
+        self::REVENUE_TYPE_LOCATION => 'Location',
+        self::REVENUE_TYPE_SYNDIC => 'Syndic',
+        self::REVENUE_TYPE_AUTRES => 'Autres',
+    ];
+
+    const REVENUE_TYPE_COLORS = [
+        self::REVENUE_TYPE_TRANSACTION => 'blue',
+        self::REVENUE_TYPE_LOCATION => 'green',
+        self::REVENUE_TYPE_SYNDIC => 'purple',
+        self::REVENUE_TYPE_AUTRES => 'gray',
+    ];
+
+    const REVENUE_TYPE_ICONS = [
+        self::REVENUE_TYPE_TRANSACTION => '🏠',
+        self::REVENUE_TYPE_LOCATION => '🔑',
+        self::REVENUE_TYPE_SYNDIC => '🏢',
+        self::REVENUE_TYPE_AUTRES => '📋',
     ];
 
     // =====================================
@@ -84,19 +115,15 @@ class Quote extends Model
     // SCOPES
     // =====================================
 
+    /**
+     * Scope pour filtrer les devis par utilisateur
+     * - Admin voit tout
+     * - Manager/Collaborateur voit uniquement SES devis
+     */
     public function scopeForUser(Builder $query, User $user): Builder
     {
         if ($user->isAdministrateur()) {
             return $query;
-        }
-
-        if ($user->isManager()) {
-            return $query->where(function ($q) use ($user) {
-                $q->where('user_id', $user->id)
-                  ->orWhereHas('user', function ($subQ) use ($user) {
-                      $subQ->where('manager_id', $user->id);
-                  });
-            });
         }
 
         return $query->where('user_id', $user->id);
@@ -144,6 +171,22 @@ class Quote extends Model
         return $query->whereYear('created_at', now()->year);
     }
 
+    // Scopes par type d'activité
+    public function scopeTransaction(Builder $query): Builder
+    {
+        return $query->where('revenue_type', self::REVENUE_TYPE_TRANSACTION);
+    }
+
+    public function scopeLocation(Builder $query): Builder
+    {
+        return $query->where('revenue_type', self::REVENUE_TYPE_LOCATION);
+    }
+
+    public function scopeSyndic(Builder $query): Builder
+    {
+        return $query->where('revenue_type', self::REVENUE_TYPE_SYNDIC);
+    }
+
     // =====================================
     // ACCESSEURS
     // =====================================
@@ -170,6 +213,21 @@ class Quote extends Model
             'converti' => 'purple',
             default => 'gray'
         };
+    }
+
+    public function getRevenueTypeLabelAttribute(): string
+    {
+        return self::REVENUE_TYPES[$this->revenue_type] ?? 'Autres';
+    }
+
+    public function getRevenueTypeColorAttribute(): string
+    {
+        return self::REVENUE_TYPE_COLORS[$this->revenue_type] ?? 'gray';
+    }
+
+    public function getRevenueTypeIconAttribute(): string
+    {
+        return self::REVENUE_TYPE_ICONS[$this->revenue_type] ?? '📋';
     }
 
     public function getFormattedTotalHtAttribute(): string
@@ -312,6 +370,7 @@ class Quote extends Model
             'client_id' => $this->client_id,
             'user_id' => $this->user_id,
             'status' => 'emise',
+            'revenue_type' => $this->revenue_type, // Transférer le type d'activité
             'total_ht' => $this->total_ht,
             'total_tva' => $this->total_tva,
             'total_ttc' => $this->total_ttc,
@@ -403,6 +462,11 @@ class Quote extends Model
 
             if (!$quote->validity_date && $quote->status === 'envoye') {
                 $quote->validity_date = now()->addDays(30);
+            }
+            
+            // Valeur par défaut pour revenue_type
+            if (!$quote->revenue_type) {
+                $quote->revenue_type = self::REVENUE_TYPE_TRANSACTION;
             }
         });
     }
