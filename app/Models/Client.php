@@ -66,19 +66,25 @@ class Client extends Model
     // SCOPES
     // =====================================
 
-    /**
-     * Scope pour filtrer les clients selon le rôle de l'utilisateur
-     * - Administrateur : voit tous les clients
-     * - Manager / Collaborateur : voit uniquement SES clients
-     */
+    // /**
+    //  * Scope pour filtrer les clients selon le rôle de l'utilisateur
+    //  * - Administrateur : voit tous les clients
+    //  * - Manager / Collaborateur : voit uniquement SES clients
+    //  */
+    // public function scopeForUser(Builder $query, User $user): Builder
+    // {
+    //     // Admin voit tout
+    //     if ($user->isAdministrateur()) {
+    //         return $query;
+    //     }
+
+    //     // Tout le monde (manager ou collaborateur) voit uniquement ses propres clients
+    //     return $query->where('user_id', $user->id);
+    // }
+
     public function scopeForUser(Builder $query, User $user): Builder
     {
-        // Admin voit tout
-        if ($user->isAdministrateur()) {
-            return $query;
-        }
-
-        // Tout le monde (manager ou collaborateur) voit uniquement ses propres clients
+        // Tout le monde voit uniquement ses propres clients
         return $query->where('user_id', $user->id);
     }
 
