@@ -28,68 +28,74 @@ class QuoteItem extends Model
         'sort_order' => 'integer',
     ];
 
-    // =====================================
-    // RELATIONS
-    // =====================================
-
     /**
-     * Devis associé
+     * Relation avec le devis associé à la ligne.
      */
     public function quote(): BelongsTo
     {
         return $this->belongsTo(Quote::class);
     }
 
-    // =====================================
-    // ACCESSEURS
-    // =====================================
-
+    /**
+     * Retourne le prix unitaire formaté en euros.
+     */
     public function getFormattedUnitPriceAttribute(): string
     {
         return number_format($this->unit_price, 2, ',', ' ') . ' €';
     }
 
+    /**
+     * Retourne le total HT formaté en euros.
+     */
     public function getFormattedTotalHtAttribute(): string
     {
         return number_format($this->total_ht, 2, ',', ' ') . ' €';
     }
 
+    /**
+     * Calcule le montant de la TVA pour cette ligne.
+     */
     public function getTotalTvaAttribute(): float
     {
         return $this->total_ht * ($this->tva_rate / 100);
     }
 
+    /**
+     * Calcule le montant TTC pour cette ligne.
+     */
     public function getTotalTtcAttribute(): float
     {
         return $this->total_ht + $this->total_tva;
     }
 
+    /**
+     * Retourne le total TTC formaté en euros.
+     */
     public function getFormattedTotalTtcAttribute(): string
     {
         return number_format($this->total_ttc, 2, ',', ' ') . ' €';
     }
 
-    // =====================================
-    // SCOPES
-    // =====================================
-
+    /**
+     * Scope pour ordonner les lignes par sort_order puis par id.
+     */
     public function scopeOrdered($query)
     {
         return $query->orderBy('sort_order')->orderBy('id');
     }
 
-    // =====================================
-    // ÉVÉNEMENTS
-    // =====================================
-
+    /**
+     * Booted du modèle : calcule automatiquement le total HT,
+     * et met à jour les totaux du devis parent après modification/suppression.
+     */
     protected static function booted()
     {
-        // Calculer automatiquement le total HT
+        // Calculer automatiquement le total HT lors de la sauvegarde de l'item
         static::saving(function ($item) {
             $item->total_ht = $item->quantity * $item->unit_price;
         });
 
-        // Recalculer les totaux du devis parent après chaque modification
+        // Recalculer les totaux du devis parent après création ou mise à jour de l'item
         static::saved(function ($item) {
             if ($item->quote) {
                 $item->quote->calculateTotals();
@@ -97,6 +103,7 @@ class QuoteItem extends Model
             }
         });
 
+        // Recalculer les totaux du devis parent après suppression de l'item
         static::deleted(function ($item) {
             if ($item->quote) {
                 $item->quote->calculateTotals();

@@ -4,6 +4,7 @@ namespace App\Traits;
 
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\User;
+use Barryvdh\DomPDF\PDF as DomPDF;
 
 trait GeneratesPdfDocuments
 {
@@ -120,7 +121,7 @@ trait GeneratesPdfDocuments
     /**
      * Générer un PDF complet (devis ou facture)
      */
-    protected function generateDocument(User $user, string $type, array $data, string $viewName): \Barryvdh\DomPDF\PDF
+    protected function generateDocument(User $user, string $type, array $data, string $viewName): DomPDF
     {
         // Fusionner les données avec les infos professionnelles
         $pdfData = array_merge($data, [

@@ -52,10 +52,6 @@ class Quote extends Model
         'signature_date' => 'datetime',
     ];
 
-    // =====================================
-    // CONSTANTES TYPES D'ACTIVITÉ
-    // =====================================
-
     const REVENUE_TYPE_TRANSACTION = 'transaction';
     const REVENUE_TYPE_LOCATION = 'location';
     const REVENUE_TYPE_SYNDIC = 'syndic';
@@ -82,44 +78,46 @@ class Quote extends Model
         self::REVENUE_TYPE_AUTRES => '📋',
     ];
 
-    // =====================================
-    // RELATIONS
-    // =====================================
-
+    /**
+     * Relation avec le client associé au devis.
+     */
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
     }
 
+    /**
+     * Relation avec l'utilisateur créateur du devis.
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Retourne la liste des items (lignes) liées au devis.
+     */
     public function items(): HasMany
     {
         return $this->hasMany(QuoteItem::class);
     }
 
+    /**
+     * Retourne la facture associée au devis le cas échéant.
+     */
     public function invoice(): HasOne
     {
         return $this->hasOne(Invoice::class);
     }
 
+    /**
+     * Retourne la mission associée au devis le cas échéant.
+     */
     public function mission(): HasOne
     {
         return $this->hasOne(Mission::class);
     }
 
-    // =====================================
-    // SCOPES
-    // =====================================
-
-    /**
-     * Scope pour filtrer les devis par utilisateur
-     * - Admin voit tout
-     * - Manager/Collaborateur voit uniquement SES devis
-     */
     // public function scopeForUser(Builder $query, User $user): Builder
     // {
     //     if ($user->isAdministrateur()) {
@@ -129,74 +127,109 @@ class Quote extends Model
     //     return $query->where('user_id', $user->id);
     // }
 
+    /**
+     * Scope pour filtrer les devis par utilisateur
+     * Tout le monde voit uniquement ses propres devis.
+     */
     public function scopeForUser(Builder $query, User $user): Builder
     {
         // Tout le monde voit uniquement ses propres devis
         return $query->where('user_id', $user->id);
     }
 
+    /**
+     * Scope pour récupérer les devis 'brouillon'.
+     */
     public function scopeDraft(Builder $query): Builder
     {
         return $query->where('status', 'brouillon');
     }
 
+    /**
+     * Scope pour récupérer les devis 'envoyé'.
+     */
     public function scopeSent(Builder $query): Builder
     {
         return $query->where('status', 'envoye');
     }
 
+    /**
+     * Scope pour récupérer les devis acceptés.
+     */
     public function scopeAccepted(Builder $query): Builder
     {
         return $query->where('status', 'accepte');
     }
 
+    /**
+     * Scope pour récupérer les devis refusés.
+     */
     public function scopeRefused(Builder $query): Builder
     {
         return $query->where('status', 'refuse');
     }
 
+    /**
+     * Scope pour récupérer les devis convertis en facture.
+     */
     public function scopeConverted(Builder $query): Builder
     {
         return $query->where('status', 'converti');
     }
 
+    /**
+     * Scope pour récupérer les devis envoyés dont la date de validité est dépassée.
+     */
     public function scopeExpired(Builder $query): Builder
     {
         return $query->where('status', 'envoye')
             ->where('validity_date', '<', now());
     }
 
+    /**
+     * Scope pour les devis du mois en cours.
+     */
     public function scopeThisMonth(Builder $query): Builder
     {
         return $query->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year);
     }
 
+    /**
+     * Scope pour les devis de l'année en cours.
+     */
     public function scopeThisYear(Builder $query): Builder
     {
         return $query->whereYear('created_at', now()->year);
     }
 
-    // Scopes par type d'activité
+    /**
+     * Scope pour filtrer les devis de type transaction.
+     */
     public function scopeTransaction(Builder $query): Builder
     {
         return $query->where('revenue_type', self::REVENUE_TYPE_TRANSACTION);
     }
 
+    /**
+     * Scope pour filtrer les devis de type location.
+     */
     public function scopeLocation(Builder $query): Builder
     {
         return $query->where('revenue_type', self::REVENUE_TYPE_LOCATION);
     }
 
+    /**
+     * Scope pour filtrer les devis de type syndic.
+     */
     public function scopeSyndic(Builder $query): Builder
     {
         return $query->where('revenue_type', self::REVENUE_TYPE_SYNDIC);
     }
 
-    // =====================================
-    // ACCESSEURS
-    // =====================================
-
+    /**
+     * Retourne le libellé (texte) du statut du devis.
+     */
     public function getStatusLabelAttribute(): string
     {
         return match ($this->status) {
@@ -209,6 +242,9 @@ class Quote extends Model
         };
     }
 
+    /**
+     * Retourne la couleur associée au statut du devis.
+     */
     public function getStatusColorAttribute(): string
     {
         return match ($this->status) {
@@ -221,40 +257,57 @@ class Quote extends Model
         };
     }
 
+    /**
+     * Retourne le libellé du type de revenu pour le devis.
+     */
     public function getRevenueTypeLabelAttribute(): string
     {
         return self::REVENUE_TYPES[$this->revenue_type] ?? 'Autres';
     }
 
+    /**
+     * Retourne la couleur associée au type de revenu.
+     */
     public function getRevenueTypeColorAttribute(): string
     {
         return self::REVENUE_TYPE_COLORS[$this->revenue_type] ?? 'gray';
     }
 
+    /**
+     * Retourne l'icône associée au type de revenu.
+     */
     public function getRevenueTypeIconAttribute(): string
     {
         return self::REVENUE_TYPE_ICONS[$this->revenue_type] ?? '📋';
     }
 
+    /**
+     * Retourne le montant HT formaté en euros.
+     */
     public function getFormattedTotalHtAttribute(): string
     {
         return number_format($this->total_ht, 2, ',', ' ') . ' €';
     }
 
+    /**
+     * Retourne le montant TVA formaté en euros.
+     */
     public function getFormattedTotalTvaAttribute(): string
     {
         return number_format($this->total_tva, 2, ',', ' ') . ' €';
     }
 
+    /**
+     * Retourne le montant TTC formaté en euros.
+     */
     public function getFormattedTotalTtcAttribute(): string
     {
         return number_format($this->total_ttc, 2, ',', ' ') . ' €';
     }
 
-    // =====================================
-    // MÉTHODES UTILITAIRES
-    // =====================================
-
+    /**
+     * Indique si le devis est expiré (statut envoyé + date de validité dépassée).
+     */
     public function isExpired(): bool
     {
         return $this->status === 'envoye'
@@ -262,16 +315,25 @@ class Quote extends Model
             && $this->validity_date->isPast();
     }
 
+    /**
+     * Indique si le devis peut être modifié.
+     */
     public function canBeEdited(): bool
     {
         return in_array($this->status, ['brouillon', 'envoye']);
     }
 
+    /**
+     * Indique si le devis peut être converti en facture.
+     */
     public function canBeConverted(): bool
     {
         return $this->status === 'accepte' && !$this->invoice;
     }
 
+    /**
+     * Calcule et met à jour les totaux HT/TVA/TTC du devis en tenant compte des remises.
+     */
     public function calculateTotals(): void
     {
         $subtotal = $this->items->sum(function ($item) {
@@ -297,6 +359,9 @@ class Quote extends Model
         $this->total_ttc = $this->total_ht + $this->total_tva;
     }
 
+    /**
+     * Génère un numéro de devis unique au format DV-YYYY-XXXX.
+     */
     public static function generateQuoteNumber(): string
     {
         $year = now()->year;
@@ -321,6 +386,9 @@ class Quote extends Model
         return $quoteNumber;
     }
 
+    /**
+     * Met à jour le statut du devis à "envoyé" et initialise la date de validité si nécessaire.
+     */
     public function send(): bool
     {
         if ($this->status !== 'brouillon') {
@@ -336,6 +404,9 @@ class Quote extends Model
         return $this->save();
     }
 
+    /**
+     * Accepte le devis, met le statut à "accepté", renseigne la date et crée une mission.
+     */
     public function accept(): bool
     {
         if ($this->status !== 'envoye') {
@@ -353,6 +424,9 @@ class Quote extends Model
         return $saved;
     }
 
+    /**
+     * Refuse le devis, met le statut à "refusé" et renseigne la date.
+     */
     public function refuse(): bool
     {
         if ($this->status !== 'envoye') {
@@ -364,6 +438,10 @@ class Quote extends Model
         return $this->save();
     }
 
+    /**
+     * Convertit le devis en facture et crée les lignes associées.
+     * Retourne la facture générée ou null en cas d'échec.
+     */
     public function convertToInvoice(): ?Invoice
     {
         if (!$this->canBeConverted()) {
@@ -411,6 +489,9 @@ class Quote extends Model
         return $invoice;
     }
 
+    /**
+     * Crée une mission liée au devis après son acceptation.
+     */
     protected function createMission(): Mission
     {
         $title = 'Mission - ' . $this->client->name;
@@ -437,6 +518,10 @@ class Quote extends Model
         return $mission;
     }
 
+    /**
+     * Calcule le taux de conversion des devis pour un utilisateur sur une période.
+     * Retourne un pourcentage arrondi à 2 décimales.
+     */
     public static function getConversionRate(User $user, ?Carbon $startDate = null, ?Carbon $endDate = null): float
     {
         $query = static::where('user_id', $user->id);
@@ -455,10 +540,12 @@ class Quote extends Model
         return $totalSent > 0 ? round(($totalAccepted / $totalSent) * 100, 2) : 0;
     }
 
-    // =====================================
-    // ÉVÉNEMENTS
-    // =====================================
-
+    /**
+     * Event model Laravel : lors de la création d'un devis :
+     * - génère son numéro unique
+     * - initialise une date de validité par défaut si statut "envoyé"
+     * - positionne le type de revenu par défaut si non renseigné
+     */
     protected static function booted()
     {
         static::creating(function ($quote) {

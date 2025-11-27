@@ -178,7 +178,7 @@ class InvoiceSeeder extends Seeder
                         'client_id' => $client->id,
                         'user_id' => $user->id,
                         'status' => $status,
-                        'revenue_type' => $revenueType, // NOUVEAU
+                        'revenue_type' => $revenueType,
                         'issued_at' => $issuedAt,
                         'due_date' => $dueDate,
                         'paid_at' => $paidAt,

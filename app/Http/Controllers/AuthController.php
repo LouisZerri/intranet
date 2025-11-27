@@ -4,26 +4,21 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use App\Models\User;
 
 class AuthController extends Controller
 {
-    /**
-     * Afficher le formulaire de connexion
-     */
+    // Affiche le formulaire de connexion
     public function showLogin()
     {
         return view('auth.login');
     }
 
-    /**
-     * Traiter la connexion
-     */
+    // Tentative de connexion utilisateur
     public function login(Request $request)
     {
-        // Validation des données
+        // Validation des identifiants
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'min:6'],
@@ -34,50 +29,41 @@ class AuthController extends Controller
             'password.min' => 'Le mot de passe doit contenir au moins 6 caractères.',
         ]);
 
-        // Tentative de connexion
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
 
-            // Mettre à jour la dernière connexion
+            // Met à jour la date de dernière connexion
             /** @var \App\Models\User $user */
             $user = Auth::user();
-
             if ($user) {
                 $user->last_login_at = now();
                 $user->save();
             }
 
-            // Redirection selon le rôle
             return $this->redirectToDashboard();
         }
 
-        // Échec de la connexion
+        // Authentification échouée
         throw ValidationException::withMessages([
             'email' => 'Ces identifiants ne correspondent à aucun compte.',
         ]);
     }
 
-    /**
-     * Déconnexion
-     */
+    // Déconnexion
     public function logout(Request $request)
     {
         Auth::logout();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         return redirect()->route('login')->with('success', 'Vous avez été déconnecté avec succès.');
     }
 
-    /**
-     * Redirection vers le tableau de bord approprié
-     */
+    // Redirection selon le statut de l'utilisateur
     private function redirectToDashboard()
     {
         $user = Auth::user();
 
-        // Vérifier si l'utilisateur est actif
         if (!$user->is_active) {
             Auth::logout();
             return redirect()->route('login')->withErrors([
@@ -85,15 +71,11 @@ class AuthController extends Controller
             ]);
         }
 
-        // Message de bienvenue personnalisé
         $welcomeMessage = $this->getWelcomeMessage($user);
-
         return redirect()->route('dashboard')->with('success', $welcomeMessage);
     }
 
-    /**
-     * Message de bienvenue personnalisé
-     */
+    // Message de bienvenue adapté au rôle
     private function getWelcomeMessage(User $user): string
     {
         $timeOfDay = $this->getTimeOfDay();
@@ -107,9 +89,7 @@ class AuthController extends Controller
         return "{$timeOfDay} {$user->first_name} ! Bienvenue sur votre espace {$roleLabel}.";
     }
 
-    /**
-     * Déterminer le moment de la journée
-     */
+    // Salutation selon l'heure
     private function getTimeOfDay(): string
     {
         $hour = now()->format('H');

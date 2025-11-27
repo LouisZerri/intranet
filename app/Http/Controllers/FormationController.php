@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use App\Models\Formation;
 use App\Models\FormationRequest;
 use App\Models\FormationFile;
-use App\Models\User;
 use App\Services\FormationFileService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -90,11 +89,11 @@ class FormationController extends Controller
     {
         $user = Auth::user();
 
-        // CORRECTION : Charger TOUS les fichiers, pas seulement les publics
+        // Charger TOUS les fichiers, pas seulement les publics
         $formation->load([
             'creator',
             'files' => function ($query) {
-                $query->ordered(); // Enlever le filtre ->public()
+                $query->ordered();
             }
         ]);
 
@@ -111,9 +110,6 @@ class FormationController extends Controller
             'average_rating' => $formation->participants()->whereNotNull('rating')->avg('rating'),
             'available_places' => $formation->getAvailablePlaces(),
         ];
-
-        // Organiser les fichiers par type (si cette méthode existe)
-        // $filesByType = $formation->getFilesByType();
 
         return view('formations.show', compact('formation', 'userRequest', 'stats'));
     }
@@ -635,7 +631,6 @@ class FormationController extends Controller
             $formationTitle = $formation->title;
             
             // La suppression des fichiers est gérée automatiquement par le modèle Formation
-            // grâce à la méthode delete() override qui supprime tous les fichiers associés
             $formation->delete();
 
             return redirect()->route('formations.index')

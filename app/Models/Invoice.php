@@ -1,5 +1,4 @@
 <?php
-// app/Models/Invoice.php
 
 namespace App\Models;
 
@@ -13,10 +12,6 @@ use Carbon\Carbon;
 class Invoice extends Model
 {
     use HasFactory;
-
-    // =====================================
-    // CONSTANTES - Types de revenus
-    // =====================================
 
     public const REVENUE_TYPE_TRANSACTION = 'transaction';
     public const REVENUE_TYPE_LOCATION = 'location';
@@ -43,7 +38,7 @@ class Invoice extends Model
         'client_id',
         'user_id',
         'status',
-        'revenue_type', // NOUVEAU
+        'revenue_type',
         'total_ht',
         'total_tva',
         'total_ttc',
@@ -75,38 +70,45 @@ class Invoice extends Model
         'reminder_count' => 'integer',
     ];
 
-    // =====================================
-    // RELATIONS
-    // =====================================
-
+    /**
+     * Relation avec le client de la facture
+     */
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
     }
 
+    /**
+     * Relation avec l'utilisateur propriétaire de la facture
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Relation avec le devis relié à la facture (s'il existe)
+     */
     public function quote(): BelongsTo
     {
         return $this->belongsTo(Quote::class);
     }
 
+    /**
+     * Liste des items de la facture
+     */
     public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class);
     }
 
+    /**
+     * Liste des paiements de la facture
+     */
     public function payments(): HasMany
     {
         return $this->hasMany(InvoicePayment::class);
     }
-
-    // =====================================
-    // SCOPES
-    // =====================================
 
     // public function scopeForUser(Builder $query, User $user): Builder
     // {
@@ -117,27 +119,42 @@ class Invoice extends Model
     //     return $query->where('user_id', $user->id);
     // }
 
+    /**
+     * Scope : factures de l'utilisateur donné
+     */
     public function scopeForUser(Builder $query, User $user): Builder
     {
         // Tout le monde voit uniquement ses propres devis
         return $query->where('user_id', $user->id);
     }
 
+    /**
+     * Scope : factures à l'état brouillon
+     */
     public function scopeDraft(Builder $query): Builder
     {
         return $query->where('status', 'brouillon');
     }
 
+    /**
+     * Scope : factures émises
+     */
     public function scopeIssued(Builder $query): Builder
     {
         return $query->where('status', 'emise');
     }
 
+    /**
+     * Scope : factures payées
+     */
     public function scopePaid(Builder $query): Builder
     {
         return $query->where('status', 'payee');
     }
 
+    /**
+     * Scope : factures en retard
+     */
     public function scopeOverdue(Builder $query): Builder
     {
         return $query->where('status', 'en_retard')
@@ -147,22 +164,34 @@ class Invoice extends Model
             });
     }
 
+    /**
+     * Scope : factures annulées
+     */
     public function scopeCancelled(Builder $query): Builder
     {
         return $query->where('status', 'annulee');
     }
 
+    /**
+     * Scope : factures du mois en cours (par date d'émission)
+     */
     public function scopeThisMonth(Builder $query): Builder
     {
         return $query->whereMonth('issued_at', now()->month)
             ->whereYear('issued_at', now()->year);
     }
 
+    /**
+     * Scope : factures de l'année en cours (par date d'émission)
+     */
     public function scopeThisYear(Builder $query): Builder
     {
         return $query->whereYear('issued_at', now()->year);
     }
 
+    /**
+     * Scope : factures payées ce mois-ci (par date de paiement)
+     */
     public function scopePaidThisMonth(Builder $query): Builder
     {
         return $query->where('status', 'payee')
@@ -170,26 +199,33 @@ class Invoice extends Model
             ->whereYear('paid_at', now()->year);
     }
 
-    // Scopes par type de revenu
+    /**
+     * Scope : factures de type transaction
+     */
     public function scopeTransaction(Builder $query): Builder
     {
         return $query->where('revenue_type', self::REVENUE_TYPE_TRANSACTION);
     }
 
+    /**
+     * Scope : factures de type location
+     */
     public function scopeLocation(Builder $query): Builder
     {
         return $query->where('revenue_type', self::REVENUE_TYPE_LOCATION);
     }
 
+    /**
+     * Scope : factures de type syndic
+     */
     public function scopeSyndic(Builder $query): Builder
     {
         return $query->where('revenue_type', self::REVENUE_TYPE_SYNDIC);
     }
 
-    // =====================================
-    // ACCESSEURS
-    // =====================================
-
+    /**
+     * Renvoie le label lisible pour le statut de la facture
+     */
     public function getStatusLabelAttribute(): string
     {
         return match ($this->status) {
@@ -202,6 +238,9 @@ class Invoice extends Model
         };
     }
 
+    /**
+     * Renvoie la couleur associée au statut de la facture (pour affichage)
+     */
     public function getStatusColorAttribute(): string
     {
         return match ($this->status) {
@@ -214,42 +253,66 @@ class Invoice extends Model
         };
     }
 
+    /**
+     * Renvoie le label lisible pour le type de revenu de la facture
+     */
     public function getRevenueTypeLabelAttribute(): string
     {
         return self::REVENUE_TYPES[$this->revenue_type] ?? 'Inconnu';
     }
 
+    /**
+     * Renvoie la couleur associée au type de revenu (pour affichage)
+     */
     public function getRevenueTypeColorAttribute(): string
     {
         return self::REVENUE_TYPE_COLORS[$this->revenue_type] ?? 'gray';
     }
 
+    /**
+     * Renvoie le montant HT formaté en euro
+     */
     public function getFormattedTotalHtAttribute(): string
     {
         return number_format($this->total_ht, 2, ',', ' ') . ' €';
     }
 
+    /**
+     * Renvoie le montant TTC formaté en euro
+     */
     public function getFormattedTotalTtcAttribute(): string
     {
         return number_format($this->total_ttc, 2, ',', ' ') . ' €';
     }
 
+    /**
+     * Renvoie le montant TVA formaté en euro
+     */
     public function getFormattedTotalTvaAttribute(): string
     {
         return number_format($this->total_tva, 2, ',', ' ') . ' €';
     }
 
+    /**
+     * Renvoie le montant restant dû sur la facture
+     */
     public function getRemainingAmountAttribute(): float
     {
         $totalPaid = $this->payments->sum('amount');
         return max(0, $this->total_ttc - $totalPaid);
     }
 
+    /**
+     * Renvoie le montant restant dû formaté en euro
+     */
     public function getFormattedRemainingAmountAttribute(): string
     {
         return number_format($this->remaining_amount, 2, ',', ' ') . ' €';
     }
 
+    /**
+     * Renvoie le nombre de jours de retard (0 si pas en retard)
+     */
     public function getDaysOverdueAttribute(): int
     {
         if (!$this->isOverdue()) {
@@ -259,15 +322,17 @@ class Invoice extends Model
         return now()->startOfDay()->diffInDays($this->due_date->startOfDay());
     }
 
+    /**
+     * Renvoie le montant total payé sur la facture, formaté en euro
+     */
     public function getFormattedPaidAmountAttribute(): string
     {
         return number_format($this->payments->sum('amount'), 2, ',', ' ') . ' €';
     }
 
-    // =====================================
-    // MÉTHODES UTILITAIRES
-    // =====================================
-
+    /**
+     * Indique si la facture est en retard de paiement
+     */
     public function isOverdue(): bool
     {
         return $this->status === 'emise'
@@ -275,16 +340,25 @@ class Invoice extends Model
             && $this->due_date->isPast();
     }
 
+    /**
+     * Indique si la facture est totalement réglée
+     */
     public function isFullyPaid(): bool
     {
         return $this->remaining_amount <= 0;
     }
 
+    /**
+     * Indique si la facture peut encore être modifiée
+     */
     public function canBeEdited(): bool
     {
         return in_array($this->status, ['brouillon', 'emise']);
     }
 
+    /**
+     * Calcule les totaux de la facture (HT, TVA, TTC) en fonction des items et des remises
+     */
     public function calculateTotals(): void
     {
         $subtotal = $this->items->sum(function ($item) {
@@ -310,6 +384,9 @@ class Invoice extends Model
         $this->total_ttc = $this->total_ht + $this->total_tva;
     }
 
+    /**
+     * Génère un numéro de facture unique, formaté
+     */
     public static function generateInvoiceNumber(): string
     {
         $year = now()->year;
@@ -334,6 +411,9 @@ class Invoice extends Model
         return $invoiceNumber;
     }
 
+    /**
+     * Met la facture à l'état "émise" (si en brouillon), date d'émission et d'échéance
+     */
     public function issue(): bool
     {
         if ($this->status !== 'brouillon') {
@@ -350,6 +430,9 @@ class Invoice extends Model
         return $this->save();
     }
 
+    /**
+     * Enregistre un paiement pour la facture et met à jour le statut si besoin
+     */
     public function recordPayment(float $amount, string $method = 'virement', ?string $reference = null): InvoicePayment
     {
         $payment = InvoicePayment::create([
@@ -371,6 +454,9 @@ class Invoice extends Model
         return $payment;
     }
 
+    /**
+     * Annule la facture, sauf si elle est payée
+     */
     public function cancel(): bool
     {
         if ($this->status === 'payee') {
@@ -382,6 +468,9 @@ class Invoice extends Model
         return $this->save();
     }
 
+    /**
+     * Marque l'envoi d'un rappel de paiement (modifie la date et incrémente le compteur)
+     */
     public function sendPaymentReminder(): bool
     {
         if ($this->status !== 'emise' && $this->status !== 'en_retard') {
@@ -395,6 +484,9 @@ class Invoice extends Model
         return true;
     }
 
+    /**
+     * Indique si on doit envoyer un rappel (pas trop souvent et si en retard)
+     */
     public function shouldSendReminder(): bool
     {
         if (!$this->isOverdue()) {
@@ -412,6 +504,9 @@ class Invoice extends Model
         return true;
     }
 
+    /**
+     * Envoie des rappels automatiques pour toutes les factures en retard si nécessaire
+     */
     public static function sendAutomaticReminders(): int
     {
         $count = 0;
@@ -426,6 +521,9 @@ class Invoice extends Model
         return $count;
     }
 
+    /**
+     * Calcule le chiffre d'affaires HT d'un utilisateur sur une période
+     */
     public static function getUserRevenue(User $user, ?Carbon $startDate = null, ?Carbon $endDate = null): float
     {
         $query = static::where('user_id', $user->id)
@@ -443,7 +541,7 @@ class Invoice extends Model
     }
 
     /**
-     * Obtenir le CA ventilé pour l'URSSAF (avec distinction Transaction/Location/Syndic)
+     * Renvoie un tableau détaillé du chiffre d'affaires pour l'URSSAF (par type, factures, etc)
      */
     public static function getURSSAFRevenue(User $user, Carbon $startDate, Carbon $endDate): array
     {
@@ -543,10 +641,9 @@ class Invoice extends Model
         ];
     }
 
-    // =====================================
-    // ÉVÉNEMENTS
-    // =====================================
-
+    /**
+     * Hook de boot : assignation des champs automatiques à la création/mise à jour
+     */
     protected static function booted()
     {
         static::creating(function ($invoice) {

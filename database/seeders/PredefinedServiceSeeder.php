@@ -9,14 +9,11 @@ class PredefinedServiceSeeder extends Seeder
 {
     /**
      * Seeder basé sur les vraies données de GEST'IMMO
-     * Sources: grille tarifaire, plaquette commerciale et tableau des missions
      */
     public function run(): void
     {
         $services = [
-            // =====================================
             // MISE EN LOCATION (10€/m²)
-            // =====================================
             [
                 'name' => 'Estimation du loyer',
                 'description' => 'Analyse du marché local et fixation du loyer optimal',
@@ -108,9 +105,7 @@ class PredefinedServiceSeeder extends Seeder
                 'sort_order' => 5,
             ],
 
-            // =====================================
             // GESTION LOCATIVE (5% des loyers)
-            // =====================================
             [
                 'name' => 'Émission des quittances',
                 'description' => 'Création et envoi des quittances mensuelles',
@@ -202,9 +197,7 @@ class PredefinedServiceSeeder extends Seeder
                 'sort_order' => 370,
             ],
 
-            // =====================================
             // SUIVI DES TRAVAUX / MAINTENANCE
-            // =====================================
             [
                 'name' => 'Commande d\'intervention',
                 'description' => 'Contact d\'un artisan pour réparation',
@@ -296,9 +289,7 @@ class PredefinedServiceSeeder extends Seeder
                 'sort_order' => 470,
             ],
 
-            // =====================================
             // AUTRES PRESTATIONS
-            // =====================================
             [
                 'name' => 'Suivi des attestations d\'assurance locataire',
                 'description' => 'Contrôle annuel de validité des contrats',

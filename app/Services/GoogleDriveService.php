@@ -14,6 +14,10 @@ class GoogleDriveService
     protected string $rootFolderId;
     protected bool $isConfigured = false;
 
+    /**
+     * Initialise le service Google Drive en tentant de charger les identifiants OAuth
+     * et le token. Rafraîchit le token si besoin, sinon log un warning.
+     */
     public function __construct()
     {
         $this->rootFolderId = config('services.google.drive_folder_id') ?: env('GOOGLE_DRIVE_FOLDER_ID', '');
@@ -63,7 +67,7 @@ class GoogleDriveService
     }
 
     /**
-     * Vérifie si le service est configuré et prêt
+     * Vérifie si le service est configuré et prêt pour l'utilisation.
      */
     public function isReady(): bool
     {
@@ -71,7 +75,8 @@ class GoogleDriveService
     }
 
     /**
-     * Récupère ou crée un dossier pour un candidat
+     * Récupère ou crée un dossier Google Drive au nom du candidat.
+     * Retourne l'identifiant du dossier.
      */
     public function getOrCreateCandidateFolder(string $candidateName): string
     {
@@ -96,7 +101,7 @@ class GoogleDriveService
             return $results->files[0]->id;
         }
 
-        // Créer le dossier
+        // Créer le dossier si non trouvé
         $folderMetadata = new DriveFile([
             'name' => $safeName,
             'parents' => [$this->rootFolderId],
@@ -113,7 +118,8 @@ class GoogleDriveService
     }
 
     /**
-     * Upload un fichier dans un dossier
+     * Upload un fichier dans le dossier Google Drive donné (par ID).
+     * Remplace un éventuel fichier de même nom dans ce dossier.
      */
     public function uploadFile(string $folderId, UploadedFile $file, ?string $customName = null): DriveFile
     {
@@ -146,7 +152,7 @@ class GoogleDriveService
     }
 
     /**
-     * Supprime un fichier existant avec le même nom
+     * Supprime tous les fichiers du dossier correspondant au nom donné (cas d'un upload qui remplace).
      */
     public function deleteExistingFile(string $folderId, string $fileName): void
     {
@@ -171,7 +177,7 @@ class GoogleDriveService
     }
 
     /**
-     * Supprime un fichier par son ID
+     * Supprime un fichier Google Drive à partir de son identifiant unique.
      */
     public function deleteFile(string $fileId): void
     {
@@ -186,7 +192,7 @@ class GoogleDriveService
     }
 
     /**
-     * Supprime un dossier
+     * Supprime un dossier Google Drive sauf le dossier racine.
      */
     public function deleteFolder(string $folderId): void
     {
@@ -198,14 +204,13 @@ class GoogleDriveService
                 return;
             }
             $this->drive->files->delete($folderId);
-            Log::info("Google Drive: Dossier supprimé - ID: " . $folderId);
         } catch (\Exception $e) {
             Log::warning("Google Drive: Erreur suppression dossier - " . $e->getMessage());
         }
     }
 
     /**
-     * Récupère le lien de visualisation
+     * Retourne le lien web de visualisation d'un fichier Google Drive.
      */
     public function getFileViewLink(string $fileId): ?string
     {
@@ -220,7 +225,8 @@ class GoogleDriveService
     }
 
     /**
-     * Nettoie le nom
+     * Nettoie/convertit un nom pour être utilisé en nom de dossier Google Drive.
+     * Enlève/supprime les caractères problématiques.
      */
     private function sanitizeFolderName(string $name): string
     {

@@ -12,7 +12,7 @@ use Carbon\Carbon;
 class URSSAFController extends Controller
 {
     /**
-     * Formulaire de génération du récapitulatif URSSAF (CDC Section D)
+     * Formulaire de génération du récapitulatif URSSAF
      */
     public function index()
     {
@@ -31,7 +31,7 @@ class URSSAFController extends Controller
     }
 
     /**
-     * Générer le récapitulatif URSSAF (CDC Section D)
+     * Générer le récapitulatif URSSAF
      */
     public function generate(Request $request)
     {
@@ -77,7 +77,7 @@ class URSSAFController extends Controller
     }
 
     /**
-     * Export PDF du récapitulatif URSSAF (CDC Section D)
+     * Export PDF du récapitulatif URSSAF
      */
     public function exportPdf(Request $request)
     {
@@ -107,7 +107,7 @@ class URSSAFController extends Controller
         $data['user_email'] = $user->email;
         $data['user_phone'] = $user->phone ?? 'Non renseigné';
         $data['user_siret'] = $user->siret ?? 'Non renseigné';
-        $data['commission_rate'] = 0; // À adapter selon votre logique métier
+        $data['commission_rate'] = 0;
 
         try {
             $pdf = Pdf::loadView('urssaf.pdf', compact('data'))
@@ -123,7 +123,7 @@ class URSSAFController extends Controller
     }
 
     /**
-     * Export Excel du récapitulatif URSSAF (CDC Section D)
+     * Export Excel du récapitulatif URSSAF
      */
     public function exportExcel(Request $request)
     {
@@ -488,8 +488,6 @@ class URSSAFController extends Controller
 
         return response()->stream($callback, 200, $headers);
     }
-
-    // ===== Méthodes utilitaires =====
 
     /**
      * Calculer les dates de début et fin selon le type de période

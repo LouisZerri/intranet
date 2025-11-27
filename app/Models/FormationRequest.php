@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Builder;
-use Carbon\Carbon;
+
 
 class FormationRequest extends Model
 {
@@ -36,23 +36,33 @@ class FormationRequest extends Model
         'final_cost' => 'decimal:2',
     ];
 
-    // Relations
+    /**
+     * Récupère la formation associée à la demande.
+     */
     public function formation(): BelongsTo
     {
         return $this->belongsTo(Formation::class);
     }
 
+    /**
+     * Récupère l'utilisateur ayant fait la demande.
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Récupère l'approbateur (manager ou admin).
+     */
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
     }
 
-    // Scopes
+    /**
+     * Scope : filtre les demandes accessibles par l'utilisateur (admin, manager, employé).
+     */
     public function scopeForUser(Builder $query, User $user): Builder
     {
         if ($user->isAdministrateur()) {
@@ -72,54 +82,72 @@ class FormationRequest extends Model
         return $query->where('user_id', $user->id);
     }
 
+    /**
+     * Scope : ne récupérer que les demandes en attente.
+     */
     public function scopePending(Builder $query): Builder
     {
         return $query->where('status', 'en_attente');
     }
 
+    /**
+     * Scope : ne récupérer que les demandes approuvées.
+     */
     public function scopeApproved(Builder $query): Builder
     {
         return $query->where('status', 'approuve');
     }
 
+    /**
+     * Scope : ne récupérer que les demandes terminées.
+     */
     public function scopeCompleted(Builder $query): Builder
     {
         return $query->where('status', 'termine');
     }
 
+    /**
+     * Scope : ne récupérer que les demandes de l'année en cours.
+     */
     public function scopeThisYear(Builder $query): Builder
     {
         return $query->whereYear('requested_at', now()->year);
     }
 
-    // Méthodes utilitaires
+    /**
+     * Indique si la demande est en attente.
+     */
     public function isPending(): bool
     {
         return $this->status === 'en_attente';
     }
 
+    /**
+     * Indique si la demande est approuvée.
+     */
     public function isApproved(): bool
     {
         return $this->status === 'approuve';
     }
 
+    /**
+     * Indique si la demande est terminée.
+     */
     public function isCompleted(): bool
     {
         return $this->status === 'termine';
     }
 
+    /**
+     * Indique si la demande peut être approuvée (seulement si en attente).
+     */
     public function canBeApproved(): bool
     {
         return $this->status === 'en_attente';
     }
 
     /**
-     * Vérifie si un utilisateur peut approuver cette demande
-     * Règles :
-     * - La demande doit être en attente
-     * - L'utilisateur ne peut pas approuver sa propre demande
-     * - Admin peut approuver toutes les demandes (sauf les siennes)
-     * - Manager peut approuver les demandes de son équipe uniquement
+     * Vérifie si l'utilisateur donné peut approuver cette demande.
      */
     public function canBeApprovedBy(User $user): bool
     {
@@ -128,7 +156,7 @@ class FormationRequest extends Model
             return false;
         }
 
-        // RÈGLE CRITIQUE : On ne peut pas approuver sa propre demande
+        // On ne peut pas approuver sa propre demande
         if ($this->user_id === $user->id) {
             return false;
         }
@@ -146,11 +174,17 @@ class FormationRequest extends Model
         return false;
     }
 
+    /**
+     * Retourne le nombre de jours depuis la création de la demande.
+     */
     public function getDaysWaiting(): int
     {
         return $this->requested_at->diffInDays(now());
     }
 
+    /**
+     * Accesseur : retourne le label humain du statut.
+     */
     public function getStatusLabelAttribute(): string
     {
         return match($this->status) {
@@ -162,6 +196,9 @@ class FormationRequest extends Model
         };
     }
 
+    /**
+     * Accesseur : retourne la couleur Tailwind correspondant au statut.
+     */
     public function getStatusColorAttribute(): string
     {
         return match($this->status) {
@@ -173,6 +210,9 @@ class FormationRequest extends Model
         };
     }
 
+    /**
+     * Accesseur : retourne le label humain de la priorité.
+     */
     public function getPriorityLabelAttribute(): string
     {
         return match($this->priority) {
@@ -183,6 +223,9 @@ class FormationRequest extends Model
         };
     }
 
+    /**
+     * Accesseur : retourne la couleur Tailwind correspondant à la priorité.
+     */
     public function getPriorityColorAttribute(): string
     {
         return match($this->priority) {
@@ -193,7 +236,9 @@ class FormationRequest extends Model
         };
     }
 
-    // Méthodes pour workflow
+    /**
+     * Approuve la demande (si possible).
+     */
     public function approve(User $approver, ?string $comments = null): bool
     {
         if (!$this->canBeApprovedBy($approver)) {
@@ -210,6 +255,9 @@ class FormationRequest extends Model
         return true;
     }
 
+    /**
+     * Refuse la demande (si possible).
+     */
     public function reject(User $approver, string $comments): bool
     {
         if (!$this->canBeApprovedBy($approver)) {
@@ -226,6 +274,9 @@ class FormationRequest extends Model
         return true;
     }
 
+    /**
+     * Termine la demande (si approuvée).
+     */
     public function complete(int $hoursCompleted, ?string $feedback = null, ?int $rating = null): bool
     {
         if (!$this->isApproved()) {
@@ -243,7 +294,9 @@ class FormationRequest extends Model
         return true;
     }
 
-    // Événements du modèle
+    /**
+     * Boot : définir la date de demande si absente à la création.
+     */
     protected static function booted()
     {
         static::creating(function ($request) {

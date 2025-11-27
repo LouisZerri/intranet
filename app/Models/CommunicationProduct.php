@@ -26,26 +26,41 @@ class CommunicationProduct extends Model
         'stock_quantity' => 'integer',
     ];
 
+    /**
+     * Relation vers les items (lignes de commande) contenant ce produit
+     */
     public function orderItems(): HasMany
     {
         return $this->hasMany(CommunicationOrderItem::class, 'product_id');
     }
 
+    /**
+     * Scope pour ne récupérer que les produits actifs
+     */
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
+    /**
+     * Scope pour ne récupérer que les produits en stock
+     */
     public function scopeInStock($query)
     {
         return $query->where('stock_quantity', '>', 0);
     }
 
+    /**
+     * Vérifie si le produit est disponible (actif et stock > 0)
+     */
     public function isAvailable(): bool
     {
         return $this->is_active && $this->stock_quantity > 0;
     }
 
+    /**
+     * Attribut accessoire : URL de l'image du produit (ou placeholder)
+     */
     public function getImageUrlAttribute(): string
     {
         if ($this->image) {
@@ -54,6 +69,9 @@ class CommunicationProduct extends Model
         return asset('images/placeholder-product.png');
     }
 
+    /**
+     * Attribut accessoire : prix formaté en euros
+     */
     public function getFormattedPriceAttribute(): string
     {
         if ($this->price) {

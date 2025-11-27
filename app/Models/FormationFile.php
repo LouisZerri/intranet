@@ -30,13 +30,17 @@ class FormationFile extends Model
         'is_public' => 'boolean',
     ];
 
-    // Relations
+    /**
+     * Récupère la formation associée à ce fichier.
+     */
     public function formation(): BelongsTo
     {
         return $this->belongsTo(Formation::class);
     }
 
-    // Accesseurs
+    /**
+     * Accesseur : retourne la taille formatée du fichier.
+     */
     public function getFormattedSizeAttribute(): string
     {
         $bytes = $this->size;
@@ -49,6 +53,9 @@ class FormationFile extends Model
         return round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
     }
 
+    /**
+     * Accesseur : retourne le label du type de fichier.
+     */
     public function getTypeLabelAttribute(): string
     {
         return match ($this->type) {
@@ -61,6 +68,9 @@ class FormationFile extends Model
         };
     }
 
+    /**
+     * Accesseur : retourne l'icône en emoji correspondant au type de fichier.
+     */
     public function getIconAttribute(): string
     {
         return match ($this->type) {
@@ -73,6 +83,9 @@ class FormationFile extends Model
         };
     }
 
+    /**
+     * Accesseur : retourne la classe de couleur Tailwind CSS selon le type du fichier.
+     */
     public function getColorClassAttribute(): string
     {
         return match ($this->type) {
@@ -85,17 +98,25 @@ class FormationFile extends Model
         };
     }
 
+    /**
+     * Accesseur : retourne l'URL publique du fichier.
+     */
     public function getUrlAttribute(): string
     {
         return Storage::url($this->path);
     }
 
+    /**
+     * Accesseur : retourne l'URL de téléchargement du fichier.
+     */
     public function getDownloadUrlAttribute(): string
     {
         return route('formations.files.download', $this);
     }
 
-    // Méthodes utilitaires
+    /**
+     * Détermine le type logique de fichier en fonction du mime type.
+     */
     public static function determineFileType(string $mimeType): string
     {
         if (str_starts_with($mimeType, 'video/')) {
@@ -138,6 +159,9 @@ class FormationFile extends Model
         return 'other';
     }
 
+    /**
+     * Indique si ce fichier est affichable dans le navigateur (images et PDF).
+     */
     public function isViewableInBrowser(): bool
     {
         return in_array($this->type, ['image', 'document']) &&
@@ -150,11 +174,17 @@ class FormationFile extends Model
             ]);
     }
 
+    /**
+     * Indique si le fichier est un média (audio/vidéo).
+     */
     public function isMediaFile(): bool
     {
         return in_array($this->type, ['video', 'audio']);
     }
 
+    /**
+     * Supprime le fichier du disque puis de la base.
+     */
     public function delete(): bool
     {
         // Supprimer le fichier du stockage
@@ -165,24 +195,32 @@ class FormationFile extends Model
         return parent::delete();
     }
 
-    // Scopes
+    /**
+     * Scope : ne récupérer que les fichiers publics.
+     */
     public function scopePublic($query)
     {
         return $query->where('is_public', true);
     }
 
+    /**
+     * Scope : filtrer les fichiers par type.
+     */
     public function scopeByType($query, string $type)
     {
         return $query->where('type', $type);
     }
 
+    /**
+     * Scope : ordonner les fichiers.
+     */
     public function scopeOrdered($query)
     {
         return $query->orderBy('sort_order')->orderBy('created_at');
     }
 
     /**
-     * Retourne l'icône HTML du type de fichier
+     * Retourne l'icône HTML (div stylisée) associée au fichier selon son type/mime.
      */
     public function getFileTypeIcon(): string
     {
@@ -215,7 +253,7 @@ class FormationFile extends Model
     }
 
     /**
-     * Retourne la taille formatée du fichier
+     * Retourne la taille formatée du fichier (accès via méthode).
      */
     public function getFormattedSize(): string
     {
@@ -223,7 +261,7 @@ class FormationFile extends Model
     }
 
     /**
-     * Vérifie si l'utilisateur peut voir ce fichier dans le navigateur
+     * Indique si le fichier peut être visualisé dans le navigateur (méthode alternative).
      */
     public function canBeViewedInBrowser(): bool
     {

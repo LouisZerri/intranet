@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Mail;
+use App\Mail\InvoiceSentMail;
 
 class InvoiceController extends Controller
 {
@@ -32,7 +33,7 @@ class InvoiceController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Filtre par type d'activité (NOUVEAU)
+        // Filtre par type d'activité
         if ($request->filled('revenue_type')) {
             $query->where('revenue_type', $request->revenue_type);
         }
@@ -92,7 +93,7 @@ class InvoiceController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        // CORRIGÉ : Filtrer les clients par utilisateur
+        // Filtrer les clients par utilisateur
         $clients = Client::forUser($user)->active()->orderBy('name')->get();
         $quote = null;
         $predefinedServices = PredefinedService::active()->ordered()->get();
@@ -101,7 +102,7 @@ class InvoiceController extends Controller
         if ($request->filled('quote_id')) {
             $quote = Quote::with('items')->findOrFail($request->quote_id);
             
-            // SÉCURITÉ : Vérifier que le devis appartient à l'utilisateur
+            // Vérifier que le devis appartient à l'utilisateur
             if (!$this->canUserViewQuote($user, $quote)) {
                 abort(403, 'Vous n\'avez pas accès à ce devis.');
             }
@@ -120,7 +121,7 @@ class InvoiceController extends Controller
 
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
-            'revenue_type' => 'required|in:transaction,location,syndic,autres', // NOUVEAU
+            'revenue_type' => 'required|in:transaction,location,syndic,autres',
             'due_date' => 'nullable|date|after:today',
             'payment_terms' => 'nullable|string',
             'discount_percentage' => 'nullable|numeric|min:0|max:100',
@@ -139,7 +140,7 @@ class InvoiceController extends Controller
             'revenue_type.in' => 'Le type d\'activité sélectionné est invalide.',
         ]);
 
-        // SÉCURITÉ : Vérifier que le client appartient à l'utilisateur
+        // Vérifier que le client appartient à l'utilisateur
         $client = Client::forUser($user)->find($validated['client_id']);
         if (!$client) {
             return back()->withInput()->with('error', 'Client non autorisé.');
@@ -152,7 +153,7 @@ class InvoiceController extends Controller
                 'client_id' => $validated['client_id'],
                 'user_id' => Auth::id(),
                 'status' => 'brouillon',
-                'revenue_type' => $validated['revenue_type'], // NOUVEAU
+                'revenue_type' => $validated['revenue_type'],
                 'due_date' => $validated['due_date'] ?? now()->addDays(30),
                 'payment_terms' => $validated['payment_terms'] ?? 'Paiement à 30 jours fin de mois',
                 'discount_percentage' => $validated['discount_percentage'] ?? null,
@@ -221,7 +222,7 @@ class InvoiceController extends Controller
 
         $invoice->load('items');
         
-        // CORRIGÉ : Filtrer les clients par utilisateur
+        // Filtrer les clients par utilisateur
         $clients = Client::forUser($user)->active()->orderBy('name')->get();
         $predefinedServices = PredefinedService::active()->ordered()->get();
 
@@ -246,7 +247,7 @@ class InvoiceController extends Controller
 
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
-            'revenue_type' => 'required|in:transaction,location,syndic,autres', // NOUVEAU
+            'revenue_type' => 'required|in:transaction,location,syndic,autres',
             'due_date' => 'nullable|date',
             'payment_terms' => 'nullable|string',
             'internal_notes' => 'nullable|string',
@@ -260,7 +261,7 @@ class InvoiceController extends Controller
             'revenue_type.in' => 'Le type d\'activité sélectionné est invalide.',
         ]);
 
-        // SÉCURITÉ : Vérifier que le client appartient à l'utilisateur
+        // Vérifier que le client appartient à l'utilisateur
         $client = Client::forUser($user)->find($validated['client_id']);
         if (!$client) {
             return back()->withInput()->with('error', 'Client non autorisé.');
@@ -270,7 +271,7 @@ class InvoiceController extends Controller
         try {
             $invoice->update([
                 'client_id' => $validated['client_id'],
-                'revenue_type' => $validated['revenue_type'], // NOUVEAU
+                'revenue_type' => $validated['revenue_type'],
                 'due_date' => $validated['due_date'],
                 'payment_terms' => $validated['payment_terms'],
                 'internal_notes' => $validated['internal_notes'],
@@ -330,7 +331,7 @@ class InvoiceController extends Controller
 
                         Mail::to($invoice->client->email)
                             ->cc($invoice->user->email)
-                            ->send(new \App\Mail\InvoiceSentMail($invoice, $pdfContent));
+                            ->send(new InvoiceSentMail($invoice, $pdfContent));
 
                         DB::commit();
 
@@ -388,7 +389,7 @@ class InvoiceController extends Controller
         ]);
 
         try {
-            $payment = InvoicePayment::create([
+            InvoicePayment::create([
                 'invoice_id' => $invoice->id,
                 'amount' => $validated['amount'],
                 'payment_method' => $validated['payment_method'],
@@ -563,6 +564,9 @@ class InvoiceController extends Controller
         ];
     }
 
+    /**
+     * Vérifie si l'utilisateur peut voir la facture (admin, manager, ou propriétaire)
+     */
     private function canUserViewInvoice($user, $invoice): bool
     {
         if ($user->isAdministrateur()) {
@@ -570,12 +574,17 @@ class InvoiceController extends Controller
         }
 
         if ($user->isManager()) {
+            // Managers: leurs propres factures ou celles de leurs collaborateurs
             return $invoice->user_id === $user->id || $invoice->user->manager_id === $user->id;
         }
 
+        // Un utilisateur classique ne peut consulter que ses propres factures
         return $invoice->user_id === $user->id;
     }
 
+    /**
+     * Vérifie si l'utilisateur peut éditer la facture (mêmes règles que pour la consultation)
+     */
     private function canUserEditInvoice($user, $invoice): bool
     {
         if ($user->isAdministrateur()) {
@@ -589,6 +598,9 @@ class InvoiceController extends Controller
         return $invoice->user_id === $user->id;
     }
 
+    /**
+     * Vérifie si l'utilisateur peut voir le devis (admin, manager, ou propriétaire)
+     */
     private function canUserViewQuote($user, $quote): bool
     {
         if ($user->isAdministrateur()) {
@@ -602,11 +614,14 @@ class InvoiceController extends Controller
         return $quote->user_id === $user->id;
     }
 
+    /**
+     * Nettoie un nom de fichier pour usage sûr dans le système de fichiers
+     */
     private function sanitizeFilename(string $filename): string
     {
-        $filename = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $filename);
-        $filename = preg_replace('/[^A-Za-z0-9._-]/', '-', $filename);
-        $filename = preg_replace('/-+/', '-', $filename);
+        $filename = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $filename); // Translittération accents/UTF8 -> ASCII
+        $filename = preg_replace('/[^A-Za-z0-9._-]/', '-', $filename);   // Remplacer les caractères spéciaux par -
+        $filename = preg_replace('/-+/', '-', $filename);                // Réduire les doubles/triples -
         return $filename;
     }
 }

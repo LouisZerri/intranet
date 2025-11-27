@@ -21,7 +21,7 @@ class ProfileController extends Controller
     }
 
     /**
-     * Mettre à jour le profil utilisateur (UNIQUEMENT INFO PERSONNELLES)
+     * Mettre à jour le profil utilisateur : uniquement les infos personnelles
      */
     public function update(Request $request)
     {
@@ -110,7 +110,7 @@ class ProfileController extends Controller
     }
 
     /**
-     * Mettre à jour la signature - UNIQUEMENT POUR ADMIN
+     * Mettre à jour la signature : uniquement pour les admins
      */
     public function updateSignature(Request $request)
     {
@@ -154,7 +154,7 @@ class ProfileController extends Controller
     }
 
     /**
-     * Supprimer la signature - UNIQUEMENT POUR ADMIN
+     * Supprimer la signature : uniquement pour les admins
      */
     public function removeSignature()
     {
@@ -180,7 +180,7 @@ class ProfileController extends Controller
     }
 
     /**
-     * Mettre à jour les informations professionnelles - UNIQUEMENT POUR ADMIN
+     * Mettre à jour les informations professionnelles : uniquement pour les admins
      */
     public function updateProfessional(Request $request)
     {
@@ -216,7 +216,7 @@ class ProfileController extends Controller
     }
 
     /**
-     * Changer le mot de passe - UNIQUEMENT POUR ADMIN
+     * Changer le mot de passe : uniquement pour les admins
      */
     public function updatePassword(Request $request)
     {

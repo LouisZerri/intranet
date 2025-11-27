@@ -25,16 +25,25 @@ class CommunicationOrder extends Model
         'ordered_at' => 'datetime',
     ];
 
+    /**
+     * Relation avec l'utilisateur ayant passé la commande
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Relation avec les lignes de la commande (articles)
+     */
     public function items(): HasMany
     {
         return $this->hasMany(CommunicationOrderItem::class, 'order_id');
     }
 
+    /**
+     * Évènements du modèle : génère un numéro de commande et la date si absents
+     */
     protected static function booted()
     {
         static::creating(function ($order) {
@@ -52,12 +61,18 @@ class CommunicationOrder extends Model
         });
     }
 
+    /**
+     * Recalcule le montant total de la commande en fonction de ses articles
+     */
     public function calculateTotal(): void
     {
         $this->total_amount = $this->items->sum('subtotal');
         $this->save();
     }
 
+    /**
+     * Renvoie le libellé associé au statut de la commande
+     */
     public function getStatusLabelAttribute(): string
     {
         return match($this->status) {
@@ -71,6 +86,9 @@ class CommunicationOrder extends Model
         };
     }
 
+    /**
+     * Renvoie la couleur associée au statut de la commande
+     */
     public function getStatusColorAttribute(): string
     {
         return match($this->status) {

@@ -34,9 +34,6 @@ class Client extends Model
         'is_active' => 'boolean',
     ];
 
-    // =====================================
-    // RELATIONS
-    // =====================================
 
     /**
      * Utilisateur propriétaire du client
@@ -62,9 +59,6 @@ class Client extends Model
         return $this->hasMany(Invoice::class);
     }
 
-    // =====================================
-    // SCOPES
-    // =====================================
 
     // /**
     //  * Scope pour filtrer les clients selon le rôle de l'utilisateur
@@ -82,27 +76,42 @@ class Client extends Model
     //     return $query->where('user_id', $user->id);
     // }
 
+    /**
+     * Scope pour filtrer les clients selon l'utilisateur connecté
+     */
     public function scopeForUser(Builder $query, User $user): Builder
     {
         // Tout le monde voit uniquement ses propres clients
         return $query->where('user_id', $user->id);
     }
 
+    /**
+     * Scope pour ne récupérer que les clients actifs
+     */
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
     }
 
+    /**
+     * Scope pour ne récupérer que les clients particuliers
+     */
     public function scopeParticulier(Builder $query): Builder
     {
         return $query->where('type', 'particulier');
     }
 
+    /**
+     * Scope pour ne récupérer que les clients professionnels
+     */
     public function scopeProfessionnel(Builder $query): Builder
     {
         return $query->where('type', 'professionnel');
     }
 
+    /**
+     * Scope pour chercher un client via différents champs
+     */
     public function scopeSearch(Builder $query, string $search): Builder
     {
         return $query->where(function ($q) use ($search) {
@@ -113,10 +122,9 @@ class Client extends Model
         });
     }
 
-    // =====================================
-    // ACCESSEURS
-    // =====================================
-
+    /**
+     * Renvoie le nom complet du client (dépend du type)
+     */
     public function getFullNameAttribute(): string
     {
         if ($this->type === 'professionnel' && $this->company_name) {
@@ -125,6 +133,9 @@ class Client extends Model
         return $this->name;
     }
 
+    /**
+     * Renvoie un nom d'affichage du client (inclut la société si pro)
+     */
     public function getDisplayNameAttribute(): string
     {
         if ($this->type === 'professionnel') {
@@ -135,6 +146,9 @@ class Client extends Model
         return $this->name;
     }
 
+    /**
+     * Renvoie l'adresse complète du client formatée
+     */
     public function getFullAddressAttribute(): string
     {
         $parts = array_filter([
@@ -146,6 +160,9 @@ class Client extends Model
         return implode("\n", $parts);
     }
 
+    /**
+     * Renvoie le libellé associé au type du client
+     */
     public function getTypeLabelAttribute(): string
     {
         return match($this->type) {
@@ -155,10 +172,9 @@ class Client extends Model
         };
     }
 
-    // =====================================
-    // MÉTHODES UTILITAIRES
-    // =====================================
-
+    /**
+     * Retourne le chiffre d'affaires total généré par le client (factures payées)
+     */
     public function getTotalRevenue(): float
     {
         return $this->invoices()
@@ -166,16 +182,25 @@ class Client extends Model
                    ->sum('total_ht') ?? 0;
     }
 
+    /**
+     * Retourne le nombre de devis du client
+     */
     public function getQuotesCount(): int
     {
         return $this->quotes()->count();
     }
 
+    /**
+     * Retourne le nombre de factures du client
+     */
     public function getInvoicesCount(): int
     {
         return $this->invoices()->count();
     }
 
+    /**
+     * Retourne le nombre de factures en attente de paiement ou en retard
+     */
     public function getUnpaidInvoicesCount(): int
     {
         return $this->invoices()
@@ -183,6 +208,9 @@ class Client extends Model
                    ->count();
     }
 
+    /**
+     * Retourne le montant total impayé par le client
+     */
     public function getUnpaidAmount(): float
     {
         return $this->invoices()
@@ -190,6 +218,9 @@ class Client extends Model
                    ->sum('total_ttc') ?? 0;
     }
 
+    /**
+     * Vérifie si le client a des factures en retard
+     */
     public function hasOverdueInvoices(): bool
     {
         return $this->invoices()
@@ -197,6 +228,9 @@ class Client extends Model
                    ->exists();
     }
 
+    /**
+     * Calcule le taux de transformation devis > acceptés/convertis
+     */
     public function getConversionRate(): float
     {
         $totalQuotes = $this->quotes()
@@ -210,6 +244,9 @@ class Client extends Model
         return $totalQuotes > 0 ? round(($convertedQuotes / $totalQuotes) * 100, 2) : 0;
     }
 
+    /**
+     * Retourne la dernière facture du client (selon la date d'émission)
+     */
     public function getLastInvoice(): ?Invoice
     {
         return $this->invoices()
@@ -217,6 +254,9 @@ class Client extends Model
                    ->first();
     }
 
+    /**
+     * Retourne le dernier devis du client (selon la date de création)
+     */
     public function getLastQuote(): ?Quote
     {
         return $this->quotes()
@@ -224,11 +264,17 @@ class Client extends Model
                    ->first();
     }
 
+    /**
+     * Vérifie si le client est un "bon payeur" (aucune facture en retard)
+     */
     public function isGoodPayer(): bool
     {
         return !$this->hasOverdueInvoices();
     }
 
+    /**
+     * Retourne différentes statistiques liées au client
+     */
     public function getStatistics(): array
     {
         return [
@@ -245,10 +291,9 @@ class Client extends Model
         ];
     }
 
-    // =====================================
-    // MÉTHODES STATIQUES
-    // =====================================
-
+    /**
+     * Retourne les meilleurs clients selon le chiffre d'affaires (factures payées)
+     */
     public static function getTopClients(int $limit = 10)
     {
         return static::active()
@@ -262,6 +307,9 @@ class Client extends Model
                     ->get();
     }
 
+    /**
+     * Récupère les clients ayant des factures en retard
+     */
     public static function getClientsWithOverdueInvoices()
     {
         return static::active()
@@ -275,10 +323,9 @@ class Client extends Model
                     ->get();
     }
 
-    // =====================================
-    // ÉVÉNEMENTS
-    // =====================================
-
+    /**
+     * Initialise la valeur du pays à 'France' si non défini lors de la création du client
+     */
     protected static function booted()
     {
         static::creating(function ($client) {

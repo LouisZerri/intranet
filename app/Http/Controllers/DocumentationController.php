@@ -11,30 +11,31 @@ use App\Models\Resource;
 class DocumentationController extends Controller
 {
     /**
-     * Page principale de documentation
+     * Page principale de documentation (affiche tout)
      */
     public function index()
     {
+        // Récupère tous les contacts, FAQ actives, ressources actives
         $contacts = Contact::orderBy('sector')->orderBy('name')->get();
         $faqs = Faq::where('is_active', true)->orderBy('order')->orderBy('created_at')->get();
         $resources = Resource::where('is_active', true)->orderBy('category')->orderBy('name')->get();
-        
+
         return view('documentation.index', compact('contacts', 'faqs', 'resources'));
     }
 
     /**
-     * Page contacts par secteur
+     * Liste contacts par secteur
      */
     public function contacts()
     {
         $contacts = Contact::orderBy('sector')->orderBy('name')->get();
-        $sectors = Contact::distinct('sector')->pluck('sector');
-        
+        $sectors = Contact::distinct('sector')->pluck('sector'); // Liste unique des secteurs
+
         return view('documentation.contacts.index', compact('contacts', 'sectors'));
     }
 
     /**
-     * Page FAQ
+     * Liste les FAQ par catégories
      */
     public function faq()
     {
@@ -42,27 +43,27 @@ class DocumentationController extends Controller
                    ->orderBy('order')
                    ->orderBy('created_at')
                    ->get();
-        $categories = Faq::distinct('category')->pluck('category');
-        
+        $categories = Faq::distinct('category')->pluck('category'); // Catégories uniques
+
         return view('documentation.faq.index', compact('faqs', 'categories'));
     }
 
     /**
-     * Page ressources
+     * Liste toutes les ressources
      */
     public function resources()
     {
         $resources = Resource::where('is_active', true)
-                           ->orderBy('category')
-                           ->orderBy('name')
-                           ->get();
+            ->orderBy('category')
+            ->orderBy('name')
+            ->get();
         $categories = Resource::distinct('category')->pluck('category');
-        
+
         return view('documentation.resources.index', compact('resources', 'categories'));
     }
 
     /**
-     * Télécharger une ressource
+     * Téléchargement sécurisé d'une ressource
      */
     public function downloadResource(Resource $resource)
     {
@@ -71,26 +72,30 @@ class DocumentationController extends Controller
         }
 
         $filePath = storage_path('app/' . $resource->file_path);
-        
+
+        // Vérifie l'existence physique du fichier avant envoi
         if (!file_exists($filePath)) {
             abort(404, 'Fichier non trouvé');
         }
 
-        // Incrémenter le compteur de téléchargements
+        // Incrémente compteur de téléchargements
         $resource->increment('download_count');
 
         return response()->download($filePath, $resource->original_filename);
     }
 
-    // --- MÉTHODES ADMIN POUR GESTION DES CONTACTS ---
-
+    // Formulaire pour ajout d'un contact
     public function createContact()
     {
         return view('documentation.contacts.create');
     }
 
+    /**
+     * Enregistre un nouveau contact depuis un formulaire
+     */
     public function storeContact(Request $request)
     {
+        // Validation basique des champs du contact
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'position' => 'nullable|string|max:255',
@@ -107,14 +112,18 @@ class DocumentationController extends Controller
         Contact::create($validated);
 
         return redirect()->route('documentation.index')
-                        ->with('success', 'Contact ajouté avec succès');
+            ->with('success', 'Contact ajouté avec succès');
     }
 
+    // Formulaire édition
     public function editContact(Contact $contact)
     {
         return view('documentation.contacts.edit', compact('contact'));
     }
 
+    /**
+     * Met à jour un contact
+     */
     public function updateContact(Request $request, Contact $contact)
     {
         $validated = $request->validate([
@@ -133,24 +142,29 @@ class DocumentationController extends Controller
         $contact->update($validated);
 
         return redirect()->route('documentation.index')
-                        ->with('success', 'Contact modifié avec succès');
+            ->with('success', 'Contact modifié avec succès');
     }
 
+    /**
+     * Supprime un contact
+     */
     public function destroyContact(Contact $contact)
     {
         $contact->delete();
-        
+
         return redirect()->route('documentation.index')
-                        ->with('success', 'Contact supprimé avec succès');
+            ->with('success', 'Contact supprimé avec succès');
     }
 
-    // --- MÉTHODES ADMIN POUR GESTION DES FAQ ---
-
+    // Formulaire ajout de FAQ
     public function createFaq()
     {
         return view('documentation.faq.create');
     }
 
+    /**
+     * Enregistrement d'une nouvelle FAQ
+     */
     public function storeFaq(Request $request)
     {
         $validated = $request->validate([
@@ -164,14 +178,18 @@ class DocumentationController extends Controller
         Faq::create($validated);
 
         return redirect()->route('documentation.index')
-                        ->with('success', 'FAQ ajoutée avec succès');
+            ->with('success', 'FAQ ajoutée avec succès');
     }
 
+    // Formulaire édition de FAQ
     public function editFaq(Faq $faq)
     {
         return view('documentation.faq.edit', compact('faq'));
     }
 
+    /**
+     * Met à jour une FAQ
+     */
     public function updateFaq(Request $request, Faq $faq)
     {
         $validated = $request->validate([
@@ -185,24 +203,29 @@ class DocumentationController extends Controller
         $faq->update($validated);
 
         return redirect()->route('documentation.index')
-                        ->with('success', 'FAQ modifiée avec succès');
+            ->with('success', 'FAQ modifiée avec succès');
     }
 
+    /**
+     * Supprime une FAQ
+     */
     public function destroyFaq(Faq $faq)
     {
         $faq->delete();
-        
+
         return redirect()->route('documentation.index')
-                        ->with('success', 'FAQ supprimée avec succès');
+            ->with('success', 'FAQ supprimée avec succès');
     }
 
-    // --- MÉTHODES ADMIN POUR GESTION DES RESSOURCES ---
-
+    // Formulaire ajout ressource
     public function createResource()
     {
         return view('documentation.resources.create');
     }
 
+    /**
+     * Ajout d'une nouvelle ressource (avec upload de fichier)
+     */
     public function storeResource(Request $request)
     {
         $validated = $request->validate([
@@ -214,6 +237,7 @@ class DocumentationController extends Controller
         ]);
 
         if ($request->hasFile('file')) {
+            // Stocke le fichier et enregistre ses infos
             $file = $request->file('file');
             $originalFilename = $file->getClientOriginalName();
             $filePath = $file->store('documentation/resources');
@@ -228,14 +252,18 @@ class DocumentationController extends Controller
         Resource::create($validated);
 
         return redirect()->route('documentation.index')
-                        ->with('success', 'Ressource ajoutée avec succès');
+            ->with('success', 'Ressource ajoutée avec succès');
     }
 
+    // Formulaire édition ressource
     public function editResource(Resource $resource)
     {
         return view('documentation.resources.edit', compact('resource'));
     }
 
+    /**
+     * Met à jour une ressource, supprime éventuellement l'ancien fichier
+     */
     public function updateResource(Request $request, Resource $resource)
     {
         $validated = $request->validate([
@@ -247,7 +275,7 @@ class DocumentationController extends Controller
         ]);
 
         if ($request->hasFile('file')) {
-            // Supprimer l'ancien fichier
+            // Supprime l'ancien fichier si présent
             if ($resource->file_path && Storage::exists($resource->file_path)) {
                 Storage::delete($resource->file_path);
             }
@@ -266,19 +294,22 @@ class DocumentationController extends Controller
         $resource->update($validated);
 
         return redirect()->route('documentation.index')
-                        ->with('success', 'Ressource modifiée avec succès');
+            ->with('success', 'Ressource modifiée avec succès');
     }
 
+    /**
+     * Supprime une ressource avec suppression physique du fichier
+     */
     public function destroyResource(Resource $resource)
     {
-        // Supprimer le fichier
+        // Suppression physique du fichier si existant
         if ($resource->file_path && Storage::exists($resource->file_path)) {
             Storage::delete($resource->file_path);
         }
 
         $resource->delete();
-        
+
         return redirect()->route('documentation.index')
-                        ->with('success', 'Ressource supprimée avec succès');
+            ->with('success', 'Ressource supprimée avec succès');
     }
 }

@@ -9,23 +9,23 @@ use Illuminate\Support\Facades\Auth;
 class ClientController extends Controller
 {
     /**
-     * Liste des clients avec recherche et filtres
+     * Liste les clients de l'utilisateur connecté avec recherche et filtres
      */
     public function index(Request $request)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        // CORRIGÉ : Filtrer par utilisateur
+        // Base de la requête filtrée par utilisateur
         $query = Client::forUser($user);
 
-        // Recherche
+        // Recherche par mot clé (nom, etc.)
         if ($request->filled('search')) {
             $search = $request->search;
             $query->search($search);
         }
 
-        // Filtre par type
+        // Filtre par type de client
         if ($request->filled('type')) {
             if ($request->type === 'particulier') {
                 $query->particulier();
@@ -34,7 +34,7 @@ class ClientController extends Controller
             }
         }
 
-        // Filtre par statut
+        // Filtre par statut (actif ou inactif)
         if ($request->filled('status')) {
             if ($request->status === 'actif') {
                 $query->where('is_active', true);
@@ -43,12 +43,13 @@ class ClientController extends Controller
             }
         }
 
+        // Récupère la liste paginée des clients avec compte devis/factures
         $clients = $query->withCount(['quotes', 'invoices'])
             ->orderBy('name')
             ->paginate(15);
-        $clients->appends($request->all());
+        $clients->appends($request->all()); // Garde les filtres dans la pagination
 
-        // Statistiques filtrées par utilisateur
+        // Statistiques (total, par type, actifs)
         $stats = [
             'total' => Client::forUser($user)->count(),
             'particuliers' => Client::forUser($user)->particulier()->count(),
@@ -60,7 +61,7 @@ class ClientController extends Controller
     }
 
     /**
-     * Formulaire de création rapide
+     * Affiche le formulaire de création rapide d'un client
      */
     public function create()
     {
@@ -68,7 +69,7 @@ class ClientController extends Controller
     }
 
     /**
-     * Création d'un client
+     * Crée un nouveau client à partir du formulaire
      */
     public function store(Request $request)
     {
@@ -94,16 +95,17 @@ class ClientController extends Controller
             'email.email' => 'L\'adresse email n\'est pas valide.',
         ]);
 
-        // Gérer le checkbox is_active
+        // Par défaut, le client est actif si absent dans le formulaire (checkbox décochée)
         if (!isset($validated['is_active'])) {
             $validated['is_active'] = true;
         }
 
-        // Assigner le client à l'utilisateur connecté
+        // Associe le client à l'utilisateur connecté
         $validated['user_id'] = Auth::id();
 
         $client = Client::create($validated);
 
+        // Réponse AJAX pour création rapide
         if ($request->ajax()) {
             return response()->json([
                 'success' => true,
@@ -117,27 +119,32 @@ class ClientController extends Controller
     }
 
     /**
-     * Afficher un client avec ses statistiques
+     * Affiche le détail d'un client (avec stats, derniers devis/factures)
      */
     public function show(Client $client)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
+        // Vérifie droits d'accès à ce client
         if (!$this->canUserViewClient($user, $client)) {
             abort(403, 'Vous n\'avez pas accès à ce client.');
         }
 
+        // Précharge relations nécessaires
         $client->load(['quotes', 'invoices.payments', 'user']);
 
+        // Récupère statistiques
         $stats = $client->getStatistics();
 
+        // 5 derniers devis
         $recentQuotes = $client->quotes()
             ->with('user')
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get();
 
+        // 5 dernières factures
         $recentInvoices = $client->invoices()
             ->with(['user', 'payments'])
             ->orderBy('issued_at', 'desc')
@@ -148,13 +155,14 @@ class ClientController extends Controller
     }
 
     /**
-     * Formulaire d'édition
+     * Formulaire d'édition d'un client existant
      */
     public function edit(Client $client)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
+        // Vérifie droits de modification
         if (!$this->canUserEditClient($user, $client)) {
             abort(403, 'Vous n\'avez pas les droits pour modifier ce client.');
         }
@@ -163,13 +171,14 @@ class ClientController extends Controller
     }
 
     /**
-     * Mise à jour d'un client
+     * Met à jour les informations d'un client
      */
     public function update(Request $request, Client $client)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
+        // Vérifie droits de modification
         if (!$this->canUserEditClient($user, $client)) {
             abort(403, 'Vous n\'avez pas les droits pour modifier ce client.');
         }
@@ -191,6 +200,7 @@ class ClientController extends Controller
             'is_active' => 'boolean',
         ]);
 
+        // Détermine la valeur de is_active (checkbox)
         $validated['is_active'] = $request->has('is_active');
 
         $client->update($validated);
@@ -200,17 +210,19 @@ class ClientController extends Controller
     }
 
     /**
-     * Suppression d'un client
+     * Suppression définitive d'un client (si aucun devis/facture associé)
      */
     public function destroy(Client $client)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
+        // Vérifie droits de suppression
         if (!$this->canUserDeleteClient($user, $client)) {
             abort(403, 'Vous n\'avez pas les droits pour supprimer ce client.');
         }
 
+        // Interdit suppression si devis/factures associés
         if ($client->quotes()->count() > 0 || $client->invoices()->count() > 0) {
             return back()->with('error', 'Impossible de supprimer ce client car il a des devis ou factures associés.');
         }
@@ -222,7 +234,7 @@ class ClientController extends Controller
     }
 
     /**
-     * API : Recherche de clients (pour autocomplete)
+     * API : recherche AJAX des clients actifs pour l'autocomplete
      */
     public function search(Request $request)
     {
@@ -230,7 +242,8 @@ class ClientController extends Controller
         $user = Auth::user();
 
         $search = $request->get('q', '');
-        
+
+        // Recherche max 10 clients actifs de l'utilisateur
         $clients = Client::forUser($user)
             ->active()
             ->search($search)
@@ -251,7 +264,7 @@ class ClientController extends Controller
     }
 
     /**
-     * Historique complet du client
+     * Historique complet du client (tous devis et factures)
      */
     public function history(Client $client)
     {
@@ -262,11 +275,13 @@ class ClientController extends Controller
             abort(403);
         }
 
+        // Tous les devis
         $quotes = $client->quotes()
             ->with('user')
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Toutes les factures
         $invoices = $client->invoices()
             ->with(['user', 'payments'])
             ->orderBy('issued_at', 'desc')
@@ -276,7 +291,7 @@ class ClientController extends Controller
     }
 
     /**
-     * Export des meilleurs clients (admin uniquement)
+     * Top clients : export ranking (réservé à l'admin)
      */
     public function topClients(Request $request)
     {
@@ -287,6 +302,7 @@ class ClientController extends Controller
             abort(403);
         }
 
+        // Nombre de clients à extraire (par défaut 20)
         $limit = $request->get('limit', 20);
         $topClients = Client::getTopClients($limit);
 
@@ -294,7 +310,7 @@ class ClientController extends Controller
     }
 
     /**
-     * Liste des clients avec factures en retard
+     * Liste les clients ayant des factures en retard (admin & manager)
      */
     public function withOverdueInvoices()
     {
@@ -305,49 +321,44 @@ class ClientController extends Controller
             abort(403);
         }
 
+        // Retourne la liste directement fournie par la méthode modèle
         $clientsWithOverdue = Client::getClientsWithOverdueInvoices();
 
         return view('clients.overdue', compact('clientsWithOverdue'));
     }
 
-    // =====================================
-    // MÉTHODES PRIVÉES DE VÉRIFICATION
-    // =====================================
-
+    /**
+     * Vérifie si l'utilisateur a accès à ce client
+     */
     private function canUserViewClient($user, $client): bool
     {
-        if ($user->isAdministrateur()) {
-            return true;
-        }
-
+        if ($user->isAdministrateur()) return true;
         if ($user->isManager()) {
             return $client->user_id === $user->id 
                 || ($client->user && $client->user->manager_id === $user->id);
         }
-
         return $client->user_id === $user->id;
     }
 
+    /**
+     * Vérifie droits d'édition
+     */
     private function canUserEditClient($user, $client): bool
     {
-        if ($user->isAdministrateur()) {
-            return true;
-        }
-
+        if ($user->isAdministrateur()) return true;
         if ($user->isManager()) {
             return $client->user_id === $user->id 
                 || ($client->user && $client->user->manager_id === $user->id);
         }
-
         return $client->user_id === $user->id;
     }
 
+    /**
+     * Vérifie droits de suppression
+     */
     private function canUserDeleteClient($user, $client): bool
     {
-        if ($user->isAdministrateur()) {
-            return true;
-        }
-
+        if ($user->isAdministrateur()) return true;
         return $client->user_id === $user->id;
     }
 }

@@ -13,7 +13,7 @@ class ClientSeeder extends Seeder
     {
         $faker = Faker::create('fr_FR');
 
-        // Récupérer TOUS les utilisateurs actifs (y compris admin)
+        // Récupérer tous les utilisateurs actifs (y compris admin)
         $users = User::where('is_active', true)->get();
 
         if ($users->isEmpty()) {

@@ -1,8 +1,10 @@
 // Calculateur dynamique pour les états des lieux
-// À intégrer dans quotes/create.blade.php et quotes/edit.blade.php
 
+/**
+ * Initialise le modal et les écouteurs d'événements pour le calculateur "État des lieux".
+ */
 function initEtatDesLieuxCalculator() {
-    // Modal HTML
+    // HTML du modal "Calculateur"
     const modalHTML = `
         <div id="edl-calculator-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full z-50">
             <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-lg bg-white">
@@ -14,9 +16,8 @@ function initEtatDesLieuxCalculator() {
                         </svg>
                     </button>
                 </div>
-
                 <div class="mt-4 space-y-4">
-                    <!-- Type de bien -->
+                    <!-- Saisie du type de bien -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Type de bien *</label>
                         <select id="edl-type-bien" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
@@ -26,8 +27,7 @@ function initEtatDesLieuxCalculator() {
                             <option value="local">Local professionnel (10€/m²)</option>
                         </select>
                     </div>
-
-                    <!-- Surface (pour appartement/maison) -->
+                    <!-- Saisie de la surface (appartement/maison) -->
                     <div id="edl-surface-section" class="hidden">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Surface *</label>
                         <select id="edl-surface" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
@@ -40,8 +40,7 @@ function initEtatDesLieuxCalculator() {
                             <option value="430" data-label="T5+ (>150m²)">T5+ (>150m²) - 430€</option>
                         </select>
                     </div>
-
-                    <!-- Surface en m² (pour local professionnel) -->
+                    <!-- Saisie de la surface en m2 (local professionnel) -->
                     <div id="edl-surface-m2-section" class="hidden">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Surface en m² *</label>
                         <input type="number" id="edl-surface-m2" min="1" step="1" 
@@ -49,16 +48,14 @@ function initEtatDesLieuxCalculator() {
                             placeholder="Ex: 80">
                         <p class="mt-1 text-xs text-gray-500">Tarif: 10€/m²</p>
                     </div>
-
-                    <!-- Meublé -->
+                    <!-- Saisie du meublé (option) -->
                     <div id="edl-meuble-section" class="hidden">
                         <label class="flex items-center">
                             <input type="checkbox" id="edl-meuble" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mr-2">
                             <span class="text-sm font-medium text-gray-700">Logement meublé (+55€)</span>
                         </label>
                     </div>
-
-                    <!-- Récapitulatif du calcul -->
+                    <!-- Affichage du récapitulatif de calcul -->
                     <div id="edl-recap" class="hidden mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
                         <h4 class="font-semibold text-indigo-900 mb-3">📊 Récapitulatif</h4>
                         <div class="space-y-2 text-sm">
@@ -81,7 +78,7 @@ function initEtatDesLieuxCalculator() {
                         </div>
                     </div>
                 </div>
-
+                <!-- Boutons d'action du modal -->
                 <div class="flex justify-end gap-3 mt-6 pt-4 border-t">
                     <button onclick="closeEDLCalculator()" 
                         class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium">
@@ -96,25 +93,34 @@ function initEtatDesLieuxCalculator() {
         </div>
     `;
 
-    // Injecter le modal dans le DOM
+    // Injecte le HTML du modal dans le body de la page
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-    // Event listeners
-    document.getElementById('edl-type-bien').addEventListener('change', updateEDLFields);
-    document.getElementById('edl-surface').addEventListener('change', calculateEDL);
-    document.getElementById('edl-surface-m2').addEventListener('input', calculateEDL);
-    document.getElementById('edl-meuble').addEventListener('change', calculateEDL);
+    // Ajoute les écouteurs pour les changements de saisie
+    document.getElementById('edl-type-bien').addEventListener('change', updateEDLFields);     // Choix du type
+    document.getElementById('edl-surface').addEventListener('change', calculateEDL);          // Choix de surface appartement/maison
+    document.getElementById('edl-surface-m2').addEventListener('input', calculateEDL);        // Surface saisie pour local pro
+    document.getElementById('edl-meuble').addEventListener('change', calculateEDL);           // Option meublé
 }
 
+/**
+ * Affiche le modal et remet le calculateur à zéro.
+ */
 function openEDLCalculator() {
     document.getElementById('edl-calculator-modal').classList.remove('hidden');
     resetEDLCalculator();
 }
 
+/**
+ * Cache/Ferme le modal.
+ */
 function closeEDLCalculator() {
     document.getElementById('edl-calculator-modal').classList.add('hidden');
 }
 
+/**
+ * Réinitialise tous les champs et cache toutes les sections du calculateur.
+ */
 function resetEDLCalculator() {
     document.getElementById('edl-type-bien').value = '';
     document.getElementById('edl-surface').value = '';
@@ -127,28 +133,37 @@ function resetEDLCalculator() {
     document.getElementById('edl-recap').classList.add('hidden');
 }
 
+/**
+ * Affiche/masque dynamiquement les champs en fonction du type de bien choisi.
+ */
 function updateEDLFields() {
     const typeBien = document.getElementById('edl-type-bien').value;
     
-    // Reset
+    // Masque tous les sous-formulaires au départ
     document.getElementById('edl-surface-section').classList.add('hidden');
     document.getElementById('edl-surface-m2-section').classList.add('hidden');
     document.getElementById('edl-meuble-section').classList.add('hidden');
     document.getElementById('edl-recap').classList.add('hidden');
     
     if (typeBien === 'appartement' || typeBien === 'maison') {
+        // Affiche le choix de la surface et case à cocher "meublé"
         document.getElementById('edl-surface-section').classList.remove('hidden');
         document.getElementById('edl-meuble-section').classList.remove('hidden');
     } else if (typeBien === 'local') {
+        // Affiche uniquement la saisie "surface en m2"
         document.getElementById('edl-surface-m2-section').classList.remove('hidden');
     }
-    
+    // Recopie pour déclencher l'affichage du récap si tout est ok
     calculateEDL();
 }
 
+/**
+ * Réalise tous les calculs de prix et met à jour le récapitulatif du modal.
+ */
 function calculateEDL() {
     const typeBien = document.getElementById('edl-type-bien').value;
     
+    // Si aucun type de bien n'est choisi, on masque le récapitulatif
     if (!typeBien) {
         document.getElementById('edl-recap').classList.add('hidden');
         return;
@@ -157,6 +172,7 @@ function calculateEDL() {
     let basePrice = 0;
     let description = 'État des lieux';
     
+    // Cas local professionnel : calcul selon surface saisie
     if (typeBien === 'local') {
         const surfaceM2 = parseFloat(document.getElementById('edl-surface-m2').value) || 0;
         if (surfaceM2 > 0) {
@@ -174,7 +190,7 @@ function calculateEDL() {
         return;
     }
     
-    // Appartement ou Maison
+    // Cas appartement/maison
     const surfaceSelect = document.getElementById('edl-surface');
     const selectedOption = surfaceSelect.options[surfaceSelect.selectedIndex];
     
@@ -183,13 +199,14 @@ function calculateEDL() {
         return;
     }
     
+    // Prix de base selon surface
     basePrice = parseFloat(surfaceSelect.value);
     const surfaceLabel = selectedOption.getAttribute('data-label');
     description = `État des lieux - ${surfaceLabel}`;
     
     let totalPrice = basePrice;
     
-    // Supplément maison
+    // Ajoute le supplément maison si besoin (+80€)
     if (typeBien === 'maison') {
         totalPrice += 80;
         description += ' (Maison)';
@@ -198,7 +215,7 @@ function calculateEDL() {
         document.getElementById('edl-maison-line').classList.add('hidden');
     }
     
-    // Supplément meublé
+    // Ajoute le supplément meublé si coché (+55€)
     const meuble = document.getElementById('edl-meuble').checked;
     if (meuble) {
         totalPrice += 55;
@@ -208,14 +225,19 @@ function calculateEDL() {
         document.getElementById('edl-meuble-line').classList.add('hidden');
     }
     
+    // Affiche les prix dans le récap
     document.getElementById('edl-base-price').textContent = formatPrice(basePrice);
     document.getElementById('edl-total-price').textContent = formatPrice(totalPrice);
     document.getElementById('edl-recap').classList.remove('hidden');
 }
 
+/**
+ * Ajoute la ligne calculée au devis courant, affiche un message temporaire, puis ferme le modal.
+ */
 function addEDLToQuote() {
     const typeBien = document.getElementById('edl-type-bien').value;
     
+    // Validation : type requis
     if (!typeBien) {
         alert('Veuillez sélectionner un type de bien');
         return;
@@ -224,6 +246,7 @@ function addEDLToQuote() {
     let description = '';
     let price = 0;
     
+    // Si local professionnel
     if (typeBien === 'local') {
         const surfaceM2 = parseFloat(document.getElementById('edl-surface-m2').value) || 0;
         if (surfaceM2 <= 0) {
@@ -233,6 +256,7 @@ function addEDLToQuote() {
         description = `État des lieux - Local professionnel (${surfaceM2}m²)`;
         price = surfaceM2 * 10;
     } else {
+        // Si appartement/maison
         const surfaceSelect = document.getElementById('edl-surface');
         if (!surfaceSelect.value) {
             alert('Veuillez sélectionner une surface');
@@ -246,11 +270,12 @@ function addEDLToQuote() {
         description = `État des lieux - ${surfaceLabel}`;
         price = basePrice;
         
+        // Ajoute supplément maison si applicale
         if (typeBien === 'maison') {
             price += 80;
             description += '\nSupplément maison: +80€';
         }
-        
+        // Ajoute supplément meublé si coché
         const meuble = document.getElementById('edl-meuble').checked;
         if (meuble) {
             price += 55;
@@ -258,13 +283,13 @@ function addEDLToQuote() {
         }
     }
     
-    // Ajouter la ligne au devis
+    // Ajoute la ligne au devis (fonction externe à ce script)
     addLine(description, 1, price, 20);
     
-    // Fermer le modal
+    // Ferme le modal
     closeEDLCalculator();
     
-    // Message de confirmation visuelle
+    // Affiche un message visuel de confirmation durant 3 secondes
     const message = document.createElement('div');
     message.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
     message.textContent = '✅ État des lieux ajouté au devis';
@@ -275,6 +300,11 @@ function addEDLToQuote() {
     }, 3000);
 }
 
+/**
+ * Formate un montant en euros (français, 2 décimales)
+ * @param {number} amount 
+ * @returns {string}
+ */
 function formatPrice(amount) {
     return new Intl.NumberFormat('fr-FR', {
         style: 'currency',
@@ -282,7 +312,7 @@ function formatPrice(amount) {
     }).format(amount);
 }
 
-// Initialiser au chargement du DOM
+// Initialise le calculateur au chargement du DOM
 document.addEventListener('DOMContentLoaded', function() {
     initEtatDesLieuxCalculator();
 });

@@ -24,16 +24,25 @@ class CommunicationOrderItem extends Model
         'subtotal' => 'decimal:2',
     ];
 
+    /**
+     * Récupère la commande associée à cet item.
+     */
     public function order(): BelongsTo
     {
         return $this->belongsTo(CommunicationOrder::class, 'order_id');
     }
 
+    /**
+     * Récupère le produit associé à cet item.
+     */
     public function product(): BelongsTo
     {
         return $this->belongsTo(CommunicationProduct::class, 'product_id');
     }
 
+    /**
+     * Méthode appelée lors du boot du modèle pour définir les événements.
+     */
     protected static function booted()
     {
         static::creating(function ($item) {

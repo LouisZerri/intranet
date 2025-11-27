@@ -130,7 +130,7 @@ class TeamController extends Controller
 
         // Construire la requête de base selon le rôle
         if ($user->isAdministrateur()) {
-            // ADMIN : Voit absolument TOUT
+            // L'administrateur voit tout
             $baseQuery = User::query();
 
             $stats = [
@@ -141,14 +141,14 @@ class TeamController extends Controller
                 'collaborateurs' => User::where('role', 'collaborateur')->count(),
             ];
         } elseif ($user->isManager()) {
-            // MANAGER : Voit son équipe directe + tous les utilisateurs des départements gérés
+            // Le manager voit son équipe directe + tous les utilisateurs des départements gérés
             $baseQuery = User::where(function ($query) use ($user) {
                 // Équipe directe (tous ceux dont il est le manager)
                 $query->where('manager_id', $user->id);
 
                 // + Utilisateurs des départements gérés
                 if ($user->managesAllDepartments()) {
-                    // Si gère tous les départements : TOUS les autres utilisateurs
+                    // Si il gère tous les départements : tous les autres utilisateurs
                     $query->orWhere('id', '!=', $user->id);
                 } elseif ($user->managed_departments && count($user->managed_departments) > 0) {
                     // Si gère des départements spécifiques : utilisateurs de ces départements
@@ -171,7 +171,7 @@ class TeamController extends Controller
                 'collaborateurs' => $collaborateursQuery->where('role', 'collaborateur')->count(),
             ];
         } else {
-            // COLLABORATEUR : Voit uniquement son équipe (ses collègues avec le même manager)
+            // Le collaborateur voit uniquement son équipe (ses collègues avec le même manager)
             $baseQuery = User::where('manager_id', $user->manager_id)
                 ->where('id', '!=', $user->id);
 
@@ -539,7 +539,7 @@ class TeamController extends Controller
     /**
      * Vérifier si l'utilisateur peut modifier ce membre d'équipe
      */
-    private function canUserEdit($user, $teamMember): bool
+    private function canUserEdit($user): bool
     {
         return $user->isAdministrateur();
     }

@@ -19,7 +19,7 @@ class CandidateController extends Controller
     }
 
     /**
-     * Vérifier que l'utilisateur est manager ou admin
+     * Vérifie que l'utilisateur est manager ou administrateur, sinon 403
      */
     private function checkAccess()
     {
@@ -32,7 +32,7 @@ class CandidateController extends Controller
     }
 
     /**
-     * Liste des types de documents pour la validation
+     * Retourne les règles de validation pour les documents
      */
     private function getDocumentValidationRules(): array
     {
@@ -51,7 +51,7 @@ class CandidateController extends Controller
     }
 
     /**
-     * Noms des fichiers pour Google Drive
+     * Construit le nom du fichier envoyé sur Google Drive
      */
     private function getDocumentFileName(string $type, Candidate|array $candidate, string $extension): string
     {
@@ -76,14 +76,14 @@ class CandidateController extends Controller
     }
 
     /**
-     * Upload tous les documents d'un candidat sur Google Drive
+     * Gère l'upload des documents d'un candidat sur Google Drive
      */
     private function uploadDocuments(Request $request, array &$validated, ?Candidate $candidate = null): void
     {
         $documentTypes = array_keys($this->getDocumentValidationRules());
         $hasFiles = false;
 
-        // Vérifier s'il y a des fichiers à uploader
+        // Détecte si au moins un fichier est à uploader
         foreach ($documentTypes as $type) {
             if ($request->hasFile($type)) {
                 $hasFiles = true;
@@ -95,16 +95,14 @@ class CandidateController extends Controller
             return;
         }
 
-        // Construire le nom du candidat
         $candidateName = $validated['first_name'] . ' ' . $validated['last_name'];
 
-        // Récupérer ou créer le dossier Google Drive
+        // Récupère ou crée le dossier Drive du candidat
         $folderId = $candidate?->google_drive_folder_id 
             ?? $this->googleDrive->getOrCreateCandidateFolder($candidateName);
         
         $validated['google_drive_folder_id'] = $folderId;
 
-        // Upload chaque document
         foreach ($documentTypes as $type) {
             if ($request->hasFile($type)) {
                 $file = $request->file($type);
@@ -117,7 +115,7 @@ class CandidateController extends Controller
                 $pathField = $docTypes[$type]['path_field'];
                 $linkField = $docTypes[$type]['link_field'];
 
-                // Supprimer l'ancien fichier si existant
+                // Supprime l'ancien fichier le cas échéant
                 if ($candidate && $candidate->$pathField) {
                     try {
                         $this->googleDrive->deleteFile($candidate->$pathField);
@@ -126,7 +124,6 @@ class CandidateController extends Controller
                     }
                 }
 
-                // Upload le nouveau fichier
                 $fileName = $this->getDocumentFileName(
                     $type, 
                     $validated, 
@@ -142,7 +139,7 @@ class CandidateController extends Controller
     }
 
     /**
-     * Liste des candidats
+     * Affiche la liste des candidats, avec filtres et stats
      */
     public function index(Request $request)
     {
@@ -150,7 +147,7 @@ class CandidateController extends Controller
 
         $query = Candidate::with(['creator', 'recruiter']);
 
-        // Filtres
+        // Gestion des filtres de recherche
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -169,7 +166,7 @@ class CandidateController extends Controller
             $query->where('department', $request->department);
         }
 
-        // Statistiques
+        // Calcul rapide des statistiques principales
         $stats = [
             'total' => Candidate::count(),
             'new' => Candidate::where('status', 'new')->count(),
@@ -191,7 +188,7 @@ class CandidateController extends Controller
     }
 
     /**
-     * Formulaire de création
+     * Page de formulaire de création
      */
     public function create()
     {
@@ -209,7 +206,7 @@ class CandidateController extends Controller
     }
 
     /**
-     * Enregistrer un nouveau candidat
+     * Traite la création d'un candidat
      */
     public function store(Request $request)
     {
@@ -230,12 +227,12 @@ class CandidateController extends Controller
             'notes' => 'nullable|string|max:5000',
         ];
 
-        // Ajouter les règles de validation des documents
+        // Ajoute règles documents
         $rules = array_merge($rules, $this->getDocumentValidationRules());
 
         $validated = $request->validate($rules);
 
-        // Upload des documents sur Google Drive
+        // Gère upload Google Drive
         try {
             $this->uploadDocuments($request, $validated);
         } catch (\Exception $e) {
@@ -246,7 +243,7 @@ class CandidateController extends Controller
         $validated['created_by'] = Auth::id();
         $validated['status'] = 'new';
 
-        // Supprimer les fichiers du tableau validated (ils ne vont pas en BDD)
+        // Supprime les fichiers du tableau validated (ne vont pas en bdd)
         foreach (array_keys($this->getDocumentValidationRules()) as $type) {
             unset($validated[$type]);
         }
@@ -257,7 +254,7 @@ class CandidateController extends Controller
     }
 
     /**
-     * Afficher un candidat
+     * Affiche le détail d'un candidat
      */
     public function show(Candidate $candidate)
     {
@@ -270,7 +267,7 @@ class CandidateController extends Controller
     }
 
     /**
-     * Formulaire d'édition
+     * Page de formulaire d'édition
      */
     public function edit(Candidate $candidate)
     {
@@ -288,7 +285,7 @@ class CandidateController extends Controller
     }
 
     /**
-     * Mettre à jour un candidat
+     * Traite la mise à jour d'un candidat
      */
     public function update(Request $request, Candidate $candidate)
     {
@@ -317,20 +314,19 @@ class CandidateController extends Controller
             'decision_date' => 'nullable|date',
         ];
 
-        // Ajouter les règles de validation des documents
+        // Ajoute règles documents
         $rules = array_merge($rules, $this->getDocumentValidationRules());
 
         $validated = $request->validate($rules);
 
-        // Upload des documents sur Google Drive
+        // Gère upload Google Drive
         try {
             $this->uploadDocuments($request, $validated, $candidate);
         } catch (\Exception $e) {
-            Log::error('Erreur Google Drive lors de la mise à jour du candidat: ' . $e->getMessage());
             return back()->withInput()->with('error', 'Erreur lors de l\'upload des fichiers sur Google Drive: ' . $e->getMessage());
         }
 
-        // Supprimer les fichiers du tableau validated
+        // Supprime les fichiers du tableau validated
         foreach (array_keys($this->getDocumentValidationRules()) as $type) {
             unset($validated[$type]);
         }
@@ -341,13 +337,13 @@ class CandidateController extends Controller
     }
 
     /**
-     * Supprimer un candidat
+     * Supprime un candidat et son dossier Google Drive
      */
     public function destroy(Candidate $candidate)
     {
         $this->checkAccess();
 
-        // Supprimer le dossier Google Drive du candidat
+        // Supprime le dossier Google Drive du candidat si présent
         try {
             if ($candidate->google_drive_folder_id) {
                 $this->googleDrive->deleteFolder($candidate->google_drive_folder_id);
@@ -362,7 +358,7 @@ class CandidateController extends Controller
     }
 
     /**
-     * Mettre à jour le statut rapidement
+     * Mise à jour rapide du statut (ajax ou non)
      */
     public function updateStatus(Request $request, Candidate $candidate)
     {
@@ -386,7 +382,7 @@ class CandidateController extends Controller
     }
 
     /**
-     * Liste des départements français
+     * Retourne la liste des départements français
      */
     private function getDepartementsFrancais(): array
     {

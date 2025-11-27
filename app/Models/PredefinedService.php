@@ -30,34 +30,41 @@ class PredefinedService extends Model
         'sort_order' => 'integer',
     ];
 
-    // =====================================
-    // SCOPES
-    // =====================================
-
+    /**
+     * Scope: Sélectionne uniquement les prestations actives.
+     */
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
     }
 
+    /**
+     * Scope: Filtre les prestations par catégorie.
+     */
     public function scopeByCategory(Builder $query, string $category): Builder
     {
         return $query->where('category', $category);
     }
 
+    /**
+     * Scope: Permet d'ordonner les services selon sort_order puis par nom.
+     */
     public function scopeOrdered(Builder $query): Builder
     {
         return $query->orderBy('sort_order')->orderBy('name');
     }
 
-    // =====================================
-    // ACCESSEURS
-    // =====================================
-
+    /**
+     * Renvoie le prix formaté en euro (ex: 15,00 €).
+     */
     public function getFormattedPriceAttribute(): string
     {
         return number_format($this->default_price, 2, ',', ' ') . ' €';
     }
 
+    /**
+     * Retourne le label lisible (français) de la catégorie.
+     */
     public function getCategoryLabelAttribute(): string
     {
         return match($this->category) {
@@ -74,12 +81,8 @@ class PredefinedService extends Model
         };
     }
 
-    // =====================================
-    // MÉTHODES UTILITAIRES
-    // =====================================
-
     /**
-     * Liste des catégories disponibles
+     * Renvoie la liste des catégories disponibles pour les prestations prédéfinies.
      */
     public static function getCategories(): array
     {
@@ -97,7 +100,7 @@ class PredefinedService extends Model
     }
 
     /**
-     * Liste des unités disponibles
+     * Renvoie les unités disponibles pour les prestations prédéfinies.
      */
     public static function getUnits(): array
     {

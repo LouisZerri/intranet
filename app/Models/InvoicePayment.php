@@ -24,27 +24,25 @@ class InvoicePayment extends Model
         'payment_date' => 'datetime',
     ];
 
-    // =====================================
-    // RELATIONS
-    // =====================================
-
     /**
-     * Facture associée
+     * Relation avec la facture associée à ce paiement.
      */
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
     }
 
-    // =====================================
-    // ACCESSEURS
-    // =====================================
-
+    /**
+     * Renvoie le montant formaté en euro.
+     */
     public function getFormattedAmountAttribute(): string
     {
         return number_format($this->amount, 2, ',', ' ') . ' €';
     }
 
+    /**
+     * Renvoie le label lisible pour le mode de paiement.
+     */
     public function getPaymentMethodLabelAttribute(): string
     {
         return match($this->payment_method) {
@@ -57,16 +55,18 @@ class InvoicePayment extends Model
         };
     }
 
-    // =====================================
-    // SCOPES
-    // =====================================
-
+    /**
+     * Scope : paiements effectués ce mois-ci.
+     */
     public function scopeThisMonth($query)
     {
         return $query->whereMonth('payment_date', now()->month)
                     ->whereYear('payment_date', now()->year);
     }
 
+    /**
+     * Scope : paiements par mode de paiement.
+     */
     public function scopeByMethod($query, string $method)
     {
         return $query->where('payment_method', $method);

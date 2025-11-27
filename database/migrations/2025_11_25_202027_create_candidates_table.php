@@ -27,7 +27,8 @@ return new class extends Migration
             // CV et documents
             $table->string('cv_path')->nullable();
             $table->string('cover_letter_path')->nullable();
-             // Dossier Google Drive du candidat
+            
+            // Dossier Google Drive du candidat
             $table->string('google_drive_folder_id')->nullable();
             
             // Liens Google Drive pour chaque document

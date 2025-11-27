@@ -19,7 +19,7 @@ class CommunicationController extends Controller
     {
         $products = CommunicationProduct::active()
             ->orderBy('name')
-            ->paginate(12); // CORRECTION: paginate au lieu de get
+            ->paginate(12);
 
         return view('communication.index', compact('products'));
     }

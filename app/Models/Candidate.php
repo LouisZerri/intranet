@@ -20,14 +20,11 @@ class Candidate extends Model
         'position_applied',
         'desired_location',
         'available_from',
-        // Documents existants
         'cv_path',
         'cover_letter_path',
-        // Google Drive
         'google_drive_folder_id',
         'cv_drive_link',
         'cover_letter_drive_link',
-        // Nouveaux documents
         'identity_card_path',
         'identity_card_drive_link',
         'proof_of_address_path',
@@ -44,7 +41,6 @@ class Candidate extends Model
         'rib_drive_link',
         'training_certificate_path',
         'training_certificate_drive_link',
-        // Évaluations
         'rating_motivation',
         'rating_seriousness',
         'rating_experience',
@@ -209,37 +205,57 @@ class Candidate extends Model
         return $count;
     }
 
-    // Méthodes de compatibilité pour CV et lettre de motivation
+    /**
+     * Vérifie si le CV du candidat a été uploadé.
+     */
     public function hasCv(): bool
     {
         return $this->hasDocument('cv');
     }
 
+    /**
+     * Vérifie si la lettre de motivation du candidat a été uploadée.
+     */
     public function hasCoverLetter(): bool
     {
         return $this->hasDocument('cover_letter');
     }
 
+    /**
+     * Accesseur pour l'URL du CV du candidat.
+     */
     public function getCvUrlAttribute(): ?string
     {
         return $this->getDocumentUrl('cv');
     }
 
+    /**
+     * Accesseur pour l'URL de la lettre de motivation du candidat.
+     */
     public function getCoverLetterUrlAttribute(): ?string
     {
         return $this->getDocumentUrl('cover_letter');
     }
 
+    /**
+     * Renvoie le nom complet du candidat.
+     */
     public function getFullNameAttribute(): string
     {
         return $this->first_name . ' ' . $this->last_name;
     }
 
+    /**
+     * Renvoie les initiales du candidat.
+     */
     public function getInitialsAttribute(): string
     {
         return strtoupper(substr($this->first_name, 0, 1) . substr($this->last_name, 0, 1));
     }
 
+    /**
+     * Calcule la note moyenne du candidat.
+     */
     public function getAverageRatingAttribute(): ?float
     {
         $ratings = array_filter([
@@ -256,6 +272,9 @@ class Candidate extends Model
         return round(array_sum($ratings) / count($ratings), 1);
     }
 
+    /**
+     * Renvoie le libellé du statut du candidat.
+     */
     public function getStatusLabelAttribute(): string
     {
         return match($this->status) {
@@ -269,6 +288,9 @@ class Candidate extends Model
         };
     }
 
+    /**
+     * Renvoie la couleur associée au statut du candidat.
+     */
     public function getStatusColorAttribute(): string
     {
         return match($this->status) {
@@ -282,16 +304,25 @@ class Candidate extends Model
         };
     }
 
+    /**
+     * Relation avec l'utilisateur créateur de la candidature.
+     */
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * Relation avec le recruteur assigné à la candidature.
+     */
     public function recruiter()
     {
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
+    /**
+     * Relation avec l'utilisateur créé à partir du candidat.
+     */
     public function convertedUser()
     {
         return $this->belongsTo(User::class, 'converted_to_user_id');

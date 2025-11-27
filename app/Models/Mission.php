@@ -13,7 +13,7 @@ class Mission extends Model
     use HasFactory;
 
     protected $fillable = [
-        'quote_id', // NOUVEAU : Lien vers le devis d'origine
+        'quote_id',
         'title',
         'description',
         'status',
@@ -39,7 +39,9 @@ class Mission extends Model
         'completed_at' => 'datetime',
     ];
 
-    // Catégories et sous-catégories de missions
+    /**
+     * Retourne la liste des catégories disponibles pour les missions.
+     */
     public static function getCategories(): array
     {
         return [
@@ -49,6 +51,9 @@ class Mission extends Model
         ];
     }
 
+    /**
+     * Retourne la liste des sous-catégories, classées par catégorie.
+     */
     public static function getSubcategories(): array
     {
         return [
@@ -85,31 +90,41 @@ class Mission extends Model
         ];
     }
 
-    // Relations
+    /**
+     * Relation avec l'utilisateur assigné à la mission.
+     */
     public function assignedUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
+    /**
+     * Relation avec le créateur de la mission.
+     */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * Relation avec le manager de la mission.
+     */
     public function manager(): BelongsTo
     {
         return $this->belongsTo(User::class, 'manager_id');
     }
 
     /**
-     * NOUVEAU : Relation avec le devis d'origine
+     * Relation avec le devis lié à la mission.
      */
     public function quote(): BelongsTo
     {
         return $this->belongsTo(Quote::class);
     }
 
-    // Scopes
+    /**
+     * Scope : filtre la requête pour afficher les missions accessibles à l'utilisateur donné.
+     */
     public function scopeForUser(Builder $query, User $user): Builder
     {
         if ($user->isAdministrateur()) {
@@ -133,36 +148,54 @@ class Mission extends Model
         });
     }
 
+    /**
+     * Scope : missions en cours (en attente ou en cours).
+     */
     public function scopeInProgress(Builder $query): Builder
     {
         return $query->whereIn('status', ['en_attente', 'en_cours']);
     }
 
+    /**
+     * Scope : missions terminées.
+     */
     public function scopeCompleted(Builder $query): Builder
     {
         return $query->where('status', 'termine');
     }
 
+    /**
+     * Scope : missions en retard (échéance dépassée et non terminée/annulée).
+     */
     public function scopeOverdue(Builder $query): Builder
     {
         return $query->where('due_date', '<', now())
                     ->whereNotIn('status', ['termine', 'annule']);
     }
 
-    public function scopeByCategory(Builder $query, string $category = null): Builder
+    /**
+     * Scope : filtre par catégorie si $category n'est pas null.
+     */
+    public function scopeByCategory(Builder $query, ?string $category = null): Builder
     {
-        if ($category) {
+        if ($category !== null) {
             return $query->where('category', $category);
         }
         return $query;
     }
 
+    /**
+     * Scope : missions créées ce mois-ci.
+     */
     public function scopeThisMonth(Builder $query): Builder
     {
         return $query->whereMonth('created_at', now()->month)
                     ->whereYear('created_at', now()->year);
     }
 
+    /**
+     * Scope : missions terminées ce mois-ci.
+     */
     public function scopeCompletedThisMonth(Builder $query): Builder
     {
         return $query->where('status', 'termine')
@@ -170,12 +203,15 @@ class Mission extends Model
                     ->whereYear('completed_at', now()->year);
     }
 
-    public function scopeByPriority(Builder $query, string $priority = null): Builder
+    /**
+     * Scope : filtre par priorité, sinon retourne le trié par priorité.
+     */
+    public function scopeByPriority(Builder $query, ?string $priority = null): Builder
     {
-        if ($priority) {
+        if ($priority !== null) {
             return $query->where('priority', $priority);
         }
-        
+
         return $query->orderByRaw("
             CASE priority 
                 WHEN 'urgente' THEN 1 
@@ -186,20 +222,27 @@ class Mission extends Model
         ");
     }
 
-    // Accesseurs pour les catégories
+    /**
+     * Retourne le label de la catégorie.
+     */
     public function getCategoryLabelAttribute(): string
     {
         $categories = self::getCategories();
         return $categories[$this->category] ?? 'Non défini';
     }
 
+    /**
+     * Retourne le label de la sous-catégorie.
+     */
     public function getSubcategoryLabelAttribute(): string
     {
         $subcategories = self::getSubcategories();
         return $subcategories[$this->category][$this->subcategory] ?? 'Non défini';
     }
 
-    // Méthodes utilitaires
+    /**
+     * Indique si la mission est en retard (échéance passée et pas terminée/annulée).
+     */
     public function isOverdue(): bool
     {
         return $this->due_date && 
@@ -207,11 +250,17 @@ class Mission extends Model
                !in_array($this->status, ['termine', 'annule']);
     }
 
+    /**
+     * Indique si la mission est terminée.
+     */
     public function isCompleted(): bool
     {
         return $this->status === 'termine';
     }
 
+    /**
+     * Retourne le nombre de jours restant jusqu'à l'échéance.
+     */
     public function getDaysUntilDue(): int
     {
         if (!$this->due_date) {
@@ -222,6 +271,9 @@ class Mission extends Model
         return (int) round($days);
     }
 
+    /**
+     * Retourne un texte lisible sur le temps restant/retard avant l'échéance.
+     */
     public function getDueStatusAttribute(): string
     {
         if (!$this->due_date) {
@@ -242,6 +294,9 @@ class Mission extends Model
         }
     }
 
+    /**
+     * Code couleur de l'échéance en fonction de l'urgence/retard.
+     */
     public function getDueColorAttribute(): string
     {
         if (!$this->due_date) {
@@ -261,6 +316,9 @@ class Mission extends Model
         }
     }
 
+    /**
+     * Retourne le pourcentage d'avancement selon le status.
+     */
     public function getProgressPercentage(): int
     {
         return match($this->status) {
@@ -273,6 +331,9 @@ class Mission extends Model
         };
     }
 
+    /**
+     * Retourne le label du status de la mission.
+     */
     public function getStatusLabelAttribute(): string
     {
         return match($this->status) {
@@ -285,6 +346,9 @@ class Mission extends Model
         };
     }
 
+    /**
+     * Retourne la couleur associée au status de la mission.
+     */
     public function getStatusColorAttribute(): string
     {
         return match($this->status) {
@@ -297,6 +361,9 @@ class Mission extends Model
         };
     }
 
+    /**
+     * Retourne le label de la priorité.
+     */
     public function getPriorityLabelAttribute(): string
     {
         return match($this->priority) {
@@ -308,6 +375,9 @@ class Mission extends Model
         };
     }
 
+    /**
+     * Retourne la couleur associée à la priorité.
+     */
     public function getPriorityColorAttribute(): string
     {
         return match($this->priority) {
@@ -319,7 +389,9 @@ class Mission extends Model
         };
     }
 
-    // Méthodes pour les KPI
+    /**
+     * Calcule la somme totale du chiffre d'affaires de l'équipe manager sur la période donnée.
+     */
     public static function getTeamRevenue(User $manager, ?Carbon $startDate = null, ?Carbon $endDate = null): float
     {
         $query = self::whereHas('assignedUser', function ($q) use ($manager) {
@@ -339,6 +411,9 @@ class Mission extends Model
         return $query->sum('revenue') ?? 0;
     }
 
+    /**
+     * Retourne le taux de missions terminées pour un utilisateur sur une période.
+     */
     public static function getCompletionRate(User $user, ?Carbon $startDate = null, ?Carbon $endDate = null): float
     {
         $baseQuery = self::where('assigned_to', $user->id);
@@ -357,7 +432,9 @@ class Mission extends Model
         return $total > 0 ? round(($completed / $total) * 100, 2) : 0;
     }
 
-    // Événements du modèle
+    /**
+     * Hook Eloquent : met à jour les statuts automatiquement lors d'une modification.
+     */
     protected static function booted()
     {
         static::updating(function ($mission) {

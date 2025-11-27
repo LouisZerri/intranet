@@ -9,22 +9,17 @@ use Illuminate\Support\Facades\Storage;
 
 class AdminCommunicationController extends Controller
 {
-    // =====================================
-    // GESTION DES PRODUITS
-    // =====================================
-
     /**
-     * Afficher la liste des produits
+     * Liste paginée des produits de communication
      */
     public function products()
     {
         $products = CommunicationProduct::orderBy('created_at', 'desc')->paginate(15);
-        
         return view('admin.communication.products.index', compact('products'));
     }
 
     /**
-     * Afficher le formulaire de création d'un produit
+     * Formulaire de création de produit
      */
     public function createProduct()
     {
@@ -32,7 +27,7 @@ class AdminCommunicationController extends Controller
     }
 
     /**
-     * Enregistrer un nouveau produit
+     * Création d'un nouveau produit (avec gestion d'image)
      */
     public function storeProduct(Request $request)
     {
@@ -46,15 +41,16 @@ class AdminCommunicationController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
-        // Gestion de l'upload d'image
+        // Upload image si présente
         if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('communication/products', 'public');
             $validated['image'] = $imagePath;
         }
 
+        // Checkbox HTML
         $validated['is_active'] = $request->has('is_active');
 
-        $product = CommunicationProduct::create($validated);
+        CommunicationProduct::create($validated);
 
         return redirect()
             ->route('admin.communication.products')
@@ -62,7 +58,7 @@ class AdminCommunicationController extends Controller
     }
 
     /**
-     * Afficher le formulaire d'édition d'un produit
+     * Formulaire d'édition de produit
      */
     public function editProduct(CommunicationProduct $product)
     {
@@ -70,7 +66,7 @@ class AdminCommunicationController extends Controller
     }
 
     /**
-     * Mettre à jour un produit
+     * Mise à jour d'un produit (et image si modifiée)
      */
     public function updateProduct(Request $request, CommunicationProduct $product)
     {
@@ -84,13 +80,12 @@ class AdminCommunicationController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
-        // Gestion de l'upload d'image
         if ($request->hasFile('image')) {
-            // Supprimer l'ancienne image si elle existe
+            // Suppression de l'ancienne image
             if ($product->image) {
                 Storage::disk('public')->delete($product->image);
             }
-            
+
             $imagePath = $request->file('image')->store('communication/products', 'public');
             $validated['image'] = $imagePath;
         }
@@ -105,18 +100,18 @@ class AdminCommunicationController extends Controller
     }
 
     /**
-     * Supprimer un produit
+     * Suppression d'un produit (interdit si utilisé dans des commandes)
      */
     public function destroyProduct(CommunicationProduct $product)
     {
-        // Vérifier si le produit a des commandes associées
+        // Refuse suppression si produit présent dans des commandes
         if ($product->orderItems()->exists()) {
             return redirect()
                 ->route('admin.communication.products')
                 ->with('error', 'Impossible de supprimer ce produit car il est utilisé dans des commandes');
         }
 
-        // Supprimer l'image si elle existe
+        // Suppression image disque si présente
         if ($product->image) {
             Storage::disk('public')->delete($product->image);
         }
@@ -128,24 +123,18 @@ class AdminCommunicationController extends Controller
             ->with('success', 'Produit supprimé avec succès');
     }
 
-    // =====================================
-    // GESTION DES COMMANDES
-    // =====================================
-
     /**
-     * Afficher la liste des commandes
+     * Liste paginée des commandes avec filtres basiques
      */
     public function orders(Request $request)
     {
         $query = CommunicationOrder::with(['user', 'items.product'])
             ->orderBy('ordered_at', 'desc');
 
-        // Filtrer par statut
+        // Filtres simples (statut & période)
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
-
-        // Filtrer par période
         if ($request->filled('period')) {
             switch ($request->period) {
                 case 'today':
@@ -163,7 +152,7 @@ class AdminCommunicationController extends Controller
 
         $orders = $query->paginate(20);
 
-        // Statistiques
+        // Stats globales pour panneau admin
         $stats = [
             'total_orders' => CommunicationOrder::count(),
             'pending_orders' => CommunicationOrder::where('status', 'en_attente')->count(),
@@ -179,7 +168,7 @@ class AdminCommunicationController extends Controller
     }
 
     /**
-     * Mettre à jour le statut d'une commande
+     * Changement du statut d'une commande (valide, expédié etc)
      */
     public function updateOrderStatus(Request $request, CommunicationOrder $order)
     {
@@ -193,28 +182,22 @@ class AdminCommunicationController extends Controller
             'notes' => $validated['notes'] ?? $order->notes
         ]);
 
-        // Log de l'activité (optionnel - à implémenter si nécessaire)
-        // ActivityLog::create([...]);
-
         return redirect()
             ->back()
             ->with('success', 'Statut de la commande mis à jour');
     }
 
     /**
-     * Afficher les détails d'une commande (optionnel)
+     * Détail d'une commande
      */
     public function showOrder(CommunicationOrder $order)
     {
         $order->load(['user', 'items.product']);
-        
         return view('admin.communication.orders.show', compact('order'));
     }
 
-
-
     /**
-     * Obtenir les statistiques globales (pour le dashboard)
+     * Statistiques globales pour dashboard
      */
     public function getStats()
     {
@@ -234,7 +217,7 @@ class AdminCommunicationController extends Controller
     }
 
     /**
-     * Gérer les alertes de stock faible
+     * Liste produits en stock faible (<=10)
      */
     public function lowStockAlert()
     {

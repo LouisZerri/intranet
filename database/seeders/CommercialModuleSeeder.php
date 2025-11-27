@@ -3,6 +3,12 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use App\Models\Client;
+use App\Models\Quote;
+use App\Models\Invoice;
+use App\Models\InvoicePayment;
+use App\Models\Mission;
+
 
 class CommercialModuleSeeder extends Seeder
 {
@@ -58,9 +64,9 @@ class CommercialModuleSeeder extends Seeder
         $this->command->info('═══════════════════════════════════════');
         
         // Clients
-        $clientsTotal = \App\Models\Client::count();
-        $clientsParticuliers = \App\Models\Client::where('type', 'particulier')->count();
-        $clientsProfessionnels = \App\Models\Client::where('type', 'professionnel')->count();
+        $clientsTotal = Client::count();
+        $clientsParticuliers = Client::where('type', 'particulier')->count();
+        $clientsProfessionnels = Client::where('type', 'professionnel')->count();
         
         $this->command->info("👥 Clients : {$clientsTotal}");
         $this->command->info("   • Particuliers : {$clientsParticuliers}");
@@ -68,12 +74,12 @@ class CommercialModuleSeeder extends Seeder
         $this->command->newLine();
 
         // Devis
-        $quotesTotal = \App\Models\Quote::count();
-        $quotesBrouillon = \App\Models\Quote::where('status', 'brouillon')->count();
-        $quotesEnvoye = \App\Models\Quote::where('status', 'envoye')->count();
-        $quotesAccepte = \App\Models\Quote::where('status', 'accepte')->count();
-        $quotesConverti = \App\Models\Quote::where('status', 'converti')->count();
-        $quotesRefuse = \App\Models\Quote::where('status', 'refuse')->count();
+        $quotesTotal = Quote::count();
+        $quotesBrouillon = Quote::where('status', 'brouillon')->count();
+        $quotesEnvoye = Quote::where('status', 'envoye')->count();
+        $quotesAccepte = Quote::where('status', 'accepte')->count();
+        $quotesConverti = Quote::where('status', 'converti')->count();
+        $quotesRefuse = Quote::where('status', 'refuse')->count();
         
         $this->command->info("📋 Devis : {$quotesTotal}");
         $this->command->info("   • Brouillon : {$quotesBrouillon}");
@@ -89,11 +95,11 @@ class CommercialModuleSeeder extends Seeder
         $this->command->newLine();
 
         // Factures
-        $invoicesTotal = \App\Models\Invoice::count();
-        $invoicesBrouillon = \App\Models\Invoice::where('status', 'brouillon')->count();
-        $invoicesEmise = \App\Models\Invoice::where('status', 'emise')->count();
-        $invoicesPayee = \App\Models\Invoice::where('status', 'payee')->count();
-        $invoicesRetard = \App\Models\Invoice::where('status', 'en_retard')->count();
+        $invoicesTotal = Invoice::count();
+        $invoicesBrouillon = Invoice::where('status', 'brouillon')->count();
+        $invoicesEmise = Invoice::where('status', 'emise')->count();
+        $invoicesPayee = Invoice::where('status', 'payee')->count();
+        $invoicesRetard = Invoice::where('status', 'en_retard')->count();
         
         $this->command->info("💰 Factures : {$invoicesTotal}");
         $this->command->info("   • Brouillon : {$invoicesBrouillon}");
@@ -103,8 +109,8 @@ class CommercialModuleSeeder extends Seeder
         $this->command->newLine();
 
         // Chiffres d'affaires
-        $caTotal = \App\Models\Invoice::where('status', 'payee')->sum('total_ht');
-        $caEnAttente = \App\Models\Invoice::whereIn('status', ['emise', 'en_retard'])->sum('total_ttc');
+        $caTotal = Invoice::where('status', 'payee')->sum('total_ht');
+        $caEnAttente = Invoice::whereIn('status', ['emise', 'en_retard'])->sum('total_ttc');
         
         $this->command->info("💵 Chiffre d'affaires :");
         $this->command->info("   • CA payé (HT) : " . number_format($caTotal, 2, ',', ' ') . " €");
@@ -112,15 +118,15 @@ class CommercialModuleSeeder extends Seeder
         $this->command->newLine();
 
         // Paiements
-        $paymentsCount = \App\Models\InvoicePayment::count();
-        $paymentsTotal = \App\Models\InvoicePayment::sum('amount');
+        $paymentsCount = InvoicePayment::count();
+        $paymentsTotal = InvoicePayment::sum('amount');
         
         $this->command->info("💳 Paiements : {$paymentsCount} enregistrement(s)");
         $this->command->info("   • Montant total : " . number_format($paymentsTotal, 2, ',', ' ') . " €");
         $this->command->newLine();
 
         // Missions créées depuis devis
-        $missionsFromQuotes = \App\Models\Mission::whereNotNull('quote_id')->count();
+        $missionsFromQuotes = Mission::whereNotNull('quote_id')->count();
         if ($missionsFromQuotes > 0) {
             $this->command->info("🎯 Missions créées automatiquement : {$missionsFromQuotes}");
             $this->command->newLine();

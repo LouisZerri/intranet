@@ -40,59 +40,89 @@ class Formation extends Model
         'is_active' => 'boolean',
     ];
 
-    // Relations
+    /**
+     * Récupère l'utilisateur créateur de la formation.
+     */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * Récupère toutes les demandes de formation.
+     */
     public function requests(): HasMany
     {
         return $this->hasMany(FormationRequest::class);
     }
 
+    /**
+     * Récupère les participants ayant terminé la formation.
+     */
     public function participants(): HasMany
     {
         return $this->hasMany(FormationRequest::class)->where('status', 'termine');
     }
 
+    /**
+     * Récupère tous les fichiers liés à la formation.
+     */
     public function files(): HasMany
     {
         return $this->hasMany(FormationFile::class);
     }
 
+    /**
+     * Récupère les fichiers publics liés à la formation.
+     */
     public function publicFiles(): HasMany
     {
         return $this->hasMany(FormationFile::class)->where('is_public', true);
     }
 
-    // Relations par type de fichier
+    /**
+     * Récupère les fichiers de type document.
+     */
     public function documents(): HasMany
     {
         return $this->files()->where('type', 'document');
     }
 
+    /**
+     * Récupère les fichiers de type vidéo.
+     */
     public function videos(): HasMany
     {
         return $this->files()->where('type', 'video');
     }
 
+    /**
+     * Récupère les fichiers de type audio.
+     */
     public function audios(): HasMany
     {
         return $this->files()->where('type', 'audio');
     }
 
+    /**
+     * Récupère les fichiers de type image.
+     */
     public function images(): HasMany
     {
         return $this->files()->where('type', 'image');
     }
 
-    // Scopes
+    /**
+     * Scope : ne récupérer que les formations actives.
+     */
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
     }
 
+    /**
+     * Scope : ne récupérer que les formations actives et récentes ou sans date de début.
+     */
     public function scopeAvailable(Builder $query): Builder
     {
         return $query->active()
@@ -102,17 +132,25 @@ class Formation extends Model
                     });
     }
 
+    /**
+     * Scope : filtrer par catégorie.
+     */
     public function scopeByCategory(Builder $query, string $category): Builder
     {
         return $query->where('category', $category);
     }
 
+    /**
+     * Scope : filtrer par niveau.
+     */
     public function scopeByLevel(Builder $query, string $level): Builder
     {
         return $query->where('level', $level);
     }
 
-    // Méthodes utilitaires
+    /**
+     * Retourne le nombre de places encore disponibles pour cette formation.
+     */
     public function getAvailablePlaces(): int
     {
         if (!$this->max_participants) {
@@ -123,11 +161,17 @@ class Formation extends Model
         return max(0, $this->max_participants - $registered);
     }
 
+    /**
+     * Vérifie si la formation est disponible.
+     */
     public function isAvailable(): bool
     {
         return $this->is_active && $this->getAvailablePlaces() > 0;
     }
 
+    /**
+     * Retourne le label du niveau de la formation.
+     */
     public function getLevelLabelAttribute(): string
     {
         return match($this->level) {
@@ -138,6 +182,9 @@ class Formation extends Model
         };
     }
 
+    /**
+     * Retourne le label du format de la formation.
+     */
     public function getFormatLabelAttribute(): string
     {
         return match($this->format) {
@@ -148,6 +195,9 @@ class Formation extends Model
         };
     }
 
+    /**
+     * Retourne la durée formatée de la formation.
+     */
     public function getDurationLabelAttribute(): string
     {
         if ($this->duration_hours == 0) return 'Durée non définie';
@@ -162,11 +212,17 @@ class Formation extends Model
         return $label;
     }
 
+    /**
+     * Indique si la formation possède au moins un fichier.
+     */
     public function hasFiles(): bool
     {
         return $this->files()->count() > 0;
     }
 
+    /**
+     * Retourne les fichiers de la formation groupés par type.
+     */
     public function getFilesByType(): array
     {
         $files = $this->files()->ordered()->get()->groupBy('type');
@@ -181,11 +237,17 @@ class Formation extends Model
         ];
     }
 
+    /**
+     * Calcule la taille totale des fichiers liés à la formation.
+     */
     public function getTotalFilesSize(): int
     {
         return $this->files()->sum('size');
     }
 
+    /**
+     * Accesseur : retourne la taille totale formatée.
+     */
     public function getFormattedTotalSizeAttribute(): string
     {
         $bytes = $this->getTotalFilesSize();
@@ -198,7 +260,9 @@ class Formation extends Model
         return round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
     }
 
-    // Méthodes pour les KPI
+    /**
+     * Retourne les formations les plus populaires (en fonction du nombre de participants).
+     */
     public static function getPopularFormations(int $limit = 5)
     {
         return self::withCount(['requests as participants_count' => function($query) {
@@ -209,6 +273,9 @@ class Formation extends Model
                     ->get();
     }
 
+    /**
+     * Retourne les statistiques par catégorie.
+     */
     public static function getCategoriesStats()
     {
         return self::selectRaw('category, count(*) as formations_count, sum(duration_hours) as total_hours')
@@ -218,7 +285,9 @@ class Formation extends Model
                    ->get();
     }
 
-    // Override delete pour supprimer les fichiers associés
+    /**
+     * Suppression de la formation et des fichiers associés.
+     */
     public function delete(): bool
     {
         // Supprimer tous les fichiers associés

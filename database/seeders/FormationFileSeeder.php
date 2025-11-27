@@ -141,7 +141,7 @@ class FormationFileSeeder extends Seeder
 
         $this->command->info('Création des fichiers de formation...');
 
-        foreach ($formations as $index => $formation) {
+        foreach ($formations as $formation) {
             // Créer le répertoire spécifique à la formation
             $formationDir = "formations/{$formation->id}/files";
             if (!Storage::disk('public')->exists($formationDir)) {

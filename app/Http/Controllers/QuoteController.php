@@ -16,21 +16,24 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class QuoteController extends Controller
 {
+    /**
+     * Liste des devis avec filtres et statistiques.
+     */
     public function index(Request $request)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
+        // Construction de la requête principale avec relations
         $query = Quote::forUser($user)->with(['client', 'user']);
 
+        // Application des filtres de recherche
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
-
         if ($request->filled('revenue_type')) {
             $query->where('revenue_type', $request->revenue_type);
         }
-
         if ($request->filled('search')) {
             $search = $request->search;
             $query->whereHas('client', function ($q) use ($search) {
@@ -38,7 +41,6 @@ class QuoteController extends Controller
                     ->orWhere('company_name', 'like', "%{$search}%");
             });
         }
-
         if ($request->filled('user_id') && ($user->isManager() || $user->isAdministrateur())) {
             $query->where('user_id', $request->user_id);
         }
@@ -46,6 +48,7 @@ class QuoteController extends Controller
         $quotes = $query->orderBy('created_at', 'desc')->paginate(15);
         $quotes->appends($request->all());
 
+        // Statistiques globales
         $stats = [
             'total' => Quote::forUser($user)->count(),
             'brouillon' => Quote::forUser($user)->draft()->count(),
@@ -55,6 +58,7 @@ class QuoteController extends Controller
             'refuse' => Quote::forUser($user)->refused()->count(),
         ];
 
+        // Calcul du taux de conversion
         $totalSent = $stats['envoye'] + $stats['accepte'] + $stats['converti'] + $stats['refuse'];
         $totalAccepted = $stats['accepte'] + $stats['converti'];
         $conversionRate = $totalSent > 0 ? round(($totalAccepted / $totalSent) * 100, 1) : 0;
@@ -62,6 +66,9 @@ class QuoteController extends Controller
         return view('quotes.index', compact('quotes', 'stats', 'conversionRate', 'request'));
     }
 
+    /**
+     * Formulaire de création de devis.
+     */
     public function create()
     {
         /** @var \App\Models\User $user */
@@ -74,11 +81,15 @@ class QuoteController extends Controller
         return view('quotes.create', compact('clients', 'predefinedServices', 'revenueTypes'));
     }
 
+    /**
+     * Enregistre un nouveau devis.
+     */
     public function store(Request $request)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
+        // Validation des données du formulaire
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
             'revenue_type' => 'required|in:transaction,location,syndic,autres',
@@ -104,7 +115,7 @@ class QuoteController extends Controller
             'items.*.unit_price.required' => 'Le prix unitaire est obligatoire.',
         ]);
 
-        // SÉCURITÉ : Vérifier que le client appartient à l'utilisateur
+        // Vérifie que le client appartient bien à l'utilisateur connecté
         $client = Client::forUser($user)->find($validated['client_id']);
         if (!$client) {
             return back()->withInput()->with('error', 'Client non autorisé.');
@@ -112,6 +123,7 @@ class QuoteController extends Controller
 
         DB::beginTransaction();
         try {
+            // Création du devis
             $quote = Quote::create([
                 'quote_number' => Quote::generateQuoteNumber(),
                 'client_id' => $validated['client_id'],
@@ -127,6 +139,7 @@ class QuoteController extends Controller
                 'delivery_terms' => $validated['delivery_terms'] ?? null,
             ]);
 
+            // Ajout des lignes de devis
             foreach ($validated['items'] as $index => $item) {
                 QuoteItem::create([
                     'quote_id' => $quote->id,
@@ -139,7 +152,7 @@ class QuoteController extends Controller
             }
 
             $quote->refresh();
-            $quote->calculateTotals();
+            $quote->calculateTotals(); // Calcul des totaux
             $quote->save();
 
             DB::commit();
@@ -152,11 +165,15 @@ class QuoteController extends Controller
         }
     }
 
+    /**
+     * Affiche un devis détaillé.
+     */
     public function show(Quote $quote)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
+        // Vérifie le droit d'accès à ce devis
         if (!$this->canUserViewQuote($user, $quote)) {
             abort(403, 'Vous n\'avez pas accès à ce devis.');
         }
@@ -166,21 +183,23 @@ class QuoteController extends Controller
         return view('quotes.show', compact('quote'));
     }
 
+    /**
+     * Formulaire d'édition d'un devis.
+     */
     public function edit(Quote $quote)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
+        // Vérifie que l'utilisateur peut modifier le devis.
         if (!$this->canUserEditQuote($user, $quote)) {
             abort(403);
         }
-
         if (!$quote->canBeEdited()) {
             return back()->with('error', 'Ce devis ne peut plus être modifié (statut : ' . $quote->status_label . ')');
         }
 
         $quote->load('items');
-        
         $clients = Client::forUser($user)->active()->orderBy('name')->get();
         $predefinedServices = PredefinedService::active()->ordered()->get();
         $revenueTypes = Quote::REVENUE_TYPES;
@@ -188,19 +207,23 @@ class QuoteController extends Controller
         return view('quotes.edit', compact('quote', 'clients', 'predefinedServices', 'revenueTypes'));
     }
 
+    /**
+     * Enregistre la modification d'un devis.
+     */
     public function update(Request $request, Quote $quote)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
+        // Vérifie que l'utilisateur peut modifier le devis.
         if (!$this->canUserEditQuote($user, $quote)) {
             abort(403);
         }
-
         if (!$quote->canBeEdited()) {
             return back()->with('error', 'Ce devis ne peut plus être modifié.');
         }
 
+        // Validation des données
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
             'revenue_type' => 'required|in:transaction,location,syndic,autres',
@@ -221,7 +244,7 @@ class QuoteController extends Controller
             'revenue_type.in' => 'Le type d\'activité sélectionné n\'est pas valide.',
         ]);
 
-        // SÉCURITÉ : Vérifier que le client appartient à l'utilisateur
+        // Vérifie que le client appartient bien à l'utilisateur connecté
         $client = Client::forUser($user)->find($validated['client_id']);
         if (!$client) {
             return back()->withInput()->with('error', 'Client non autorisé.');
@@ -229,6 +252,7 @@ class QuoteController extends Controller
 
         DB::beginTransaction();
         try {
+            // Mise à jour du devis
             $quote->update([
                 'client_id' => $validated['client_id'],
                 'revenue_type' => $validated['revenue_type'],
@@ -241,6 +265,7 @@ class QuoteController extends Controller
                 'delivery_terms' => $validated['delivery_terms'] ?? null,
             ]);
 
+            // On supprime puis recrée les lignes du devis
             $quote->items()->delete();
 
             foreach ($validated['items'] as $index => $item) {
@@ -268,6 +293,9 @@ class QuoteController extends Controller
         }
     }
 
+    /**
+     * Envoi du devis par mail au client (et passe à "envoyé").
+     */
     public function send(Quote $quote)
     {
         /** @var \App\Models\User $user */
@@ -276,11 +304,9 @@ class QuoteController extends Controller
         if (!$this->canUserEditQuote($user, $quote)) {
             abort(403);
         }
-
         if ($quote->status !== 'brouillon') {
             return back()->with('error', 'Seuls les devis en brouillon peuvent être envoyés.');
         }
-
         if (!$quote->client->email) {
             return back()->with('error', 'Le client n\'a pas d\'adresse email renseignée.');
         }
@@ -290,6 +316,7 @@ class QuoteController extends Controller
             $quote->load(['client', 'user', 'items']);
             $userInfo = $this->getUserProfessionalInfo($quote->user);
 
+            // Génération du PDF du devis
             $pdf = Pdf::loadView('quotes.pdf', compact('quote', 'userInfo'))
                 ->setPaper('a4', 'portrait')
                 ->setOption('enable-local-file-access', true)
@@ -299,15 +326,16 @@ class QuoteController extends Controller
             $pdfContent = $pdf->output();
 
             $pdfSizeMB = strlen($pdfContent) / 1024 / 1024;
-
             if ($pdfSizeMB > 10) {
                 return back()->with('error', 'Le PDF est trop volumineux (' . round($pdfSizeMB, 2) . ' MB). Veuillez réduire le nombre d\'éléments.');
             }
 
+            // Passage du statut à "envoyé" et sauvegarde
             $quote->status = 'envoye';
             $quote->sent_at = now();
             $quote->save();
 
+            // Envoi du mail avec le devis en pièce jointe
             Mail::to($quote->client->email)
                 ->cc($quote->user->email)
                 ->send(new QuoteSentMail($quote, $pdfContent));
@@ -320,7 +348,6 @@ class QuoteController extends Controller
             );
         } catch (\Exception $e) {
             DB::rollBack();
-
             return back()->with(
                 'error',
                 'Erreur lors de l\'envoi : ' . $e->getMessage()
@@ -328,6 +355,9 @@ class QuoteController extends Controller
         }
     }
 
+    /**
+     * Accepte le devis, crée la mission et marque comme signé.
+     */
     public function accept(Quote $quote)
     {
         /** @var \App\Models\User $user */
@@ -336,7 +366,6 @@ class QuoteController extends Controller
         if (!$this->canUserEditQuote($user, $quote)) {
             abort(403);
         }
-
         if ($quote->status !== 'envoye') {
             return back()->with('error', 'Seuls les devis envoyés peuvent être acceptés.');
         }
@@ -362,6 +391,9 @@ class QuoteController extends Controller
         }
     }
 
+    /**
+     * Refuse le devis (uniquement si "envoyé").
+     */
     public function refuse(Quote $quote)
     {
         /** @var \App\Models\User $user */
@@ -370,7 +402,6 @@ class QuoteController extends Controller
         if (!$this->canUserEditQuote($user, $quote)) {
             abort(403);
         }
-
         if ($quote->status !== 'envoye') {
             return back()->with('error', 'Seuls les devis envoyés peuvent être refusés.');
         }
@@ -382,6 +413,9 @@ class QuoteController extends Controller
         return back()->with('error', 'Erreur lors du refus du devis.');
     }
 
+    /**
+     * Convertit un devis accepté en facture.
+     */
     public function convertToInvoice(Quote $quote)
     {
         /** @var \App\Models\User $user */
@@ -390,7 +424,6 @@ class QuoteController extends Controller
         if (!$this->canUserEditQuote($user, $quote)) {
             abort(403);
         }
-
         if (!$quote->canBeConverted()) {
             return back()->with('error', 'Ce devis ne peut pas être converti en facture.');
         }
@@ -405,6 +438,9 @@ class QuoteController extends Controller
         return back()->with('error', 'Erreur lors de la conversion en facture.');
     }
 
+    /**
+     * Suppression d'un devis (brouillon uniquement)
+     */
     public function destroy(Quote $quote)
     {
         /** @var \App\Models\User $user */
@@ -413,7 +449,6 @@ class QuoteController extends Controller
         if (!$user->isAdministrateur() && $quote->user_id !== $user->id) {
             abort(403);
         }
-
         if ($quote->status !== 'brouillon') {
             return back()->with('error', 'Seuls les devis en brouillon peuvent être supprimés.');
         }
@@ -424,6 +459,9 @@ class QuoteController extends Controller
             ->with('success', 'Devis supprimé avec succès.');
     }
 
+    /**
+     * Télécharger le PDF du devis.
+     */
     public function downloadPdf(Quote $quote)
     {
         /** @var \App\Models\User $user */
@@ -449,6 +487,9 @@ class QuoteController extends Controller
         }
     }
 
+    /**
+     * Aperçu en ligne du PDF du devis.
+     */
     public function viewPdf(Quote $quote)
     {
         /** @var \App\Models\User $user */
@@ -471,6 +512,9 @@ class QuoteController extends Controller
         }
     }
 
+    /**
+     * Retourne les services prédéfinis selon la catégorie sélectionnée (ajax).
+     */
     public function getPredefinedServices(Request $request)
     {
         $category = $request->get('category');
@@ -486,8 +530,9 @@ class QuoteController extends Controller
         return response()->json($services);
     }
 
-    // ===== Méthodes privées =====
-
+    /**
+     * Infos professionnelles de l'utilisateur pour modèles PDF Emails, etc.
+     */
     private function getUserProfessionalInfo(User $user): array
     {
         return [
@@ -505,32 +550,37 @@ class QuoteController extends Controller
         ];
     }
 
+    /**
+     * Vérifie si l'utilisateur peut voir ce devis.
+     */
     private function canUserViewQuote($user, $quote): bool
     {
         if ($user->isAdministrateur()) {
             return true;
         }
-
         if ($user->isManager()) {
             return $quote->user_id === $user->id || $quote->user->manager_id === $user->id;
         }
-
         return $quote->user_id === $user->id;
     }
 
+    /**
+     * Vérifie si l'utilisateur peut éditer ce devis.
+     */
     private function canUserEditQuote($user, $quote): bool
     {
         if ($user->isAdministrateur()) {
             return true;
         }
-
         if ($user->isManager()) {
             return $quote->user_id === $user->id || $quote->user->manager_id === $user->id;
         }
-
         return $quote->user_id === $user->id;
     }
 
+    /**
+     * Nettoyage du nom de fichier pour le téléchargement.
+     */
     private function sanitizeFilename(string $filename): string
     {
         $filename = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $filename);

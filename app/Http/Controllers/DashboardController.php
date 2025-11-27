@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Mission;
 use App\Models\CommunicationOrder;
@@ -11,11 +10,14 @@ use App\Models\Formation;
 use App\Models\FormationRequest;
 use App\Models\Quote;
 use App\Models\Invoice;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Collection;
 
 class DashboardController extends Controller
 {
+    /**
+     * Cette fonction affiche la page d'accueil du tableau de bord avec les données adaptées selon le rôle de l'utilisateur
+     */
     public function index()
     {
         $user = Auth::user();
@@ -232,7 +234,7 @@ class DashboardController extends Controller
     /**
      * Données KPI pour un administrateur
      */
-    private function getAdministrateurData(User $user): array
+    private function getAdministrateurData(): array
     {
         // KPI commerciaux globaux
         $devisCeMois = Quote::whereMonth('created_at', now()->month)
@@ -315,7 +317,7 @@ class DashboardController extends Controller
     /**
      * Actualités personnalisées
      */
-    private function getPersonalizedNews(User $user): \Illuminate\Database\Eloquent\Collection
+    private function getPersonalizedNews(User $user): Collection
     {
         return News::published()
             ->forUser($user)
@@ -328,7 +330,7 @@ class DashboardController extends Controller
     /**
      * Performance de l'équipe
      */
-    private function getTeamPerformance(\Illuminate\Database\Eloquent\Collection $teamMembers): array
+    private function getTeamPerformance(Collection $teamMembers): array
     {
         $performance = [];
 
@@ -625,7 +627,7 @@ class DashboardController extends Controller
     /**
      * Calculer le taux de formation d'une équipe
      */
-    private function getTeamTrainingRate(\Illuminate\Database\Eloquent\Collection $teamMembers): float
+    private function getTeamTrainingRate(Collection $teamMembers): float
     {
         if ($teamMembers->isEmpty()) {
             return 0;
@@ -641,7 +643,7 @@ class DashboardController extends Controller
     /**
      * Calculer les heures de formation d'une équipe
      */
-    private function getTeamTrainingHours(\Illuminate\Database\Eloquent\Collection $teamMembers): int
+    private function getTeamTrainingHours(Collection $teamMembers): int
     {
         return $teamMembers->sum(function ($member) {
             return $member->getFormationHoursThisYear();

@@ -28,60 +28,65 @@ class InvoiceItem extends Model
         'sort_order' => 'integer',
     ];
 
-    // =====================================
-    // RELATIONS
-    // =====================================
-
     /**
-     * Facture associée
+     * Récupère la facture associée à l'item.
      */
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
     }
 
-    // =====================================
-    // ACCESSEURS
-    // =====================================
-
+    /**
+     * Renvoie le prix unitaire formaté en euro.
+     */
     public function getFormattedUnitPriceAttribute(): string
     {
         return number_format($this->unit_price, 2, ',', ' ') . ' €';
     }
 
+    /**
+     * Renvoie le total HT formaté en euro.
+     */
     public function getFormattedTotalHtAttribute(): string
     {
         return number_format($this->total_ht, 2, ',', ' ') . ' €';
     }
 
+    /**
+     * Calcule la TVA totale sur cet item.
+     */
     public function getTotalTvaAttribute(): float
     {
         return $this->total_ht * ($this->tva_rate / 100);
     }
 
+    /**
+     * Calcule le total TTC de l'item.
+     */
     public function getTotalTtcAttribute(): float
     {
         return $this->total_ht + $this->total_tva;
     }
 
+    /**
+     * Renvoie le total TTC formaté en euro.
+     */
     public function getFormattedTotalTtcAttribute(): string
     {
         return number_format($this->total_ttc, 2, ',', ' ') . ' €';
     }
 
-    // =====================================
-    // SCOPES
-    // =====================================
-
+    /**
+     * Scope pour ordonner les items selon sort_order puis id.
+     */
     public function scopeOrdered($query)
     {
         return $query->orderBy('sort_order')->orderBy('id');
     }
 
-    // =====================================
-    // ÉVÉNEMENTS
-    // =====================================
-
+    /**
+     * Méthodes d'events pour calculer automatiquement les totaux et maintenir la cohérence avec la facture.
+     */
     protected static function booted()
     {
         // Calculer automatiquement le total HT
