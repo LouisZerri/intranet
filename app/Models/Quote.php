@@ -120,12 +120,18 @@ class Quote extends Model
      * - Admin voit tout
      * - Manager/Collaborateur voit uniquement SES devis
      */
+    // public function scopeForUser(Builder $query, User $user): Builder
+    // {
+    //     if ($user->isAdministrateur()) {
+    //         return $query;
+    //     }
+
+    //     return $query->where('user_id', $user->id);
+    // }
+
     public function scopeForUser(Builder $query, User $user): Builder
     {
-        if ($user->isAdministrateur()) {
-            return $query;
-        }
-
+        // Tout le monde voit uniquement ses propres devis
         return $query->where('user_id', $user->id);
     }
 
@@ -157,13 +163,13 @@ class Quote extends Model
     public function scopeExpired(Builder $query): Builder
     {
         return $query->where('status', 'envoye')
-                    ->where('validity_date', '<', now());
+            ->where('validity_date', '<', now());
     }
 
     public function scopeThisMonth(Builder $query): Builder
     {
         return $query->whereMonth('created_at', now()->month)
-                    ->whereYear('created_at', now()->year);
+            ->whereYear('created_at', now()->year);
     }
 
     public function scopeThisYear(Builder $query): Builder
@@ -193,7 +199,7 @@ class Quote extends Model
 
     public function getStatusLabelAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'brouillon' => 'Brouillon',
             'envoye' => 'Envoyé',
             'accepte' => 'Accepté',
@@ -205,7 +211,7 @@ class Quote extends Model
 
     public function getStatusColorAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'brouillon' => 'gray',
             'envoye' => 'blue',
             'accepte' => 'green',
@@ -251,8 +257,8 @@ class Quote extends Model
 
     public function isExpired(): bool
     {
-        return $this->status === 'envoye' 
-            && $this->validity_date 
+        return $this->status === 'envoye'
+            && $this->validity_date
             && $this->validity_date->isPast();
     }
 
@@ -294,7 +300,7 @@ class Quote extends Model
     public static function generateQuoteNumber(): string
     {
         $year = now()->year;
-        
+
         $lastQuote = static::whereYear('created_at', $year)
             ->orderByRaw('CAST(SUBSTRING(quote_number, 9) AS UNSIGNED) DESC')
             ->first();
@@ -306,7 +312,7 @@ class Quote extends Model
         }
 
         $quoteNumber = 'DV-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
-        
+
         while (static::where('quote_number', $quoteNumber)->exists()) {
             $nextNumber++;
             $quoteNumber = 'DV-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
@@ -322,7 +328,7 @@ class Quote extends Model
         }
 
         $this->status = 'envoye';
-        
+
         if (!$this->validity_date) {
             $this->validity_date = now()->addDays(30);
         }
@@ -413,8 +419,8 @@ class Quote extends Model
             'quote_id' => $this->id,
             'title' => $title,
             'description' => "Mission créée automatiquement depuis le devis {$this->quote_number}.\n\n" .
-                           "Client : {$this->client->name}\n" .
-                           "Montant : {$this->formatted_total_ttc}",
+                "Client : {$this->client->name}\n" .
+                "Montant : {$this->formatted_total_ttc}",
             'status' => 'en_attente',
             'priority' => 'normale',
             'category' => 'autres',
@@ -463,7 +469,7 @@ class Quote extends Model
             if (!$quote->validity_date && $quote->status === 'envoye') {
                 $quote->validity_date = now()->addDays(30);
             }
-            
+
             // Valeur par défaut pour revenue_type
             if (!$quote->revenue_type) {
                 $quote->revenue_type = self::REVENUE_TYPE_TRANSACTION;

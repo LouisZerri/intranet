@@ -108,12 +108,18 @@ class Invoice extends Model
     // SCOPES
     // =====================================
 
+    // public function scopeForUser(Builder $query, User $user): Builder
+    // {
+    //     if ($user->isAdministrateur()) {
+    //         return $query;
+    //     }
+
+    //     return $query->where('user_id', $user->id);
+    // }
+
     public function scopeForUser(Builder $query, User $user): Builder
     {
-        if ($user->isAdministrateur()) {
-            return $query;
-        }
-
+        // Tout le monde voit uniquement ses propres devis
         return $query->where('user_id', $user->id);
     }
 
@@ -355,7 +361,7 @@ class Invoice extends Model
         ]);
 
         $this->refresh();
-        
+
         if ($this->isFullyPaid()) {
             $this->status = 'payee';
             $this->paid_at = now();
@@ -487,7 +493,7 @@ class Invoice extends Model
         // Calcul des totaux par type
         foreach ($invoices as $invoice) {
             $type = $invoice->revenue_type ?? self::REVENUE_TYPE_TRANSACTION;
-            
+
             $byType[$type]['total_ht'] += $invoice->total_ht;
             $byType[$type]['total_tva'] += $invoice->total_tva;
             $byType[$type]['total_ttc'] += $invoice->total_ttc;
@@ -504,23 +510,23 @@ class Invoice extends Model
             'user_email' => $user->email,
             'user_phone' => $user->phone ?? 'Non renseigné',
             'user_siret' => $user->siret ?? 'Non renseigné',
-            
+
             // Totaux globaux
             'total_ht' => $invoices->sum('total_ht'),
             'total_tva' => $invoices->sum('total_tva'),
             'total_ttc' => $invoices->sum('total_ttc'),
             'invoice_count' => $invoices->count(),
-            
+
             // Ventilation par type de CA
             'by_type' => $byType,
             'by_type_filtered' => $byTypeFiltered,
-            
+
             // Totaux par type (raccourcis)
             'transaction' => $byType[self::REVENUE_TYPE_TRANSACTION],
             'location' => $byType[self::REVENUE_TYPE_LOCATION],
             'syndic' => $byType[self::REVENUE_TYPE_SYNDIC],
             'autres' => $byType[self::REVENUE_TYPE_AUTRES],
-            
+
             // Détail des factures avec type
             'invoices' => $invoices->map(function ($invoice) {
                 return [
