@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
             FormationFileSeeder::class,
             CommercialModuleSeeder::class,
             PredefinedServiceSeeder::class,
-            CandidateSeeder::class
+            //CandidateSeeder::class
         ]);
     }
 }

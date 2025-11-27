@@ -128,66 +128,64 @@
             <!-- Documents -->
             <div class="bg-white shadow rounded-lg">
                 <div class="p-6 border-b border-gray-200">
-                    <h2 class="text-lg font-semibold text-gray-900">📄 Documents</h2>
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-semibold text-gray-900">📄 Documents</h2>
+                        <span class="text-sm text-gray-500">
+                            {{ $candidate->getUploadedDocumentsCount() }}/{{ count($documentTypes) }} documents
+                        </span>
+                    </div>
                 </div>
                 <div class="p-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        @if($candidate->cv_path)
-                        <a href="{{ asset('storage/' . $candidate->cv_path) }}" 
-                           target="_blank"
-                           class="flex items-center p-4 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors">
-                            <div class="bg-purple-500 p-3 rounded-lg mr-4">
-                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="font-medium text-purple-900">CV</p>
-                                <p class="text-sm text-purple-600">Cliquer pour voir</p>
-                            </div>
-                        </a>
-                        @else
-                        <div class="flex items-center p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                            <div class="bg-gray-300 p-3 rounded-lg mr-4">
-                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="font-medium text-gray-500">CV</p>
-                                <p class="text-sm text-gray-400">Non fourni</p>
-                            </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        @foreach($candidate->getDocumentsStatus() as $type => $doc)
+                        <div class="flex items-center p-4 rounded-lg border-2 transition-colors
+                            {{ $doc['uploaded'] 
+                                ? 'bg-green-50 border-green-200 hover:bg-green-100' 
+                                : 'bg-gray-50 border-gray-200' 
+                            }}">
+                            @if($doc['uploaded'])
+                                <a href="{{ $doc['url'] }}" target="_blank" class="flex items-center w-full">
+                                    <div class="p-2 rounded-lg mr-3 bg-green-500">
+                                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="font-medium text-green-900 text-sm">{{ $doc['icon'] }} {{ $doc['label'] }}</p>
+                                        <p class="text-xs text-green-600">Cliquer pour voir</p>
+                                    </div>
+                                    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </a>
+                            @else
+                                <div class="p-2 rounded-lg mr-3 bg-gray-300">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="font-medium text-sm text-gray-500">{{ $doc['icon'] }} {{ $doc['label'] }}</p>
+                                    <p class="text-xs text-gray-400">Non fourni</p>
+                                </div>
+                            @endif
                         </div>
-                        @endif
-
-                        @if($candidate->cover_letter_path)
-                        <a href="{{ asset('storage/' . $candidate->cover_letter_path) }}" 
-                           target="_blank"
-                           class="flex items-center p-4 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors">
-                            <div class="bg-indigo-500 p-3 rounded-lg mr-4">
-                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="font-medium text-indigo-900">Lettre de motivation</p>
-                                <p class="text-sm text-indigo-600">Cliquer pour voir</p>
-                            </div>
-                        </a>
-                        @else
-                        <div class="flex items-center p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                            <div class="bg-gray-300 p-3 rounded-lg mr-4">
-                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="font-medium text-gray-500">Lettre de motivation</p>
-                                <p class="text-sm text-gray-400">Non fournie</p>
-                            </div>
-                        </div>
-                        @endif
+                        @endforeach
                     </div>
+
+                    <!-- Lien vers le dossier Google Drive -->
+                    @if($candidate->google_drive_folder_id)
+                    <div class="mt-6 pt-4 border-t border-gray-200">
+                        <a href="https://drive.google.com/drive/folders/{{ $candidate->google_drive_folder_id }}" 
+                           target="_blank"
+                           class="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors">
+                            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.01-.02-1.708-3.001-3.774-6.62l-3.76-6.574h-3.76zm-5.5 6.574c-.017.023-1.729 3.004-3.805 6.627l-3.771 6.586 1.873.01 1.873.01 1.893-3.31 1.893-3.31h7.627l-.945-1.652-.944-1.652-2.9-.01c-1.595-.005-2.906.005-2.913.017l1.88-3.31c1.034-1.82 1.88-3.313 1.88-3.32 0-.006-.846-.01-1.88-.01-1.034 0-1.88.006-1.88.014h-.006z"/>
+                            </svg>
+                            Ouvrir le dossier complet sur Google Drive
+                        </a>
+                    </div>
+                    @endif
                 </div>
             </div>
 

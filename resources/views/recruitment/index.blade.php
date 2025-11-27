@@ -105,6 +105,18 @@
         </div>
     </div>
 
+    <!-- Message d'erreur Google Drive -->
+    @if(session('error'))
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div class="flex">
+            <svg class="w-5 h-5 text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="text-red-700">{{ session('error') }}</p>
+        </div>
+    </div>
+    @endif
+
     <!-- Filtres -->
     <div class="bg-white shadow rounded-lg p-6">
         <form method="GET" action="{{ route('recruitment.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -245,8 +257,8 @@
 
                         <!-- CV -->
                         <td class="px-6 py-4 whitespace-nowrap">
-                            @if($candidate->cv_path)
-                                <a href="{{ asset('storage/' . $candidate->cv_path) }}" 
+                            @if($candidate->hasCv())
+                                <a href="{{ $candidate->cv_url }}" 
                                    target="_blank"
                                    class="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-purple-700 bg-purple-100 rounded-lg hover:bg-purple-200 transition-colors">
                                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

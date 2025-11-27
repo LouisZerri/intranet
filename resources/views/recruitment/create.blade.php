@@ -19,6 +19,18 @@
         </div>
     </div>
 
+    <!-- Message d'erreur Google Drive -->
+    @if(session('error'))
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div class="flex">
+            <svg class="w-5 h-5 text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="text-red-700">{{ session('error') }}</p>
+        </div>
+    </div>
+    @endif
+
     <!-- Formulaire -->
     <form method="POST" action="{{ route('recruitment.store') }}" enctype="multipart/form-data" class="space-y-6">
         @csrf
@@ -223,51 +235,42 @@
         <div class="bg-white shadow rounded-lg">
             <div class="p-6 border-b border-gray-200">
                 <h2 class="text-lg font-semibold text-gray-900">📄 Documents</h2>
-                <p class="text-sm text-gray-600 mt-1">CV et lettre de motivation</p>
+                <p class="text-sm text-gray-600 mt-1">Tous les documents du candidat (stockés sur Google Drive)</p>
             </div>
             <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- CV -->
-                    <div>
-                        <label for="cv" class="block text-sm font-medium text-gray-700 mb-2">
-                            <span class="flex items-center">
-                                <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                </svg>
-                                CV
-                            </span>
-                        </label>
-                        <input type="file" 
-                               name="cv" 
-                               id="cv" 
-                               accept=".pdf,.doc,.docx"
-                               class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 transition-colors @error('cv') border-red-300 @enderror">
-                        <p class="mt-1 text-xs text-gray-500">PDF, DOC, DOCX - Max 5MB</p>
-                        @error('cv')
-                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                <!-- Info Google Drive -->
+                <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div class="flex">
+                        <svg class="w-5 h-5 text-blue-500 mr-3 mt-0.5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.01-.02-1.708-3.001-3.774-6.62l-3.76-6.574h-3.76zm-5.5 6.574c-.017.023-1.729 3.004-3.805 6.627l-3.771 6.586 1.873.01 1.873.01 1.893-3.31 1.893-3.31h7.627l-.945-1.652-.944-1.652-2.9-.01c-1.595-.005-2.906.005-2.913.017l1.88-3.31c1.034-1.82 1.88-3.313 1.88-3.32 0-.006-.846-.01-1.88-.01-1.034 0-1.88.006-1.88.014h-.006z"/>
+                        </svg>
+                        <div>
+                            <p class="text-sm text-blue-800 font-medium">Stockage Google Drive</p>
+                            <p class="text-sm text-blue-600 mt-1">Les documents seront automatiquement uploadés dans un dossier dédié au candidat sur Google Drive.</p>
+                        </div>
                     </div>
+                </div>
 
-                    <!-- Lettre de motivation -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    @foreach($documentTypes as $type => $config)
                     <div>
-                        <label for="cover_letter" class="block text-sm font-medium text-gray-700 mb-2">
+                        <label for="{{ $type }}" class="block text-sm font-medium text-gray-700 mb-2">
                             <span class="flex items-center">
-                                <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                </svg>
-                                Lettre de motivation
+                                <span class="mr-2">{{ $config['icon'] }}</span>
+                                {{ $config['label'] }}
                             </span>
                         </label>
                         <input type="file" 
-                               name="cover_letter" 
-                               id="cover_letter" 
-                               accept=".pdf,.doc,.docx"
-                               class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 transition-colors @error('cover_letter') border-red-300 @enderror">
-                        <p class="mt-1 text-xs text-gray-500">PDF, DOC, DOCX - Max 5MB</p>
-                        @error('cover_letter')
+                               name="{{ $type }}" 
+                               id="{{ $type }}" 
+                               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                               class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 transition-colors @error($type) border-red-300 @enderror">
+                        <p class="mt-1 text-xs text-gray-500">PDF, DOC, DOCX, JPG, PNG - Max 5MB</p>
+                        @error($type)
                             <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
+                    @endforeach
                 </div>
             </div>
         </div>

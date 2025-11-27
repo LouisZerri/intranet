@@ -37,6 +37,18 @@
         </div>
     </div>
 
+    <!-- Message d'erreur Google Drive -->
+    @if(session('error'))
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div class="flex">
+            <svg class="w-5 h-5 text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="text-red-700">{{ session('error') }}</p>
+        </div>
+    </div>
+    @endif
+
     <!-- Formulaire -->
     <form method="POST" action="{{ route('recruitment.update', $candidate) }}" enctype="multipart/form-data" class="space-y-6">
         @csrf
@@ -218,48 +230,67 @@
                 <!-- Documents -->
                 <div class="bg-white shadow rounded-lg">
                     <div class="p-6 border-b border-gray-200">
-                        <h2 class="text-lg font-semibold text-gray-900">📄 Documents</h2>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-lg font-semibold text-gray-900">📄 Documents</h2>
+                                <p class="text-sm text-gray-600 mt-1">Stockés sur Google Drive</p>
+                            </div>
+                            <span class="text-sm text-gray-500">
+                                {{ $candidate->getUploadedDocumentsCount() }}/{{ count($documentTypes) }} documents
+                            </span>
+                        </div>
                     </div>
                     <div class="p-6">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <!-- CV -->
-                            <div>
-                                <label for="cv" class="block text-sm font-medium text-gray-700 mb-2">CV</label>
-                                @if($candidate->cv_path)
-                                    <div class="mb-2 p-3 bg-purple-50 rounded-lg flex items-center justify-between">
-                                        <span class="text-sm text-purple-700">CV actuel</span>
-                                        <a href="{{ asset('storage/' . $candidate->cv_path) }}" target="_blank" class="text-purple-600 hover:text-purple-800 text-sm font-medium">
-                                            Voir le CV
+                            @foreach($documentTypes as $type => $config)
+                            <div class="p-4 rounded-lg border {{ $candidate->hasDocument($type) ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50' }}">
+                                <label for="{{ $type }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                    <span class="flex items-center">
+                                        <span class="mr-2">{{ $config['icon'] }}</span>
+                                        {{ $config['label'] }}
+                                        @if($candidate->hasDocument($type))
+                                            <span class="ml-2 text-green-600">✓</span>
+                                        @endif
+                                    </span>
+                                </label>
+                                
+                                @if($candidate->hasDocument($type))
+                                    <div class="mb-3 p-2 bg-white rounded-lg flex items-center justify-between">
+                                        <span class="text-sm text-green-700">Document actuel</span>
+                                        <a href="{{ $candidate->getDocumentUrl($type) }}" target="_blank" class="text-purple-600 hover:text-purple-800 text-sm font-medium">
+                                            Voir sur Drive
                                         </a>
                                     </div>
                                 @endif
+                                
                                 <input type="file" 
-                                       name="cv" 
-                                       id="cv" 
-                                       accept=".pdf,.doc,.docx"
+                                       name="{{ $type }}" 
+                                       id="{{ $type }}" 
+                                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                                        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100">
-                                <p class="mt-1 text-xs text-gray-500">Laisser vide pour conserver l'actuel</p>
+                                <p class="mt-1 text-xs text-gray-500">
+                                    {{ $candidate->hasDocument($type) ? 'Laisser vide pour conserver l\'actuel' : 'PDF, DOC, JPG, PNG - Max 5MB' }}
+                                </p>
+                                @error($type)
+                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
                             </div>
-
-                            <!-- Lettre de motivation -->
-                            <div>
-                                <label for="cover_letter" class="block text-sm font-medium text-gray-700 mb-2">Lettre de motivation</label>
-                                @if($candidate->cover_letter_path)
-                                    <div class="mb-2 p-3 bg-purple-50 rounded-lg flex items-center justify-between">
-                                        <span class="text-sm text-purple-700">Lettre actuelle</span>
-                                        <a href="{{ asset('storage/' . $candidate->cover_letter_path) }}" target="_blank" class="text-purple-600 hover:text-purple-800 text-sm font-medium">
-                                            Voir la lettre
-                                        </a>
-                                    </div>
-                                @endif
-                                <input type="file" 
-                                       name="cover_letter" 
-                                       id="cover_letter" 
-                                       accept=".pdf,.doc,.docx"
-                                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100">
-                                <p class="mt-1 text-xs text-gray-500">Laisser vide pour conserver l'actuelle</p>
-                            </div>
+                            @endforeach
                         </div>
+
+                        <!-- Lien vers le dossier Google Drive -->
+                        @if($candidate->google_drive_folder_id)
+                        <div class="mt-6 pt-4 border-t border-gray-200">
+                            <a href="https://drive.google.com/drive/folders/{{ $candidate->google_drive_folder_id }}" 
+                               target="_blank"
+                               class="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors">
+                                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.01-.02-1.708-3.001-3.774-6.62l-3.76-6.574h-3.76zm-5.5 6.574c-.017.023-1.729 3.004-3.805 6.627l-3.771 6.586 1.873.01 1.873.01 1.893-3.31 1.893-3.31h7.627l-.945-1.652-.944-1.652-2.9-.01c-1.595-.005-2.906.005-2.913.017l1.88-3.31c1.034-1.82 1.88-3.313 1.88-3.32 0-.006-.846-.01-1.88-.01-1.034 0-1.88.006-1.88.014h-.006z"/>
+                                </svg>
+                                Ouvrir le dossier complet sur Google Drive
+                            </a>
+                        </div>
+                        @endif
                     </div>
                 </div>
 

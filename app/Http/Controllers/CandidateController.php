@@ -4,12 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\Candidate;
 use App\Models\User;
+use App\Services\GoogleDriveService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class CandidateController extends Controller
 {
+    protected GoogleDriveService $googleDrive;
+
+    public function __construct(GoogleDriveService $googleDrive)
+    {
+        $this->googleDrive = $googleDrive;
+    }
+
     /**
      * Vérifier que l'utilisateur est manager ou admin
      */
@@ -20,6 +28,116 @@ class CandidateController extends Controller
         
         if (!$user->isManager() && !$user->isAdministrateur()) {
             abort(403, 'Accès non autorisé. Seuls les managers et administrateurs peuvent accéder au recrutement.');
+        }
+    }
+
+    /**
+     * Liste des types de documents pour la validation
+     */
+    private function getDocumentValidationRules(): array
+    {
+        return [
+            'cv' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
+            'cover_letter' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
+            'identity_card' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'proof_of_address' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'legal_status' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
+            'rcp_insurance' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'signed_contract' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
+            'criminal_record' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'rib' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'training_certificate' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+        ];
+    }
+
+    /**
+     * Noms des fichiers pour Google Drive
+     */
+    private function getDocumentFileName(string $type, Candidate|array $candidate, string $extension): string
+    {
+        $firstName = is_array($candidate) ? $candidate['first_name'] : $candidate->first_name;
+        $lastName = is_array($candidate) ? $candidate['last_name'] : $candidate->last_name;
+
+        $prefixes = [
+            'cv' => 'CV',
+            'cover_letter' => 'LM',
+            'identity_card' => 'CNI',
+            'proof_of_address' => 'Justificatif_Domicile',
+            'legal_status' => 'Statut_Juridique',
+            'rcp_insurance' => 'RCP',
+            'signed_contract' => 'Contrat',
+            'criminal_record' => 'Casier_Judiciaire',
+            'rib' => 'RIB',
+            'training_certificate' => 'Attestation_Formation',
+        ];
+
+        $prefix = $prefixes[$type] ?? $type;
+        return "{$prefix}_{$firstName}_{$lastName}.{$extension}";
+    }
+
+    /**
+     * Upload tous les documents d'un candidat sur Google Drive
+     */
+    private function uploadDocuments(Request $request, array &$validated, ?Candidate $candidate = null): void
+    {
+        $documentTypes = array_keys($this->getDocumentValidationRules());
+        $hasFiles = false;
+
+        // Vérifier s'il y a des fichiers à uploader
+        foreach ($documentTypes as $type) {
+            if ($request->hasFile($type)) {
+                $hasFiles = true;
+                break;
+            }
+        }
+
+        if (!$hasFiles) {
+            return;
+        }
+
+        // Construire le nom du candidat
+        $candidateName = $validated['first_name'] . ' ' . $validated['last_name'];
+
+        // Récupérer ou créer le dossier Google Drive
+        $folderId = $candidate?->google_drive_folder_id 
+            ?? $this->googleDrive->getOrCreateCandidateFolder($candidateName);
+        
+        $validated['google_drive_folder_id'] = $folderId;
+
+        // Upload chaque document
+        foreach ($documentTypes as $type) {
+            if ($request->hasFile($type)) {
+                $file = $request->file($type);
+                $docTypes = Candidate::getDocumentTypes();
+                
+                if (!isset($docTypes[$type])) {
+                    continue;
+                }
+
+                $pathField = $docTypes[$type]['path_field'];
+                $linkField = $docTypes[$type]['link_field'];
+
+                // Supprimer l'ancien fichier si existant
+                if ($candidate && $candidate->$pathField) {
+                    try {
+                        $this->googleDrive->deleteFile($candidate->$pathField);
+                    } catch (\Exception $e) {
+                        Log::warning("Impossible de supprimer l'ancien fichier: " . $e->getMessage());
+                    }
+                }
+
+                // Upload le nouveau fichier
+                $fileName = $this->getDocumentFileName(
+                    $type, 
+                    $validated, 
+                    $file->getClientOriginalExtension()
+                );
+
+                $driveFile = $this->googleDrive->uploadFile($folderId, $file, $fileName);
+                
+                $validated[$pathField] = $driveFile->id;
+                $validated[$linkField] = $driveFile->webViewLink;
+            }
         }
     }
 
@@ -85,8 +203,9 @@ class CandidateController extends Controller
                           ->get();
 
         $departementsFrancais = $this->getDepartementsFrancais();
+        $documentTypes = Candidate::getDocumentTypes();
 
-        return view('recruitment.create', compact('recruiters', 'departementsFrancais'));
+        return view('recruitment.create', compact('recruiters', 'departementsFrancais', 'documentTypes'));
     }
 
     /**
@@ -96,7 +215,7 @@ class CandidateController extends Controller
     {
         $this->checkAccess();
 
-        $validated = $request->validate([
+        $rules = [
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
@@ -106,29 +225,31 @@ class CandidateController extends Controller
             'position_applied' => 'nullable|string|max:255',
             'desired_location' => 'nullable|string|max:255',
             'available_from' => 'nullable|date',
-            'cv' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
-            'cover_letter' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
             'source' => 'nullable|string|max:255',
             'assigned_to' => 'nullable|exists:users,id',
             'notes' => 'nullable|string|max:5000',
-        ]);
+        ];
 
-        // Gestion du CV
-        if ($request->hasFile('cv')) {
-            $cvPath = $request->file('cv')->store('candidates/cv', 'public');
-            $validated['cv_path'] = $cvPath;
-        }
+        // Ajouter les règles de validation des documents
+        $rules = array_merge($rules, $this->getDocumentValidationRules());
 
-        // Gestion de la lettre de motivation
-        if ($request->hasFile('cover_letter')) {
-            $coverPath = $request->file('cover_letter')->store('candidates/cover_letters', 'public');
-            $validated['cover_letter_path'] = $coverPath;
+        $validated = $request->validate($rules);
+
+        // Upload des documents sur Google Drive
+        try {
+            $this->uploadDocuments($request, $validated);
+        } catch (\Exception $e) {
+            Log::error('Erreur Google Drive lors de la création du candidat: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Erreur lors de l\'upload des fichiers sur Google Drive: ' . $e->getMessage());
         }
 
         $validated['created_by'] = Auth::id();
         $validated['status'] = 'new';
 
-        unset($validated['cv'], $validated['cover_letter']);
+        // Supprimer les fichiers du tableau validated (ils ne vont pas en BDD)
+        foreach (array_keys($this->getDocumentValidationRules()) as $type) {
+            unset($validated[$type]);
+        }
 
         Candidate::create($validated);
 
@@ -143,8 +264,9 @@ class CandidateController extends Controller
         $this->checkAccess();
 
         $candidate->load(['creator', 'recruiter', 'convertedUser']);
+        $documentTypes = Candidate::getDocumentTypes();
 
-        return view('recruitment.show', compact('candidate'));
+        return view('recruitment.show', compact('candidate', 'documentTypes'));
     }
 
     /**
@@ -160,8 +282,9 @@ class CandidateController extends Controller
                           ->get();
 
         $departementsFrancais = $this->getDepartementsFrancais();
+        $documentTypes = Candidate::getDocumentTypes();
 
-        return view('recruitment.edit', compact('candidate', 'recruiters', 'departementsFrancais'));
+        return view('recruitment.edit', compact('candidate', 'recruiters', 'departementsFrancais', 'documentTypes'));
     }
 
     /**
@@ -171,7 +294,7 @@ class CandidateController extends Controller
     {
         $this->checkAccess();
 
-        $validated = $request->validate([
+        $rules = [
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
@@ -181,8 +304,6 @@ class CandidateController extends Controller
             'position_applied' => 'nullable|string|max:255',
             'desired_location' => 'nullable|string|max:255',
             'available_from' => 'nullable|date',
-            'cv' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
-            'cover_letter' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
             'rating_motivation' => 'nullable|integer|min:1|max:5',
             'rating_seriousness' => 'nullable|integer|min:1|max:5',
             'rating_experience' => 'nullable|integer|min:1|max:5',
@@ -194,27 +315,25 @@ class CandidateController extends Controller
             'assigned_to' => 'nullable|exists:users,id',
             'interview_date' => 'nullable|date',
             'decision_date' => 'nullable|date',
-        ]);
+        ];
 
-        // Gestion du CV
-        if ($request->hasFile('cv')) {
-            if ($candidate->cv_path) {
-                Storage::disk('public')->delete($candidate->cv_path);
-            }
-            $cvPath = $request->file('cv')->store('candidates/cv', 'public');
-            $validated['cv_path'] = $cvPath;
+        // Ajouter les règles de validation des documents
+        $rules = array_merge($rules, $this->getDocumentValidationRules());
+
+        $validated = $request->validate($rules);
+
+        // Upload des documents sur Google Drive
+        try {
+            $this->uploadDocuments($request, $validated, $candidate);
+        } catch (\Exception $e) {
+            Log::error('Erreur Google Drive lors de la mise à jour du candidat: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Erreur lors de l\'upload des fichiers sur Google Drive: ' . $e->getMessage());
         }
 
-        // Gestion de la lettre de motivation
-        if ($request->hasFile('cover_letter')) {
-            if ($candidate->cover_letter_path) {
-                Storage::disk('public')->delete($candidate->cover_letter_path);
-            }
-            $coverPath = $request->file('cover_letter')->store('candidates/cover_letters', 'public');
-            $validated['cover_letter_path'] = $coverPath;
+        // Supprimer les fichiers du tableau validated
+        foreach (array_keys($this->getDocumentValidationRules()) as $type) {
+            unset($validated[$type]);
         }
-
-        unset($validated['cv'], $validated['cover_letter']);
 
         $candidate->update($validated);
 
@@ -228,11 +347,13 @@ class CandidateController extends Controller
     {
         $this->checkAccess();
 
-        if ($candidate->cv_path) {
-            Storage::disk('public')->delete($candidate->cv_path);
-        }
-        if ($candidate->cover_letter_path) {
-            Storage::disk('public')->delete($candidate->cover_letter_path);
+        // Supprimer le dossier Google Drive du candidat
+        try {
+            if ($candidate->google_drive_folder_id) {
+                $this->googleDrive->deleteFolder($candidate->google_drive_folder_id);
+            }
+        } catch (\Exception $e) {
+            Log::warning('Impossible de supprimer le dossier Google Drive: ' . $e->getMessage());
         }
 
         $candidate->delete();

@@ -27,6 +27,37 @@ return new class extends Migration
             // CV et documents
             $table->string('cv_path')->nullable();
             $table->string('cover_letter_path')->nullable();
+             // Dossier Google Drive du candidat
+            $table->string('google_drive_folder_id')->nullable();
+            
+            // Liens Google Drive pour chaque document
+            $table->string('cv_drive_link')->nullable();
+            $table->string('cover_letter_drive_link')->nullable();
+            
+            // Nouveaux documents
+            $table->string('identity_card_path')->nullable();
+            $table->string('identity_card_drive_link')->nullable();
+            
+            $table->string('proof_of_address_path')->nullable();
+            $table->string('proof_of_address_drive_link')->nullable();
+            
+            $table->string('legal_status_path')->nullable();
+            $table->string('legal_status_drive_link')->nullable();
+            
+            $table->string('rcp_insurance_path')->nullable();
+            $table->string('rcp_insurance_drive_link')->nullable();
+            
+            $table->string('signed_contract_path')->nullable();
+            $table->string('signed_contract_drive_link')->nullable();
+            
+            $table->string('criminal_record_path')->nullable();
+            $table->string('criminal_record_drive_link')->nullable();
+            
+            $table->string('rib_path')->nullable();
+            $table->string('rib_drive_link')->nullable();
+
+            $table->string('training_certificate_path')->nullable();
+            $table->string('training_certificate_drive_link')->nullable();
             
             // Notations (1 à 5 étoiles)
             $table->tinyInteger('rating_motivation')->nullable();

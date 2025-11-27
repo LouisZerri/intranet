@@ -14,6 +14,7 @@ use App\Http\Controllers\ProfileController;
 
 // ===== NOUVEAUX CONTROLLERS MODULE COMMERCIAL =====
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\QuoteController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\URSSAFController;
@@ -23,6 +24,9 @@ Route::middleware('guest')->group(function () {
     Route::get('/', [AuthController::class, 'showLogin'])->name('login');
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login.form');
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+    // Google OAuth
+    Route::get('/google/auth', [GoogleAuthController::class, 'redirect'])->name('google.auth');
+    Route::get('/google/callback', [GoogleAuthController::class, 'callback'])->name('google.callback');
 });
 
 // Routes protégées (avec authentification)
