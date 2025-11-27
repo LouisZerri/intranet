@@ -322,7 +322,7 @@
                 </div>
                 <div class="col-span-3">
                     <input type="number" name="items[INDEX][unit_price]"
-                        placeholder="Prix unit." step="0.01" min="0" required
+                        placeholder="Prix unit." step="0.01" required
                         onchange="calculateLine(this)"
                         class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500">
                 </div>

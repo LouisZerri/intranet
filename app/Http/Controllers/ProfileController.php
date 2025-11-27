@@ -42,38 +42,6 @@ class ProfileController extends Controller
     }
 
     /**
-     * NOUVELLE MÉTHODE : Mettre à jour UNIQUEMENT les informations professionnelles
-     */
-    public function updateProfessional(Request $request)
-    {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-
-        // Validation uniquement des champs professionnels
-        $validated = $request->validate([
-            'rsac_number' => 'nullable|string|max:255',
-            'professional_address' => 'nullable|string|max:500',
-            'professional_city' => 'nullable|string|max:255',
-            'professional_postal_code' => 'nullable|string|max:10',
-            'professional_email' => 'nullable|email|max:255',
-            'professional_phone' => 'nullable|string|max:255',
-            'legal_mentions' => 'nullable|string|max:2000',
-            'footer_text' => 'nullable|string|max:1000',
-        ], [
-            'professional_email.email' => 'L\'email professionnel doit être une adresse email valide.',
-            'rsac_number.max' => 'Le numéro RSAC ne doit pas dépasser 255 caractères.',
-            'professional_address.max' => 'L\'adresse ne doit pas dépasser 500 caractères.',
-            'legal_mentions.max' => 'Les mentions légales ne doivent pas dépasser 2000 caractères.',
-            'footer_text.max' => 'Le texte de pied de page ne doit pas dépasser 1000 caractères.',
-        ]);
-
-        // Mise à jour directe (pas de restriction de rôle pour ces champs)
-        $user->update($validated);
-
-        return redirect()->route('profile.edit')->with('success', 'Informations professionnelles mises à jour avec succès ! 🏢');
-    }
-
-    /**
      * Mettre à jour uniquement l'avatar
      */
     public function updateAvatar(Request $request, $user = null)
@@ -142,11 +110,17 @@ class ProfileController extends Controller
     }
 
     /**
-     * Mettre à jour la signature
+     * Mettre à jour la signature - UNIQUEMENT POUR ADMIN
      */
     public function updateSignature(Request $request)
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
+
+        // Seuls les admins peuvent modifier la signature
+        if (!$user->isAdministrateur()) {
+            return redirect()->route('profile.edit')->with('error', 'Vous n\'êtes pas autorisé à modifier la signature');
+        }
 
         $request->validate([
             'signature_image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048'
@@ -180,11 +154,17 @@ class ProfileController extends Controller
     }
 
     /**
-     * Supprimer la signature
+     * Supprimer la signature - UNIQUEMENT POUR ADMIN
      */
     public function removeSignature()
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
+
+        // Seuls les admins peuvent supprimer la signature
+        if (!$user->isAdministrateur()) {
+            return redirect()->route('profile.edit')->with('error', 'Vous n\'êtes pas autorisé à supprimer la signature');
+        }
 
         if ($user->signature_image && $user->signature_image !== 'default-signature.png') {
             $signaturePath = storage_path('app/public/signatures/' . $user->signature_image);
@@ -200,16 +180,58 @@ class ProfileController extends Controller
     }
 
     /**
-     * Changer le mot de passe
+     * Mettre à jour les informations professionnelles - UNIQUEMENT POUR ADMIN
+     */
+    public function updateProfessional(Request $request)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        // Seuls les admins peuvent modifier les infos professionnelles (sauf adresse)
+        if (!$user->isAdministrateur()) {
+            return redirect()->route('profile.edit')->with('error', 'Vous n\'êtes pas autorisé à modifier les informations professionnelles');
+        }
+
+        // Validation uniquement des champs professionnels
+        $validated = $request->validate([
+            'rsac_number' => 'nullable|string|max:255',
+            'professional_address' => 'nullable|string|max:500',
+            'professional_city' => 'nullable|string|max:255',
+            'professional_postal_code' => 'nullable|string|max:10',
+            'professional_email' => 'nullable|email|max:255',
+            'professional_phone' => 'nullable|string|max:255',
+            'legal_mentions' => 'nullable|string|max:2000',
+            'footer_text' => 'nullable|string|max:1000',
+        ], [
+            'professional_email.email' => 'L\'email professionnel doit être une adresse email valide.',
+            'rsac_number.max' => 'Le numéro RSAC ne doit pas dépasser 255 caractères.',
+            'professional_address.max' => 'L\'adresse ne doit pas dépasser 500 caractères.',
+            'legal_mentions.max' => 'Les mentions légales ne doivent pas dépasser 2000 caractères.',
+            'footer_text.max' => 'Le texte de pied de page ne doit pas dépasser 1000 caractères.',
+        ]);
+
+        $user->update($validated);
+
+        return redirect()->route('profile.edit')->with('success', 'Informations professionnelles mises à jour avec succès ! 🏢');
+    }
+
+    /**
+     * Changer le mot de passe - UNIQUEMENT POUR ADMIN
      */
     public function updatePassword(Request $request)
     {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        // Seuls les admins peuvent modifier le mot de passe
+        if (!$user->isAdministrateur()) {
+            return redirect()->route('profile.edit')->with('error', 'Vous n\'êtes pas autorisé à modifier le mot de passe');
+        }
+
         $request->validate([
             'current_password' => 'required',
             'password' => 'required|min:8|confirmed',
         ]);
-
-        $user = Auth::user();
 
         // Vérifier le mot de passe actuel
         if (!Hash::check($request->current_password, $user->password)) {
@@ -227,15 +249,21 @@ class ProfileController extends Controller
     }
 
     /**
-     * Obtenir les règles de validation selon le rôle (SANS les champs professionnels)
+     * Obtenir les règles de validation selon le rôle
+     * Admin : tous les champs
+     * Autres : téléphone et adresse postale uniquement
      */
     private function getValidationRules($user): array
     {
+        // Règles pour managers/conseillers : téléphone + adresse postale
         $baseRules = [
             'phone' => 'nullable|string|max:255',
+            'professional_address' => 'nullable|string|max:500',
+            'professional_city' => 'nullable|string|max:255',
+            'professional_postal_code' => 'nullable|string|max:10',
         ];
 
-        // Seuls les administrateurs peuvent modifier tous les champs personnels
+        // Seuls les administrateurs peuvent modifier tous les champs
         if ($user->isAdministrateur()) {
             return array_merge($baseRules, [
                 'first_name' => 'required|string|max:255',
@@ -250,7 +278,9 @@ class ProfileController extends Controller
     }
 
     /**
-     * Obtenir les champs autorisés selon le rôle (SANS les champs professionnels)
+     * Obtenir les champs autorisés selon le rôle
+     * Admin : tous les champs
+     * Autres : téléphone et adresse postale uniquement
      */
     private function getAllowedFields($user): array
     {
@@ -262,11 +292,19 @@ class ProfileController extends Controller
                 'phone',
                 'position',
                 'department',
+                'professional_address',
+                'professional_city',
+                'professional_postal_code',
             ];
         }
 
-        // Managers et Collaborateurs : téléphone uniquement
-        return ['phone'];
+        // Managers et Collaborateurs : téléphone + adresse postale uniquement
+        return [
+            'phone',
+            'professional_address',
+            'professional_city',
+            'professional_postal_code',
+        ];
     }
 
     /**

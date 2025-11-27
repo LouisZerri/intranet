@@ -41,26 +41,7 @@
             <div class="ml-3">
                 <h3 class="text-sm font-medium text-blue-800">ℹ️ Informations</h3>
                 <div class="mt-2 text-sm text-blue-700">
-                    Vous pouvez modifier votre téléphone, votre photo de profil, votre signature et vos informations professionnelles. Pour modifier d'autres informations, contactez un administrateur.
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    <!-- Alerte si infos professionnelles incomplètes -->
-    @if(!auth()->user()->hasProfessionalInfoComplete())
-    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <div class="flex">
-            <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                </svg>
-            </div>
-            <div class="ml-3">
-                <h3 class="text-sm font-medium text-yellow-800">⚠️ Informations professionnelles incomplètes</h3>
-                <div class="mt-2 text-sm text-yellow-700">
-                    Pour que vos devis et factures soient correctement personnalisés, veuillez renseigner vos informations professionnelles (RSAC, adresse, etc.).
+                    Vous pouvez modifier votre téléphone, votre adresse postale et votre photo de profil. Pour modifier d'autres informations, contactez un administrateur.
                 </div>
             </div>
         </div>
@@ -146,7 +127,8 @@
                 </div>
             </div>
 
-            <!-- Gestion signature/cachet -->
+            <!-- Gestion signature/cachet - UNIQUEMENT POUR ADMIN -->
+            @if(auth()->user()->isAdministrateur())
             <div class="bg-white shadow rounded-lg">
                 <div class="p-6 border-b border-gray-200">
                     <h2 class="text-lg font-semibold text-gray-900">✍️ Signature / Cachet</h2>
@@ -219,6 +201,7 @@
                     </div>
                 </div>
             </div>
+            @endif
 
             <!-- Formulaire informations personnelles -->
             <div class="bg-white shadow rounded-lg">
@@ -365,6 +348,62 @@
                                 </div>
                             </div>
                             @endif
+
+                            <!-- Adresse postale - Modifiable par tous -->
+                            <div class="md:col-span-2">
+                                <label for="professional_address" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Adresse postale
+                                    @if(!auth()->user()->isAdministrateur())
+                                        <span class="text-green-600 text-xs ml-2">(modifiable)</span>
+                                    @endif
+                                </label>
+                                <textarea name="professional_address" 
+                                          id="professional_address" 
+                                          rows="2"
+                                          placeholder="Ex: 35 Rue de l'Exemple"
+                                          class="block w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors @error('professional_address') border-red-300 ring-red-500 @enderror">{{ old('professional_address', auth()->user()->professional_address) }}</textarea>
+                                @error('professional_address')
+                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <!-- Code postal - Modifiable par tous -->
+                            <div>
+                                <label for="professional_postal_code" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Code postal
+                                    @if(!auth()->user()->isAdministrateur())
+                                        <span class="text-green-600 text-xs ml-2">(modifiable)</span>
+                                    @endif
+                                </label>
+                                <input type="text" 
+                                       name="professional_postal_code" 
+                                       id="professional_postal_code" 
+                                       value="{{ old('professional_postal_code', auth()->user()->professional_postal_code) }}"
+                                       placeholder="Ex: 75001"
+                                       class="block w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors @error('professional_postal_code') border-red-300 ring-red-500 @enderror">
+                                @error('professional_postal_code')
+                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <!-- Ville - Modifiable par tous -->
+                            <div>
+                                <label for="professional_city" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Ville
+                                    @if(!auth()->user()->isAdministrateur())
+                                        <span class="text-green-600 text-xs ml-2">(modifiable)</span>
+                                    @endif
+                                </label>
+                                <input type="text" 
+                                       name="professional_city" 
+                                       id="professional_city" 
+                                       value="{{ old('professional_city', auth()->user()->professional_city) }}"
+                                       placeholder="Ex: Paris"
+                                       class="block w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors @error('professional_city') border-red-300 ring-red-500 @enderror">
+                                @error('professional_city')
+                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
                         </div>
 
                         <!-- Boutons -->
@@ -383,7 +422,7 @@
                 </div>
             </div>
 
-            <!-- NOUVELLE SECTION : Départements gérés (lecture seule) -->
+            <!-- SECTION : Départements gérés (lecture seule) - UNIQUEMENT POUR MANAGER/ADMIN -->
             @if(in_array(auth()->user()->role, ['manager', 'administrateur']))
             <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 shadow rounded-lg">
                 <div class="p-6 border-b border-blue-200">
@@ -471,7 +510,8 @@
             </div>
             @endif
 
-            <!-- NOUVEAU : Informations professionnelles (pour les devis/factures) -->
+            <!-- Informations professionnelles (pour les devis/factures) - UNIQUEMENT POUR ADMIN -->
+            @if(auth()->user()->isAdministrateur())
             <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 shadow rounded-lg">
                 <div class="p-6 border-b border-green-200">
                     <h2 class="text-lg font-semibold text-green-900">🏢 Informations professionnelles</h2>
@@ -487,7 +527,6 @@
                             <div class="md:col-span-2">
                                 <label for="rsac_number" class="block text-sm font-medium text-gray-700 mb-2">
                                     Numéro RSAC
-                                    <span class="text-green-600 text-xs ml-2">(modifiable)</span>
                                 </label>
                                 <input type="text" 
                                        name="rsac_number" 
@@ -500,61 +539,10 @@
                                 @enderror
                             </div>
 
-                            <!-- Adresse professionnelle -->
-                            <div class="md:col-span-2">
-                                <label for="professional_address" class="block text-sm font-medium text-gray-700 mb-2">
-                                    Adresse professionnelle
-                                    <span class="text-green-600 text-xs ml-2">(modifiable)</span>
-                                </label>
-                                <textarea name="professional_address" 
-                                          id="professional_address" 
-                                          rows="2"
-                                          placeholder="Ex: 35 Rue de l'Exemple"
-                                          class="block w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors @error('professional_address') border-red-300 ring-red-500 @enderror">{{ old('professional_address', auth()->user()->professional_address) }}</textarea>
-                                @error('professional_address')
-                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            <!-- Code postal -->
-                            <div>
-                                <label for="professional_postal_code" class="block text-sm font-medium text-gray-700 mb-2">
-                                    Code postal
-                                    <span class="text-green-600 text-xs ml-2">(modifiable)</span>
-                                </label>
-                                <input type="text" 
-                                       name="professional_postal_code" 
-                                       id="professional_postal_code" 
-                                       value="{{ old('professional_postal_code', auth()->user()->professional_postal_code) }}"
-                                       placeholder="Ex: 75001"
-                                       class="block w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors @error('professional_postal_code') border-red-300 ring-red-500 @enderror">
-                                @error('professional_postal_code')
-                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            <!-- Ville -->
-                            <div>
-                                <label for="professional_city" class="block text-sm font-medium text-gray-700 mb-2">
-                                    Ville
-                                    <span class="text-green-600 text-xs ml-2">(modifiable)</span>
-                                </label>
-                                <input type="text" 
-                                       name="professional_city" 
-                                       id="professional_city" 
-                                       value="{{ old('professional_city', auth()->user()->professional_city) }}"
-                                       placeholder="Ex: Paris"
-                                       class="block w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors @error('professional_city') border-red-300 ring-red-500 @enderror">
-                                @error('professional_city')
-                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
-
                             <!-- Email professionnel (optionnel) -->
                             <div>
                                 <label for="professional_email" class="block text-sm font-medium text-gray-700 mb-2">
                                     Email professionnel (optionnel)
-                                    <span class="text-green-600 text-xs ml-2">(modifiable)</span>
                                 </label>
                                 <input type="email" 
                                        name="professional_email" 
@@ -571,7 +559,6 @@
                             <div>
                                 <label for="professional_phone" class="block text-sm font-medium text-gray-700 mb-2">
                                     Téléphone professionnel (optionnel)
-                                    <span class="text-green-600 text-xs ml-2">(modifiable)</span>
                                 </label>
                                 <input type="text" 
                                        name="professional_phone" 
@@ -588,7 +575,6 @@
                             <div class="md:col-span-2">
                                 <label for="legal_mentions" class="block text-sm font-medium text-gray-700 mb-2">
                                     Mentions légales personnalisées
-                                    <span class="text-green-600 text-xs ml-2">(modifiable)</span>
                                 </label>
                                 <textarea name="legal_mentions" 
                                           id="legal_mentions" 
@@ -604,7 +590,6 @@
                             <div class="md:col-span-2">
                                 <label for="footer_text" class="block text-sm font-medium text-gray-700 mb-2">
                                     Texte de pied de page
-                                    <span class="text-green-600 text-xs ml-2">(modifiable)</span>
                                 </label>
                                 <textarea name="footer_text" 
                                           id="footer_text" 
@@ -632,8 +617,10 @@
                     </form>
                 </div>
             </div>
+            @endif
 
-            <!-- Changement de mot de passe -->
+            <!-- Changement de mot de passe - UNIQUEMENT POUR ADMIN -->
+            @if(auth()->user()->isAdministrateur())
             <div class="bg-white shadow rounded-lg">
                 <div class="p-6 border-b border-gray-200">
                     <h2 class="text-lg font-semibold text-gray-900">🔒 Changer le mot de passe</h2>
@@ -697,6 +684,7 @@
                     </form>
                 </div>
             </div>
+            @endif
         </div>
 
         <!-- Sidebar avec informations -->
@@ -768,10 +756,8 @@
                             <p>En tant que {{ auth()->user()->role }}, vous pouvez modifier :</p>
                             <ul class="list-disc list-inside mt-1">
                                 <li>Votre téléphone</li>
+                                <li>Votre adresse postale</li>
                                 <li>Votre photo de profil</li>
-                                <li>Votre signature/cachet</li>
-                                <li>Vos infos professionnelles</li>
-                                <li>Votre mot de passe</li>
                             </ul>
                         </div>
                     </div>
@@ -811,7 +797,8 @@
                 </div>
             </div>
 
-            <!-- Conseils sécurité -->
+            <!-- Conseils sécurité - UNIQUEMENT POUR ADMIN -->
+            @if(auth()->user()->isAdministrateur())
             <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
                 <div class="flex">
                     <div class="flex-shrink-0">
@@ -832,6 +819,7 @@
                     </div>
                 </div>
             </div>
+            @endif
         </div>
     </div>
 </div>

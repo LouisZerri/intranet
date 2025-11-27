@@ -131,7 +131,7 @@ class InvoiceController extends Controller
             'items' => 'required|array|min:1',
             'items.*.description' => 'required|string',
             'items.*.quantity' => 'required|numeric|min:0.01',
-            'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.unit_price' => 'required|numeric',
             'items.*.tva_rate' => 'required|numeric|min:0|max:100',
         ], [
             'items.required' => 'Vous devez ajouter au moins une ligne à la facture.',
@@ -253,7 +253,7 @@ class InvoiceController extends Controller
             'items' => 'required|array|min:1',
             'items.*.description' => 'required|string',
             'items.*.quantity' => 'required|numeric|min:0.01',
-            'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.unit_price' => 'required|numeric',
             'items.*.tva_rate' => 'required|numeric|min:0|max:100',
         ], [
             'revenue_type.required' => 'Le type d\'activité est obligatoire.',
